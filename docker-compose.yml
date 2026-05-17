@@ -1,0 +1,55 @@
+services:
+  frontend:
+    build:
+      context: ./pmtm-fe
+    command: npm run dev
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8100
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./pmtm-fe:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./pmtm-be
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      APP_NAME: PMTM API
+      APP_ENV: development
+      CORS_ORIGINS: http://localhost:3100
+      DATABASE_URL: postgresql://pmtm:pmtm@postgres:5432/pmtm
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./pmtm-be:/app
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pmtm
+      POSTGRES_USER: pmtm
+      POSTGRES_PASSWORD: pmtm
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  frontend_node_modules:
+  postgres_data:
+  redis_data:
