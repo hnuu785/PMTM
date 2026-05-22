@@ -34,3 +34,35 @@ pip install -r requirements.txt
 ```bash
 PMTM_MODEL_ID=Qwen/Qwen2.5-3B python run_training.py --stage sft
 ```
+
+## Colab + Google Drive
+
+Colab에서 `git clone` 후 실행할 때 런타임이 끊겨도 결과를 남기려면 `models`와 `outputs`를 Drive로 보내는 게 맞습니다.
+
+```python
+from google.colab import drive
+drive.mount("/content/drive")
+```
+
+```bash
+cd /content
+git clone <YOUR_REPO_URL>
+cd PMTM2/pmtm-ai
+pip install -r requirements.txt
+```
+
+```bash
+export PMTM_MODELS_DIR=/content/drive/MyDrive/pmtm-ai/models
+export PMTM_OUTPUTS_DIR=/content/drive/MyDrive/pmtm-ai/outputs
+python run_training.py --stage sft
+python run_training.py --stage sanity
+python run_training.py --stage grpo
+python run_training.py --stage eval
+```
+
+이렇게 하면 저장 위치는 아래처럼 바뀝니다.
+
+- SFT 최종 어댑터: `/content/drive/MyDrive/pmtm-ai/models/sft_rap_qwen`
+- GRPO 최종 어댑터: `/content/drive/MyDrive/pmtm-ai/models/grpo_rap_qwen`
+- SFT 체크포인트: `/content/drive/MyDrive/pmtm-ai/outputs/sft_qwen`
+- GRPO 체크포인트: `/content/drive/MyDrive/pmtm-ai/outputs/grpo_qwen`
