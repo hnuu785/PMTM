@@ -69,8 +69,23 @@ def _parse_target_bars(prompt: str, default: int = 8) -> int:
     return int(m.group(1)) if m else default
 
 
+def _max_consecutive_duplicate_run(lines: list[str]) -> int:
+    if not lines:
+        return 0
+
+    max_run = 1
+    current_run = 1
+    for i in range(1, len(lines)):
+        if lines[i] == lines[i - 1]:
+            current_run += 1
+            max_run = max(max_run, current_run)
+        else:
+            current_run = 1
+    return max_run
+
+
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """라임 0.6 + 길이 0.2 + format 0.2 − 0.5*반복비율."""
+    """반복 가사가 라임 점수를 부풀리지 못하도록 보상 계산."""
     if prompts is None:
         prompts = [""] * len(completions)
     rewards = []
@@ -88,8 +103,23 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         format_ok = 1.0 if "[End]" in comp else 0.0
         length_score = max(0.0, 1.0 - abs(len(lines) - n_target) / n_target)
         dup_ratio = 1.0 - len(set(lines)) / len(lines) if lines else 1.0
+        max_run = _max_consecutive_duplicate_run(lines)
+        run_penalty = max(0.0, (max_run - 1) / max(1, len(lines) - 1)) if lines else 1.0
 
-        r = 0.6 * rhyme + 0.2 * length_score + 0.2 * format_ok - 0.5 * dup_ratio
+        # 반복이 많을수록 라임 보상 자체를 줄여서 "같은 줄 반복 = 고득점"을 차단한다.
+        effective_rhyme = rhyme * (1.0 - dup_ratio)
+        r = (
+            0.5 * effective_rhyme
+            + 0.2 * length_score
+            + 0.2 * format_ok
+            - 0.4 * dup_ratio
+            - 0.4 * run_penalty
+        )
+
+        # 중복이 심한 completion은 최종 보상 상한을 강제로 낮춘다.
+        if dup_ratio >= 0.6 or max_run >= 3:
+            r = min(r, 0.0)
+
         rewards.append(float(r))
     return rewards
 
