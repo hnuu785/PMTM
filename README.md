@@ -6,6 +6,7 @@
 
 - `pmtm-fe`: Next.js 프론트엔드
 - `pmtm-be`: FastAPI 백엔드
+- `pmtm-ai`: 가사 생성 AI 학습/추론 코드 영역
 - `docker-compose.yml`: 로컬 개발용 통합 실행
 
 ## Local Development
@@ -45,3 +46,14 @@ docker compose up --build
 - docs: `http://localhost:8100/docs`
 - postgres: `localhost:5433`
 - redis: `localhost:6380`
+
+## AI Workspace
+
+`pmtm-ai`는 모델 학습, 추론, 데이터셋, 체크포인트 자산을 분리해서 다루는 디렉터리입니다.
+
+```bash
+cd pmtm-ai
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```

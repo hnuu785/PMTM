@@ -1,0 +1,11 @@
+transformers>=4.45
+accelerate>=0.34
+peft>=0.13
+trl>=0.12
+bitsandbytes>=0.43
+datasets>=2.20
+pandas
+tqdm
+jamo
+pronouncing
+g2pk
