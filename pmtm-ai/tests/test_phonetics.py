@@ -71,6 +71,20 @@ check("'rap' ≥ 1 음절", len(p) >= 1, f"got {p}")
 p = get_phonemes("hello")
 check("'hello' ≥ 1 음절", len(p) >= 1, f"got {p}")
 
+p = get_phonemes("apple")
+check("'apple' 끝 음절이 ㅡ+ㄹ 계열", len(p) >= 2 and p[-1] == {"v": "ㅡ", "c": "ㄹ"}, f"got {p}")
+
+p = get_phonemes("orange")
+check("'orange'가 오렌지 계열로 분해됨",
+      len(p) >= 3 and [s["v"] for s in p[-3:]] == ["ㅗ", "ㅔ", "ㅣ"], f"got {p}")
+
+p = get_phonemes("flow")
+check("'flow'가 플로우 계열로 분해됨",
+      len(p) >= 2 and [s["v"] for s in p[-2:]] == ["ㅡ", "ㅗ"], f"got {p}")
+
+p = get_phonemes("yeah")
+check("'yeah' 같은 추임새는 라임 계산에서 제외됨", p == [], f"got {p}")
+
 # 한영 혼합
 p = get_phonemes("hello 강")
 check("한영 혼합 토큰 처리 가능", len(p) >= 2, f"got {p}")

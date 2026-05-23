@@ -3,6 +3,16 @@ from functools import lru_cache
 from jamo import hangul_to_jamo, j2hcj
 
 try:
+    from loanword_overrides import MANUAL_LOANWORD_OVERRIDES
+except ImportError:
+    from .loanword_overrides import MANUAL_LOANWORD_OVERRIDES
+
+try:
+    from loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+except ImportError:
+    from .loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+
+try:
     from g2pk import G2p
     _g2p_kr_inst = G2p()
 
@@ -67,9 +77,141 @@ _LETTER_C = {
     'v': 'ㅂ', 'x': 'ㄱ', 'z': 'ㅅ', 'h': None, 'w': None,
 }
 
+_BUILTIN_LOANWORD_OVERRIDES = {
+    "apple": "애플",
+    "orange": "오렌지",
+    "party": "파티",
+    "money": "머니",
+    "vibe": "바이브",
+    "radio": "라디오",
+    "cookie": "쿠키",
+}
+
+_LOANWORD_OVERRIDES = {
+    **_BUILTIN_LOANWORD_OVERRIDES,
+    **MANUAL_LOANWORD_OVERRIDES,
+}
+
+_CHOSEONG_INDEX = {
+    None: 11,
+    'ㄱ': 0, 'ㄲ': 1, 'ㄴ': 2, 'ㄷ': 3, 'ㄸ': 4, 'ㄹ': 5, 'ㅁ': 6, 'ㅂ': 7, 'ㅃ': 8,
+    'ㅅ': 9, 'ㅆ': 10, 'ㅇ': 11, 'ㅈ': 12, 'ㅉ': 13, 'ㅊ': 14, 'ㅋ': 15, 'ㅌ': 16,
+    'ㅍ': 17, 'ㅎ': 18,
+}
+
+_JUNGSEONG_INDEX = {
+    'ㅏ': 0, 'ㅐ': 1, 'ㅑ': 2, 'ㅒ': 3, 'ㅓ': 4, 'ㅔ': 5, 'ㅕ': 6, 'ㅖ': 7, 'ㅗ': 8,
+    'ㅘ': 9, 'ㅙ': 10, 'ㅚ': 11, 'ㅛ': 12, 'ㅜ': 13, 'ㅝ': 14, 'ㅞ': 15, 'ㅟ': 16,
+    'ㅠ': 17, 'ㅡ': 18, 'ㅢ': 19, 'ㅣ': 20,
+}
+
+_JONGSEONG_INDEX = {
+    None: 0,
+    'ㄱ': 1, 'ㄲ': 2, 'ㄳ': 3, 'ㄴ': 4, 'ㄵ': 5, 'ㄶ': 6, 'ㄷ': 7, 'ㄹ': 8, 'ㄺ': 9,
+    'ㄻ': 10, 'ㄼ': 11, 'ㄽ': 12, 'ㄾ': 13, 'ㄿ': 14, 'ㅀ': 15, 'ㅁ': 16, 'ㅂ': 17,
+    'ㅄ': 18, 'ㅅ': 19, 'ㅆ': 20, 'ㅇ': 21, 'ㅈ': 22, 'ㅊ': 23, 'ㅋ': 24, 'ㅌ': 25,
+    'ㅍ': 26, 'ㅎ': 27,
+}
+
+_CMU_CONS_TO_ONSET = {
+    'B': 'ㅂ', 'P': 'ㅍ', 'F': 'ㅍ', 'V': 'ㅂ',
+    'D': 'ㄷ', 'T': 'ㅌ', 'TH': 'ㅌ', 'DH': 'ㄷ',
+    'G': 'ㄱ', 'K': 'ㅋ',
+    'M': 'ㅁ', 'N': 'ㄴ', 'NG': 'ㅇ',
+    'L': 'ㄹ', 'R': 'ㄹ',
+    'S': 'ㅅ', 'Z': 'ㅈ', 'SH': 'ㅅ', 'ZH': 'ㅈ',
+    'CH': 'ㅊ', 'JH': 'ㅈ',
+    'HH': 'ㅎ', 'W': 'ㅇ', 'Y': 'ㅇ',
+}
+
+_CMU_CONS_TO_CODA_LOAN = {
+    'B': 'ㅂ', 'P': 'ㅂ', 'F': 'ㅂ', 'V': 'ㅂ',
+    'D': 'ㄷ', 'T': 'ㄷ', 'TH': 'ㄷ', 'DH': 'ㄷ',
+    'G': 'ㄱ', 'K': 'ㄱ',
+    'M': 'ㅁ', 'N': 'ㄴ', 'NG': 'ㅇ',
+    'L': 'ㄹ', 'R': 'ㄹ',
+    'S': 'ㅅ', 'Z': 'ㅅ', 'SH': 'ㅅ', 'ZH': 'ㅅ',
+    'CH': 'ㅊ', 'JH': 'ㅈ',
+}
+
+_EPENTHETIC_VOWEL_BY_CONS = {
+    'CH': 'ㅣ', 'JH': 'ㅣ', 'Y': 'ㅣ',
+    'SH': 'ㅡ', 'ZH': 'ㅡ', 'S': 'ㅡ', 'Z': 'ㅡ',
+    'L': 'ㅡ', 'R': 'ㅡ',
+}
+
 
 def _strip_stress(p: str) -> str:
     return re.sub(r'\d', '', p)
+
+
+def _compose_hangul(onset: str | None, vowel: str, coda: str | None = None) -> str:
+    onset_idx = _CHOSEONG_INDEX.get(onset, _CHOSEONG_INDEX[None])
+    vowel_idx = _JUNGSEONG_INDEX[vowel]
+    coda_idx = _JONGSEONG_INDEX.get(coda, 0)
+    codepoint = 0xAC00 + (onset_idx * 21 + vowel_idx) * 28 + coda_idx
+    return chr(codepoint)
+
+
+def _loanword_vowel(phone: str, trailing: list[str]) -> str | None:
+    if phone == 'AH' and trailing == ['L']:
+        return 'ㅡ'
+    return CMU_VOWEL_TO_JAMO.get(phone)
+
+
+def _epenthetic_vowel(phone: str) -> str:
+    return _EPENTHETIC_VOWEL_BY_CONS.get(phone, 'ㅡ')
+
+
+def _append_epenthetic_syllables(phones: list[str]) -> str:
+    out = []
+    for phone in phones:
+        onset = _CMU_CONS_TO_ONSET.get(phone)
+        if onset is None:
+            continue
+        out.append(_compose_hangul(onset, _epenthetic_vowel(phone)))
+    return ''.join(out)
+
+
+def _cmu_to_loanword(cmu_str: str) -> str | None:
+    phones = [_strip_stress(p) for p in cmu_str.split()]
+    vowel_idxs = [i for i, p in enumerate(phones) if p in CMU_VOWEL_TO_JAMO]
+    if not vowel_idxs:
+        return None
+
+    syllables: list[str] = []
+    carry_onset = _CMU_CONS_TO_ONSET.get(phones[0]) if vowel_idxs[0] > 0 else None
+
+    for k, vi in enumerate(vowel_idxs):
+        next_vi = vowel_idxs[k + 1] if k + 1 < len(vowel_idxs) else None
+        trailing = phones[vi + 1:next_vi] if next_vi is not None else phones[vi + 1:]
+        vowel = _loanword_vowel(phones[vi], trailing)
+        if vowel is None:
+            continue
+
+        onset = carry_onset
+        coda = None
+        carry_onset = None
+        extra_tail: list[str] = []
+
+        if next_vi is not None:
+            if len(trailing) >= 2:
+                coda = _CMU_CONS_TO_CODA_LOAN.get(trailing[0])
+                carry_onset = _CMU_CONS_TO_ONSET.get(trailing[-1])
+            elif len(trailing) == 1:
+                carry_onset = _CMU_CONS_TO_ONSET.get(trailing[0])
+        else:
+            if len(trailing) == 1:
+                coda = _CMU_CONS_TO_CODA_LOAN.get(trailing[0])
+            elif len(trailing) >= 2:
+                coda = _CMU_CONS_TO_CODA_LOAN.get(trailing[0])
+                extra_tail = trailing[1:]
+
+        syllables.append(_compose_hangul(onset, vowel, coda))
+        if extra_tail:
+            syllables.append(_append_epenthetic_syllables(extra_tail))
+
+    return ''.join(syllables) or None
 
 
 def _cmu_to_phonemes(cmu_str: str) -> list[dict]:
@@ -121,9 +263,19 @@ def _english_fallback(word: str) -> list[dict]:
 
 
 def _english_word_to_phonemes(word: str) -> list[dict]:
+    if word.lower() in ENGLISH_RHYME_STOPWORDS:
+        return []
+
+    override = _LOANWORD_OVERRIDES.get(word.lower())
+    if override is not None:
+        return _hangul_to_phonemes(override)
+
     if pronouncing is not None:
         cands = pronouncing.phones_for_word(word.lower())
         if cands:
+            loanword = _cmu_to_loanword(cands[0])
+            if loanword is not None:
+                return _hangul_to_phonemes(loanword)
             return _cmu_to_phonemes(cands[0])
     return _english_fallback(word)
 
