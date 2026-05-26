@@ -35,7 +35,20 @@ import sys
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, PROJECT_ROOT
+
+def _bootstrap_experiment_name(argv: list[str]) -> None:
+    for i, arg in enumerate(argv):
+        if arg.startswith("--experiment-name="):
+            os.environ["PMTM_EXPERIMENT_NAME"] = arg.split("=", 1)[1]
+            return
+        if arg == "--experiment-name" and i + 1 < len(argv):
+            os.environ["PMTM_EXPERIMENT_NAME"] = argv[i + 1]
+            return
+
+
+_bootstrap_experiment_name(sys.argv[1:])
+
+from app.paths import DATA_DIR, EXPERIMENT_NAME, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
 
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
@@ -65,6 +78,16 @@ def run_phonetics_test():
     rc = subprocess.call([sys.executable, "tests/test_phonetics.py"])
     if rc != 0:
         raise RuntimeError("phonetics test 실패")
+    print()
+
+
+def print_result_paths():
+    label = EXPERIMENT_NAME or "default"
+    print("=" * 60)
+    print(f"[A0] Result paths ({label})")
+    print("=" * 60)
+    print(f"models dir    : {MODELS_DIR}")
+    print(f"outputs dir   : {OUTPUTS_DIR}")
     print()
 
 
@@ -250,6 +273,11 @@ def run_eval():
 def parse_args():
     p = argparse.ArgumentParser(description="Qwen 랩 생성 학습 (SFT + GRPO)")
     p.add_argument(
+        "--experiment-name",
+        default=None,
+        help="결과물을 models/<name>, outputs/<name> 아래에 저장",
+    )
+    p.add_argument(
         "--stage",
         choices=["all", "sft", "sanity", "grpo", "eval"],
         default="all",
@@ -264,6 +292,10 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.experiment_name:
+        os.environ["PMTM_EXPERIMENT_NAME"] = args.experiment_name
+
+    print_result_paths()
     check_gpu()
 
     if args.stage == "sft":

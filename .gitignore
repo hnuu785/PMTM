@@ -8,3 +8,7 @@
 __pycache__/
 node_modules/
 *.pyc
+
+# PMTM AI training artifacts
+pmtm-ai/models/
+pmtm-ai/outputs/

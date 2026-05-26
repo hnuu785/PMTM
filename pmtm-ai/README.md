@@ -41,6 +41,29 @@ pip install g2pk || echo "g2pk 설치 실패 - fallback 사용"
 PMTM_MODEL_ID=Qwen/Qwen2.5-3B python run_training.py --stage sft
 ```
 
+결과물만 실험별로 쌓고 싶다면 `PMTM_EXPERIMENT_NAME` 또는 `--experiment-name`을 주면 됩니다. 이 경우 `data/`는 공유하고 `models/`, `outputs/`만 실험명 하위 디렉터리로 분리됩니다.
+
+```bash
+python run_training.py --experiment-name exp-001 --stage sft
+python run_training.py --experiment-name exp-001 --stage grpo
+python -m app.inference.generate --artist "Tablo" --bpm 90 --energy 0.65 --danceability 0.70 --loudness -6.0 --valence 0.50 --bars 8
+```
+
+위처럼 실행하면 기본 경로 기준 결과물은 아래에 쌓입니다.
+
+- `models/exp-001/sft_rap_qwen`
+- `models/exp-001/grpo_rap_qwen`
+- `outputs/exp-001/sft_qwen`
+- `outputs/exp-001/grpo_qwen`
+
+환경변수 방식도 동일합니다.
+
+```bash
+export PMTM_EXPERIMENT_NAME=exp-002
+python run_training.py --stage sft
+python run_training.py --stage grpo
+```
+
 ## Colab + Google Drive
 
 Colab에서 `git clone` 후 실행할 때 런타임이 끊겨도 결과를 남기려면 `models`와 `outputs`를 Drive로 보내는 게 맞습니다.
