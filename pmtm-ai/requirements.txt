@@ -8,5 +8,6 @@ pandas
 tqdm
 jamo
 pronouncing
+matplotlib
 # optional:
 # g2pk

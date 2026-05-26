@@ -91,6 +91,24 @@ def print_result_paths():
     print()
 
 
+def save_loss_plots_if_possible() -> None:
+    try:
+        from plot_training_loss import generate_loss_plots
+
+        saved = generate_loss_plots(
+            outputs_dir=OUTPUTS_DIR,
+            experiment_name=EXPERIMENT_NAME,
+        )
+    except Exception as exc:
+        print(f"[WARN] loss plot 저장 실패: {exc}")
+        return
+
+    print("[plots] saved:")
+    for path in saved:
+        print(f"  {path}")
+    print()
+
+
 def prepare_dataset():
     print("=" * 60)
     print("[B1] SFT 데이터셋 준비")
@@ -301,6 +319,7 @@ def main():
     if args.stage == "sft":
         prepare_dataset()
         run_sft(force=args.force)
+        save_loss_plots_if_possible()
         return
 
     if args.stage == "sanity":
@@ -309,6 +328,7 @@ def main():
 
     if args.stage == "grpo":
         run_grpo()
+        save_loss_plots_if_possible()
         return
 
     if args.stage == "eval":
@@ -320,9 +340,11 @@ def main():
         run_phonetics_test()
     prepare_dataset()
     run_sft(force=args.force)
+    save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check()
     run_grpo()
+    save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval()
 

@@ -64,6 +64,17 @@ python run_training.py --stage sft
 python run_training.py --stage grpo
 ```
 
+학습이 끝난 뒤 체크포인트의 `trainer_state.json`에서 loss 그래프 PNG를 만들 수 있습니다.
+
+```bash
+python3 plot_training_loss.py --experiment-name exp-002
+```
+
+기본 저장 경로는 `outputs/exp-002/plots/`이며, 아래 파일을 생성합니다.
+
+- `outputs/exp-002/plots/sft_qwen_loss.png`
+- `outputs/exp-002/plots/grpo_qwen_loss.png`
+
 ## Colab + Google Drive
 
 Colab에서 `git clone` 후 실행할 때 런타임이 끊겨도 결과를 남기려면 `models`와 `outputs`를 Drive로 보내는 게 맞습니다.
