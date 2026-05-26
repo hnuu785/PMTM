@@ -29,6 +29,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+`g2pk`는 선택 의존성입니다. 로컬 macOS 환경에서는 `python-mecab-ko` 빌드가 `mecab-config` 때문에 실패할 수 있는데, 이 경우 설치하지 않아도 자모 분해 폴백으로 동작합니다.
+
+```bash
+pip install g2pk || echo "g2pk 설치 실패 - fallback 사용"
+```
+
 기본 베이스 모델은 `Qwen/Qwen2.5-1.5B`입니다. 다른 모델을 쓰려면 `PMTM_MODEL_ID` 환경변수로 덮어쓸 수 있습니다.
 
 ```bash

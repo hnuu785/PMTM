@@ -8,4 +8,5 @@ pandas
 tqdm
 jamo
 pronouncing
-g2pk
+# optional:
+# g2pk
