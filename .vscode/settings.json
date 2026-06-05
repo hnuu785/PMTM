@@ -1,0 +1,4 @@
+{
+  "typescript.tsdk": "pmtm-fe/node_modules/typescript/lib",
+  "js/ts.tsdk.path": "pmtm-fe/node_modules/typescript/lib"
+}

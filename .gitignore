@@ -8,6 +8,7 @@
 __pycache__/
 node_modules/
 *.pyc
+*.tsbuildinfo
 
 # PMTM AI training artifacts
 pmtm-ai/models/
