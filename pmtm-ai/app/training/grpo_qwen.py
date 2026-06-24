@@ -112,13 +112,13 @@ def rhyme_reward(completions, prompts=None, **kwargs):
             0.5 * effective_rhyme
             + 0.2 * length_score
             + 0.2 * format_ok
-            - 0.4 * dup_ratio
-            - 0.4 * run_penalty
+            - 1.0 * dup_ratio
+            - 1.0 * run_penalty
         )
 
-        # 중복이 심한 completion은 최종 보상 상한을 강제로 낮춘다.
-        if dup_ratio >= 0.6 or max_run >= 3:
-            r = min(r, 0.0)
+        # 중복이 심하거나 연속 중복이 발생한 completion은 최종 보상 상한을 강제로 크게 낮춘다.
+        if dup_ratio >= 0.3 or max_run >= 2:
+            r = min(r, -1.5)
 
         rewards.append(float(r))
     return rewards
@@ -175,7 +175,7 @@ def train_grpo():
         learning_rate=1e-5,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
-        num_train_epochs=1,
+        num_train_epochs=6,
         num_generations=4,
         max_completion_length=160,
         beta=0.04,
