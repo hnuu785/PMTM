@@ -12,7 +12,7 @@ def parse_args():
     p.add_argument(
         "--adapter",
         default=str(DEFAULT_ADAPTER),
-        help="LoRA adapter directory path (default: models/grpo_rap_qwen)",
+        help="LoRA adapter directory path (default: models/grpo_rap_qwen). Set to 'none' to run the base model only.",
     )
     p.add_argument("--artist", required=True, help="Artist style name")
     p.add_argument("--bpm", type=float, required=True, help="Track BPM")
@@ -49,9 +49,12 @@ def build_prompt(args) -> str:
     )
 
 
-def resolve_base_model(adapter_path: Path, override: str | None) -> str:
+def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
     if override:
         return override
+
+    if adapter_path is None:
+        return MODEL_ID
 
     try:
         from peft import PeftConfig
@@ -73,12 +76,13 @@ def resolve_base_model(adapter_path: Path, override: str | None) -> str:
     return MODEL_ID
 
 
-def build_model(base_model: str, adapter_path: Path):
+def build_model(base_model: str, adapter_path: Path | None):
     import torch
     from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    tokenizer = AutoTokenizer.from_pretrained(str(adapter_path), trust_remote_code=True)
+    tokenizer_path = str(adapter_path) if adapter_path else base_model
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -103,7 +107,10 @@ def build_model(base_model: str, adapter_path: Path):
             trust_remote_code=True,
         )
 
-    model = PeftModel.from_pretrained(base, str(adapter_path))
+    if adapter_path:
+        model = PeftModel.from_pretrained(base, str(adapter_path))
+    else:
+        model = base
     model.eval()
     return tokenizer, model
 
@@ -127,9 +134,12 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
 
 def main():
     args = parse_args()
-    adapter_path = Path(args.adapter).expanduser().resolve()
-    if not adapter_path.exists():
-        raise FileNotFoundError(f"adapter not found: {adapter_path}")
+    if args.adapter.lower() == "none":
+        adapter_path = None
+    else:
+        adapter_path = Path(args.adapter).expanduser().resolve()
+        if not adapter_path.exists():
+            raise FileNotFoundError(f"adapter not found: {adapter_path}")
 
     base_model = resolve_base_model(adapter_path, args.base_model)
     prompt = build_prompt(args)

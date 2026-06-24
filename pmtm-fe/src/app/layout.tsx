@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "PMTM",
-  description: "AI lyric generation service",
+  description: "BPM based AI rap lyric assistant",
 };
 
 export default function RootLayout({

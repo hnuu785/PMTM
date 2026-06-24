@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3100"
     database_url: str = "postgresql://pmtm:pmtm@localhost:5433/pmtm"
     redis_url: str = "redis://localhost:6380/0"
+    qwen_python_path: str = "../pmtm-ai/venv/bin/python"
+    qwen_timeout_seconds: int = 120
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5-mini"
+    openai_timeout_seconds: int = 60
 
     model_config = SettingsConfigDict(
         env_file=".env",
