@@ -54,6 +54,18 @@ def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
             "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
             "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
         ]
+    elif payload.llm == "qwen-exp-002-sft":
+        lyrics = _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen")
+        notes = [
+            "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
+        ]
+    elif payload.llm == "qwen-exp-002-grpo":
+        lyrics = _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen")
+        notes = [
+            "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
+        ]
     else:
         lyrics = _generate_qwen_verse(bpm)
         notes = [
