@@ -36,28 +36,27 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
 
 기본 주소: `http://localhost:8100`
 
-### 3. Docker Compose
+### 3. Local Infrastructure
 
-Docker Compose로 백엔드, PostgreSQL, Redis를 실행합니다. 프론트엔드는 로컬에서 직접 실행합니다.
+Docker Compose로 PostgreSQL, Redis만 실행합니다. 프론트엔드와 백엔드는 로컬에서 직접 실행합니다.
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
 서비스:
 
-- backend: `http://localhost:8100`
 - postgres: `localhost:5433`
 - redis: `localhost:6380`
 
-백엔드 Docker 이미지는 FastAPI 실행에 필요한 최소 의존성만 설치합니다. OpenAI 선택지를 사용하려면 루트 `.env` 또는 `.env.local`에 키를 넣습니다. 둘 다 있으면 `.env.local` 값이 우선합니다.
+OpenAI 선택지를 사용하려면 `pmtm-be/.env` 또는 `pmtm-be/.env.local`에 키를 넣습니다.
 
 ```bash
 OPENAI_API_KEY=your_api_key
 OPENAI_MODEL=gpt-5-mini
 ```
 
-Qwen 로컬 추론은 `pmtm-ai`의 별도 Python 환경과 모델 캐시가 필요합니다. Docker 백엔드 컨테이너 안에서 Qwen까지 실행하려면 AI 의존성 설치와 Hugging Face 캐시 마운트 구성이 추가로 필요합니다.
+Qwen 로컬 추론은 `pmtm-ai`의 별도 Python 환경과 모델 캐시가 필요합니다. 로컬 개발에서는 백엔드도 로컬 Python 환경에서 실행합니다.
 
 ## AI Workspace
 
