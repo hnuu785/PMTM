@@ -1,4 +1,27 @@
 services:
+  backend:
+    build:
+      context: ./pmtm-be
+    env_file:
+      - path: ./.env
+        required: false
+      - path: ./.env.local
+        required: false
+    environment:
+      APP_ENV: development
+      CORS_ORIGINS: http://localhost:3100
+      DATABASE_URL: postgresql://pmtm:pmtm@postgres:5432/pmtm
+      REDIS_URL: redis://redis:6379/0
+      QWEN_PYTHON_PATH: /usr/local/bin/python
+      QWEN_TIMEOUT_SECONDS: 120
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./pmtm-ai:/pmtm-ai
+    depends_on:
+      - postgres
+      - redis
+
   postgres:
     image: postgres:16-alpine
     environment:
