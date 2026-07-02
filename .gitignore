@@ -5,6 +5,7 @@
 .next
 .pytest_cache
 .venv
+venv
 __pycache__/
 node_modules/
 *.pyc
