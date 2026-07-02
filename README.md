@@ -50,12 +50,14 @@ docker compose up --build
 - postgres: `localhost:5433`
 - redis: `localhost:6380`
 
-백엔드 컨테이너는 `pmtm-ai`를 `/pmtm-ai`로 마운트하고 컨테이너의 Python 런타임으로 Qwen 추론 CLI를 호출합니다. OpenAI 선택지를 사용하려면 루트 `.env` 또는 `.env.local`에 키를 넣습니다. 둘 다 있으면 `.env.local` 값이 우선합니다.
+백엔드 Docker 이미지는 FastAPI 실행에 필요한 최소 의존성만 설치합니다. OpenAI 선택지를 사용하려면 루트 `.env` 또는 `.env.local`에 키를 넣습니다. 둘 다 있으면 `.env.local` 값이 우선합니다.
 
 ```bash
 OPENAI_API_KEY=your_api_key
 OPENAI_MODEL=gpt-5-mini
 ```
+
+Qwen 로컬 추론은 `pmtm-ai`의 별도 Python 환경과 모델 캐시가 필요합니다. Docker 백엔드 컨테이너 안에서 Qwen까지 실행하려면 AI 의존성 설치와 Hugging Face 캐시 마운트 구성이 추가로 필요합니다.
 
 ## AI Workspace
 
