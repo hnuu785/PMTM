@@ -8,6 +8,8 @@ from app.paths import MODEL_ID
 def parse_args():
     p = argparse.ArgumentParser(description="PMTM API lyric generation CLI")
     p.add_argument("--bpm", type=float, required=True, help="Track BPM")
+    p.add_argument("--genre", default="Korean hip-hop", help="Target genre")
+    p.add_argument("--mood", default="confident", help="Target mood")
     p.add_argument("--adapter", default=None, help="Optional LoRA adapter directory path")
     p.add_argument(
         "--base-model",
@@ -19,7 +21,7 @@ def parse_args():
         default=None,
         help="Override tokenizer id/path. Useful when the base model cache lacks tokenizer files.",
     )
-    p.add_argument("--bars", type=int, choices=[8], default=8, help="Target bar count")
+    p.add_argument("--bars", type=int, choices=[8, 16], default=8, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=180, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.85, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=0.92, help="Top-p sampling")
@@ -28,11 +30,13 @@ def parse_args():
 
 def build_prompt(args) -> str:
     return (
-        "You write rap lyrics. Return only an 8-line verse. "
+        f"You write rap lyrics. Return only a {args.bars}-line verse. "
         "Do not include title, explanation, numbering, or markdown.\n"
-        f"Write an 8-bar rap verse for BPM {args.bpm:.0f}. "
+        f"Write a {args.bars}-bar rap verse for BPM {args.bpm:.0f}. "
         "Each line should feel like one bar and match the BPM's breathing and line length.\n"
         f"BPM: {args.bpm:.0f}\n"
+        f"Genre: {args.genre}\n"
+        f"Mood: {args.mood}\n"
         f"[Verse {args.bars}마디]\n"
     )
 

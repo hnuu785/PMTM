@@ -14,3 +14,4 @@ node_modules/
 # PMTM AI training artifacts
 pmtm-ai/models/
 pmtm-ai/outputs/
+pmtm-be/storage/

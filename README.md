@@ -41,6 +41,23 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
 요청 형식은 `multipart/form-data`이며 `beat` 오디오 파일과 `llm` 값을 보냅니다.
 지원 형식은 MP3, WAV, M4A/MP4, AAC, FLAC이고 파일은 임시 분석 후 저장하지 않습니다.
 
+AI 보컬 데모 생성 API는 `POST /api/v1/demos/generate-from-beat`를 사용합니다.
+요청 형식은 `multipart/form-data`이며 `beat`, `llm`, `genre`, `mood`, `demoLengthSec`, `voice` 값을 보냅니다.
+응답의 `jobId`로 `GET /api/v1/demos/{jobId}`를 polling하고, 완료 후 `GET /api/v1/demos/{jobId}/audio`에서 데모 오디오를 받을 수 있습니다.
+데모 생성은 Redis + RQ 비동기 작업이므로 백엔드와 별도로 워커를 실행해야 합니다.
+
+```bash
+cd pmtm-be
+source .venv/bin/activate
+PYTHONPATH=. rq worker demo-generation --worker-class rq.SimpleWorker --url redis://localhost:6380/0
+```
+
+로컬 macOS 개발에서는 기본 RQ worker의 fork 방식이 `librosa`/오디오 분석 단계에서 멈출 수 있어 `rq.SimpleWorker`를 사용합니다.
+
+보컬 합성은 OpenAI Speech API를 사용하므로 `OPENAI_API_KEY`가 필요합니다.
+기본 TTS 모델은 `OPENAI_TTS_MODEL=gpt-4o-mini-tts`입니다.
+MP3/M4A 등 비-WAV 비트 처리와 MP3 데모 출력을 위해 로컬 `ffmpeg` 설치가 필요합니다.
+
 ### 3. Local Infrastructure
 
 Docker Compose로 PostgreSQL, Redis만 실행합니다. 프론트엔드와 백엔드는 로컬에서 직접 실행합니다.
