@@ -89,6 +89,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzingRhyme, setIsAnalyzingRhyme] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy");
+  const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
@@ -153,6 +154,7 @@ export default function Home() {
     setIsLoading(true);
     setError("");
     setCopyLabel("Copy");
+    setEditingLineIndex(null);
 
     try {
       const response =
@@ -170,6 +172,7 @@ export default function Home() {
       setLyricLines(parseLyricLines(data.lyrics));
       setRhymeAnalysis(data.rhymeAnalysis ?? []);
       setRhymeError("");
+      setEditingLineIndex(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
@@ -185,6 +188,7 @@ export default function Home() {
     setError("");
     setRhymeError("");
     setCopyLabel("Copy");
+    setEditingLineIndex(null);
   }
 
   async function requestBeatGeneration() {
@@ -307,6 +311,7 @@ export default function Home() {
                           setRhymeAnalysis([]);
                           setError("");
                           setRhymeError("");
+                          setEditingLineIndex(null);
                         }}
                         className="mt-2 block w-full border border-[#f5b950]/45 bg-[#130806]/88 px-3 py-3 text-sm font-semibold text-[#fff3ca] outline-none transition file:mr-4 file:border-0 file:bg-[#f5b950] file:px-3 file:py-2 file:text-sm file:font-black file:text-[#170906] hover:border-[#f5b950]/70 focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.18)]"
                         aria-label="Beat file"
@@ -330,6 +335,7 @@ export default function Home() {
                           setRhymeAnalysis([]);
                           setError("");
                           setRhymeError("");
+                          setEditingLineIndex(null);
                         }}
                         inputMode="numeric"
                         className="mt-2 h-16 w-full border border-[#f5b950]/45 bg-[#130806]/88 px-4 text-4xl font-black text-[#fff3ca] outline-none transition placeholder:text-[#7b5130] focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.18)]"
@@ -457,29 +463,40 @@ export default function Home() {
                     </div>
                     {lyricLines.map((line, index) => {
                       const analysis = rhymeAnalysis[index];
+                      const isEditing = editingLineIndex === index;
 
                       return (
                         <div
                           key={index}
                           className="border border-[#f5b950]/20 bg-[#130806]/58 px-3 py-3"
                         >
-                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div className="min-w-0 flex-1 font-mono text-sm leading-7 text-[#fff6df]">
-                              {renderHighlightedLine(line, analysis)}
-                            </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            {isEditing ? (
+                              <textarea
+                                value={line}
+                                rows={1}
+                                onChange={(event) => updateLyricLine(index, event.target.value)}
+                                className="block min-h-10 min-w-0 flex-1 resize-y border border-[#f5b950]/25 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-[#fff6df] outline-none transition focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.14)]"
+                                aria-label={`Lyric line ${index + 1}`}
+                              />
+                            ) : (
+                              <div className="min-w-0 flex-1 font-mono text-sm leading-7 text-[#fff6df]">
+                                {renderHighlightedLine(line, analysis)}
+                              </div>
+                            )}
                             <span className="shrink-0 border border-[#f5b950]/25 bg-black/25 px-2 py-1 text-[11px] font-bold text-[#b9865f]">
                               {analysis?.rhymeGroup == null
                                 ? `score ${formatScore(analysis?.score)}`
                                 : `R${analysis.rhymeGroup + 1} · ${formatScore(analysis.score)}`}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingLineIndex(isEditing ? null : index)}
+                              className="h-8 shrink-0 border border-[#f5b950]/45 px-3 text-xs font-bold text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
+                            >
+                              {isEditing ? "완료" : "수정"}
+                            </button>
                           </div>
-                          <textarea
-                            value={line}
-                            rows={1}
-                            onChange={(event) => updateLyricLine(index, event.target.value)}
-                            className="block min-h-10 w-full resize-y border border-[#f5b950]/25 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-[#fff6df] outline-none transition focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.14)]"
-                            aria-label={`Lyric line ${index + 1}`}
-                          />
                         </div>
                       );
                     })}
