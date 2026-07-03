@@ -160,18 +160,42 @@ def _generate_openai_verse(bpm: int) -> str:
             detail="OPENAI_API_KEY is not configured.",
         )
 
-    payload = {
+    payload = _build_openai_payload(bpm)
+    data = _request_openai_response(payload)
+
+    generated = _extract_openai_text(data)
+    if not generated:
+        raise HTTPException(status_code=502, detail=_describe_empty_openai_response(data))
+
+    lines = [line.strip() for line in generated.splitlines() if line.strip()]
+    if lines and lines[0].lower().startswith("[verse"):
+        lines = lines[1:]
+    return "[Verse]\n" + "\n".join(lines[:8])
+
+
+def _build_openai_payload(bpm: int) -> dict:
+    payload: dict = {
         "model": settings.openai_model,
         "instructions": (
-            "You write rap lyrics. Return only an 8-line verse. "
+            "You write Korean rap lyrics. Return only an 8-line verse in Korean. "
+            "Use natural Korean hip-hop phrasing, with English words only as occasional ad-libs. "
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (
-            f"Write an 8-bar rap verse for BPM {bpm}. "
-            "Each line should feel like one bar and match the BPM's breathing and line length."
+            f"BPM {bpm}에 맞는 한국어 랩 8마디 벌스를 써줘. "
+            "각 줄은 한 마디처럼 호흡이 맞아야 하고, 전체 가사의 대부분은 한국어여야 해."
         ),
-        "max_output_tokens": 220,
+        "max_output_tokens": 500,
     }
+
+    if settings.openai_model.startswith("gpt-5"):
+        payload["reasoning"] = {"effort": "minimal"}
+        payload["text"] = {"verbosity": "low"}
+
+    return payload
+
+
+def _request_openai_response(payload: dict) -> dict:
     request = urllib.request.Request(
         "https://api.openai.com/v1/responses",
         data=json.dumps(payload).encode("utf-8"),
@@ -192,15 +216,7 @@ def _generate_openai_verse(bpm: int) -> str:
         raise HTTPException(status_code=502, detail=f"OpenAI request failed: {exc}") from exc
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="OpenAI generation timed out.") from exc
-
-    generated = _extract_openai_text(data)
-    if not generated:
-        raise HTTPException(status_code=502, detail="OpenAI returned an empty lyric.")
-
-    lines = [line.strip() for line in generated.splitlines() if line.strip()]
-    if lines and lines[0].lower().startswith("[verse"):
-        lines = lines[1:]
-    return "[Verse]\n" + "\n".join(lines[:8])
+    return data
 
 
 def _extract_openai_text(data: dict) -> str:
@@ -215,3 +231,25 @@ def _extract_openai_text(data: dict) -> str:
             if isinstance(text, str):
                 chunks.append(text)
     return "\n".join(chunks).strip()
+
+
+def _describe_empty_openai_response(data: dict) -> str:
+    status = data.get("status")
+    incomplete_details = data.get("incomplete_details")
+    if incomplete_details:
+        return f"OpenAI returned no lyric text. status={status}, incomplete_details={incomplete_details}"
+
+    output_types: list[str] = []
+    for item in data.get("output", []):
+        item_type = item.get("type")
+        if isinstance(item_type, str):
+            output_types.append(item_type)
+        for content in item.get("content", []):
+            content_type = content.get("type")
+            if isinstance(content_type, str):
+                output_types.append(content_type)
+
+    if output_types:
+        return f"OpenAI returned no lyric text. status={status}, output_types={output_types}"
+
+    return f"OpenAI returned no lyric text. status={status}"

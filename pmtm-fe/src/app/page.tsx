@@ -20,6 +20,10 @@ type LyricModel =
   | "qwen-exp-002-grpo"
   | "openai";
 
+type ApiErrorResponse = {
+  detail?: unknown;
+};
+
 const BPM_PRESETS = [80, 90, 120, 140];
 const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> = [
   {
@@ -87,7 +91,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const message = await response.text();
+        const message = await readErrorMessage(response);
         throw new Error(message || "가사 생성 요청에 실패했습니다.");
       }
 
@@ -279,4 +283,22 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+async function readErrorMessage(response: Response) {
+  const fallback = await response.text();
+  if (!fallback) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(fallback) as ApiErrorResponse;
+    if (typeof parsed.detail === "string") {
+      return parsed.detail;
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
 }
