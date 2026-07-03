@@ -1,17 +1,38 @@
 import json
+import math
+import os
+import re
 import subprocess
+import sys
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi import File
+from fastapi import Form
 from fastapi import HTTPException
+from fastapi import UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.schemas import LyricGenerateRequest, LyricGenerateResponse
+from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
+from app.schemas import RhymeLineAnalysis
 
 settings = get_settings()
+MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
+RHYME_GROUP_THRESHOLD = 0.72
+SUPPORTED_BEAT_CONTENT_TYPES = {
+    "audio/aac",
+    "audio/flac",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/x-m4a",
+    "audio/x-wav",
+}
 
 app = FastAPI(
     title=settings.app_name,
@@ -36,42 +57,8 @@ def health_check() -> dict[str, str]:
 @app.post("/api/v1/lyrics/generate", response_model=LyricGenerateResponse)
 def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
     bpm = payload.bpm
-    if payload.llm == "openai":
-        lyrics = _generate_openai_verse(bpm)
-        notes = [
-            f"{settings.openai_model} 생성 결과입니다.",
-            "OpenAI Responses API를 사용했습니다.",
-        ]
-    elif payload.llm == "qwen-exp-001-sft":
-        lyrics = _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen")
-        notes = [
-            "Qwen/Qwen2.5-1.5B + exp-001 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/sft_rap_qwen을 사용했습니다.",
-        ]
-    elif payload.llm == "qwen-exp-001-grpo":
-        lyrics = _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen")
-        notes = [
-            "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
-        ]
-    elif payload.llm == "qwen-exp-002-sft":
-        lyrics = _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen")
-        notes = [
-            "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
-        ]
-    elif payload.llm == "qwen-exp-002-grpo":
-        lyrics = _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen")
-        notes = [
-            "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
-        ]
-    else:
-        lyrics = _generate_qwen_verse(bpm)
-        notes = [
-            "Qwen/Qwen2.5-1.5B 베이스 모델 생성 결과입니다.",
-            "LoRA 어댑터를 사용하지 않은 순수 Qwen 추론입니다.",
-        ]
+    lyrics, notes = _generate_verse_for_model(bpm, payload.llm)
+    lyric_lines = _extract_lyric_lines(lyrics)
 
     return LyricGenerateResponse(
         title=f"{bpm} BPM Verse",
@@ -79,7 +66,210 @@ def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
         llm=payload.llm,
         lyrics=lyrics,
         notes=notes,
+        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines),
     )
+
+
+@app.post("/api/v1/lyrics/generate-from-beat", response_model=LyricGenerateResponse)
+async def generate_lyrics_from_beat(
+    llm: LyricModel = Form("qwen-local"),
+    beat: UploadFile = File(...),
+) -> LyricGenerateResponse:
+    beat_path = await _save_uploaded_beat(beat)
+    try:
+        bpm = _analyze_beat_bpm(beat_path)
+    finally:
+        try:
+            os.unlink(beat_path)
+        except FileNotFoundError:
+            pass
+
+    lyrics, notes = _generate_verse_for_model(bpm, llm)
+    notes = ["librosa tempo 분석값을 BPM으로 사용했습니다.", *notes]
+    lyric_lines = _extract_lyric_lines(lyrics)
+
+    return LyricGenerateResponse(
+        title=f"{bpm} BPM Verse",
+        bpm=bpm,
+        llm=llm,
+        lyrics=lyrics,
+        notes=notes,
+        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines),
+    )
+
+
+@app.post("/api/v1/lyrics/analyze-rhyme", response_model=list[RhymeLineAnalysis])
+def analyze_rhyme(payload: RhymeAnalyzeRequest) -> list[RhymeLineAnalysis]:
+    return _analyze_rhyme_lines(payload.lines)
+
+
+def _generate_verse_for_model(bpm: int, llm: LyricModel) -> tuple[str, list[str]]:
+    if llm == "openai":
+        return _generate_openai_verse(bpm), [
+            f"{settings.openai_model} 생성 결과입니다.",
+            "OpenAI Responses API를 사용했습니다.",
+        ]
+    if llm == "qwen-exp-001-sft":
+        return _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen"), [
+            "Qwen/Qwen2.5-1.5B + exp-001 SFT 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-001/sft_rap_qwen을 사용했습니다.",
+        ]
+    if llm == "qwen-exp-001-grpo":
+        return _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen"), [
+            "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
+        ]
+    if llm == "qwen-exp-002-sft":
+        return _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen"), [
+            "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
+        ]
+    if llm == "qwen-exp-002-grpo":
+        return _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen"), [
+            "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
+            "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
+        ]
+
+    return _generate_qwen_verse(bpm), [
+        "Qwen/Qwen2.5-1.5B 베이스 모델 생성 결과입니다.",
+        "LoRA 어댑터를 사용하지 않은 순수 Qwen 추론입니다.",
+    ]
+
+
+def _extract_lyric_lines(lyrics: str) -> list[str]:
+    return [
+        line.strip()
+        for line in lyrics.splitlines()
+        if line.strip() and not line.strip().lower().startswith("[verse")
+    ]
+
+
+def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
+    clean_lines = [line.strip() for line in lines[:32]]
+    line_count = len(clean_lines)
+    parents = list(range(line_count))
+    scores = [0.0] * line_count
+
+    def find(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parents[right_root] = left_root
+
+    get_line_rhyme_score = _load_rhyme_score_func()
+    for left in range(line_count):
+        for right in range(left + 1, line_count):
+            score = get_line_rhyme_score(clean_lines[left], clean_lines[right])
+            scores[left] = max(scores[left], score)
+            scores[right] = max(scores[right], score)
+            if score >= RHYME_GROUP_THRESHOLD:
+                union(left, right)
+
+    root_counts: dict[int, int] = {}
+    for index in range(line_count):
+        root = find(index)
+        root_counts[root] = root_counts.get(root, 0) + 1
+
+    group_ids: dict[int, int] = {}
+    next_group_id = 0
+    analyses: list[RhymeLineAnalysis] = []
+    for index, line in enumerate(clean_lines):
+        root = find(index)
+        rhyme_group = None
+        if root_counts[root] > 1:
+            if root not in group_ids:
+                group_ids[root] = next_group_id
+                next_group_id += 1
+            rhyme_group = group_ids[root]
+
+        highlight_start, highlight_end = _find_rhyme_highlight(line)
+        analyses.append(
+            RhymeLineAnalysis(
+                text=line,
+                rhymeGroup=rhyme_group,
+                score=round(scores[index], 4),
+                highlightStart=highlight_start,
+                highlightEnd=highlight_end,
+            )
+        )
+
+    return analyses
+
+
+def _load_rhyme_score_func():
+    project_root = Path(__file__).resolve().parents[2]
+    scoring_root = project_root / "pmtm-ai" / "app" / "rhyme_scoring"
+    if str(scoring_root) not in sys.path:
+        sys.path.insert(0, str(scoring_root))
+
+    from rhyme_engine import get_line_rhyme_score
+
+    return get_line_rhyme_score
+
+
+def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:
+    matches = list(re.finditer(r"[가-힣A-Za-z]+", line))
+    if not matches:
+        return None, None
+    match = matches[-1]
+    return match.start(), match.end()
+
+
+async def _save_uploaded_beat(beat: UploadFile) -> str:
+    if beat.content_type not in SUPPORTED_BEAT_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail="지원하지 않는 오디오 형식입니다.")
+
+    suffix = Path(beat.filename or "").suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        total = 0
+        while chunk := await beat.read(1024 * 1024):
+            total += len(chunk)
+            if total > MAX_BEAT_UPLOAD_BYTES:
+                tmp_path = tmp.name
+                tmp.close()
+                os.unlink(tmp_path)
+                raise HTTPException(status_code=400, detail="비트 파일은 20MB 이하로 업로드해주세요.")
+            tmp.write(chunk)
+
+        tmp_path = tmp.name
+
+    if total == 0:
+        os.unlink(tmp_path)
+        raise HTTPException(status_code=400, detail="비트 파일이 비어 있습니다.")
+
+    return tmp_path
+
+
+def _analyze_beat_bpm(file_path: str) -> int:
+    try:
+        import librosa
+        import numpy as np
+
+        y, sr = librosa.load(file_path, sr=None, mono=True, duration=60)
+        if len(y) == 0:
+            raise ValueError("empty audio")
+
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        tempo_value = float(np.asarray(tempo).reshape(-1)[0])
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="BPM 분석 실패") from exc
+
+    if not math.isfinite(tempo_value):
+        raise HTTPException(status_code=400, detail="BPM 분석 실패")
+
+    bpm = round(tempo_value)
+    if bpm < 40 or bpm > 220:
+        raise HTTPException(status_code=400, detail="BPM 분석 실패")
+
+    return bpm
 
 
 def _generate_qwen_verse(bpm: int, adapter: str | None = None) -> str:
