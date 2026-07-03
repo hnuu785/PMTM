@@ -23,7 +23,8 @@ npm run dev
 
 ### 2. Backend
 
-백엔드는 로컬에서 실행합니다. 가사 생성은 `pmtm-ai/venv`의 순수 `Qwen/Qwen2.5-1.5B` 추론 CLI를 호출합니다.
+백엔드는 로컬에서 실행합니다. 가사 생성은 업로드한 비트 파일을 `librosa`로 분석해 BPM을 추정한 뒤,
+`pmtm-ai/venv`의 순수 `Qwen/Qwen2.5-1.5B` 추론 CLI를 호출합니다.
 OpenAI 선택지를 사용하려면 `OPENAI_API_KEY`를 설정합니다.
 
 ```bash
@@ -35,6 +36,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
 ```
 
 기본 주소: `http://localhost:8100`
+
+비트 기반 생성 API는 `POST /api/v1/lyrics/generate-from-beat`를 사용합니다.
+요청 형식은 `multipart/form-data`이며 `beat` 오디오 파일과 `llm` 값을 보냅니다.
+지원 형식은 MP3, WAV, M4A/MP4, AAC, FLAC이고 파일은 임시 분석 후 저장하지 않습니다.
 
 ### 3. Local Infrastructure
 
