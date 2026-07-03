@@ -11,6 +11,7 @@
 - `data`: 학습/평가용 입력 데이터
 - `models`: 베이스 모델, 어댑터, 내보낸 모델 자산
 - `outputs`: 학습 중간 산출물과 체크포인트
+- `docs/training-pipeline.md`: 학습 파이프라인 도식
 - `train_colab.ipynb`: Colab 실행 노트북
 - `CHANGES.md`: 최근 변경 기록
 

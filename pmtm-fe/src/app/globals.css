@@ -14,6 +14,7 @@ html {
 
 body {
   margin: 0;
+  background: #130806;
   font-family:
     Arial,
     "Apple SD Gothic Neo",
@@ -24,4 +25,56 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.pmtm-stage {
+  background:
+    linear-gradient(90deg, rgba(255, 191, 94, 0.06) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 191, 94, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 88% 16%, rgba(255, 122, 22, 0.5), transparent 34rem),
+    radial-gradient(circle at 22% 82%, rgba(82, 212, 200, 0.13), transparent 24rem),
+    linear-gradient(135deg, #0c0504 0%, #190806 38%, #441106 72%, #7b2308 100%);
+  background-size:
+    56px 56px,
+    56px 56px,
+    auto,
+    auto,
+    auto;
+  position: relative;
+}
+
+.pmtm-stage::before {
+  background:
+    linear-gradient(110deg, transparent 0 18%, rgba(0, 0, 0, 0.28) 18% 19%, transparent 19% 100%),
+    linear-gradient(74deg, transparent 0 68%, rgba(255, 184, 74, 0.08) 68% 69%, transparent 69% 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 5px);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.pmtm-stage > * {
+  position: relative;
+}
+
+.pmtm-panel {
+  background:
+    linear-gradient(180deg, rgba(31, 13, 9, 0.94), rgba(14, 6, 5, 0.94)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px);
+  border: 1px solid rgba(245, 185, 80, 0.28);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 227, 167, 0.08);
+}
+
+.lyric-paper {
+  background:
+    linear-gradient(90deg, rgba(245, 185, 80, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 32px),
+    linear-gradient(180deg, rgba(18, 8, 6, 0.96), rgba(8, 5, 5, 0.96));
+  background-size:
+    100% 100%,
+    100% 32px,
+    auto;
 }
