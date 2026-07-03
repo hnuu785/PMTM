@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2100" viewBox="0 0 1800 2100">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .section { font: 700 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 12; }
+      .box-blue { fill: #eff6ff; stroke: #93c5fd; stroke-width: 2; rx: 12; }
+      .box-green { fill: #ecfdf5; stroke: #86efac; stroke-width: 2; rx: 12; }
+      .box-amber { fill: #fffbeb; stroke: #fcd34d; stroke-width: 2; rx: 12; }
+      .box-rose { fill: #fff1f2; stroke: #fda4af; stroke-width: 2; rx: 12; }
+      .box-purple { fill: #f5f3ff; stroke: #c4b5fd; stroke-width: 2; rx: 12; }
+      .label { font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .body { font: 400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
+      .small { font: 400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .edge { stroke: #334155; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .edge-dashed { stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 8 8; fill: none; marker-end: url(#arrow); }
+      .note { fill: #ffffff; stroke: #e2e8f0; stroke-width: 2; rx: 10; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1800" height="2100"/>
+
+  <text x="80" y="80" class="title">PMTM AI Training Pipeline</text>
+  <text x="80" y="120" class="subtitle">현재 pmtm-ai 코드 기준 학습 실행 흐름과 데이터/모델 산출물 흐름</text>
+
+  <rect x="80" y="155" width="1640" height="120" class="note"/>
+  <text x="115" y="195" class="label">Assumptions</text>
+  <text x="115" y="230" class="body">• 엔트리포인트: run_training.py  • 기본 모델: Qwen/Qwen2.5-1.5B  • 실험명: PMTM_EXPERIMENT_NAME</text>
+  <text x="115" y="258" class="body">• 경로 override: PMTM_DATA_DIR, PMTM_MODELS_DIR, PMTM_OUTPUTS_DIR  • 모델 override: PMTM_MODEL_ID</text>
+
+  <text x="80" y="340" class="section">1. End-to-End Flow</text>
+
+  <g id="e2e">
+    <rect x="80" y="380" width="270" height="100" class="box-blue"/>
+    <text x="110" y="418" class="label">CLI</text>
+    <text x="110" y="450" class="body">python run_training.py</text>
+    <text x="110" y="474" class="small">--stage all|sft|sanity|grpo|eval</text>
+
+    <rect x="430" y="380" width="270" height="100" class="box"/>
+    <text x="460" y="418" class="label">app.paths</text>
+    <text x="460" y="450" class="body">MODEL_ID / DATA_DIR</text>
+    <text x="460" y="474" class="small">MODELS_DIR / OUTPUTS_DIR</text>
+
+    <rect x="780" y="380" width="270" height="100" class="box"/>
+    <text x="810" y="418" class="label">check_gpu()</text>
+    <text x="810" y="450" class="body">CUDA, memory</text>
+    <text x="810" y="474" class="small">bf16 지원 여부 확인</text>
+
+    <rect x="1130" y="380" width="270" height="100" class="box-green"/>
+    <text x="1160" y="418" class="label">phonetics test</text>
+    <text x="1160" y="450" class="body">tests/test_phonetics.py</text>
+    <text x="1160" y="474" class="small">--skip-phonetics로 생략 가능</text>
+
+    <rect x="80" y="570" width="270" height="110" class="box-amber"/>
+    <text x="110" y="608" class="label">prepare_dataset()</text>
+    <text x="110" y="640" class="body">prepare_dataset.py</text>
+    <text x="110" y="664" class="small">CSV → prepared_dataset.jsonl</text>
+
+    <rect x="430" y="570" width="270" height="110" class="box-purple"/>
+    <text x="460" y="608" class="label">run_sft()</text>
+    <text x="460" y="640" class="body">sft_qwen.train_sft</text>
+    <text x="460" y="664" class="small">4-bit NF4 + LoRA</text>
+
+    <rect x="780" y="570" width="270" height="110" class="box"/>
+    <text x="810" y="608" class="label">loss plots</text>
+    <text x="810" y="640" class="body">plot_training_loss.py</text>
+    <text x="810" y="664" class="small">checkpoint trainer_state.json</text>
+
+    <rect x="1130" y="570" width="270" height="110" class="box-rose"/>
+    <text x="1160" y="608" class="label">reward sanity</text>
+    <text x="1160" y="640" class="body">SFT 샘플 20개 생성</text>
+    <text x="1160" y="664" class="small">reward mean/stdev 확인</text>
+
+    <rect x="80" y="760" width="270" height="110" class="box-purple"/>
+    <text x="110" y="798" class="label">run_grpo()</text>
+    <text x="110" y="830" class="body">grpo_qwen.train_grpo</text>
+    <text x="110" y="854" class="small">SFT adapter에서 시작</text>
+
+    <rect x="430" y="760" width="270" height="110" class="box"/>
+    <text x="460" y="798" class="label">loss plots</text>
+    <text x="460" y="830" class="body">SFT/GRPO loss PNG</text>
+    <text x="460" y="854" class="small">outputs[/experiment]/plots</text>
+
+    <rect x="780" y="760" width="270" height="110" class="box-green"/>
+    <text x="810" y="798" class="label">run_eval()</text>
+    <text x="810" y="830" class="body">샘플 프롬프트 생성</text>
+    <text x="810" y="854" class="small">GRPO 없으면 SFT fallback</text>
+
+    <path class="edge" d="M350 430 L430 430"/>
+    <path class="edge" d="M700 430 L780 430"/>
+    <path class="edge" d="M1050 430 L1130 430"/>
+    <path class="edge" d="M1265 480 C1265 530 215 520 215 570"/>
+    <path class="edge" d="M350 625 L430 625"/>
+    <path class="edge" d="M700 625 L780 625"/>
+    <path class="edge" d="M1050 625 L1130 625"/>
+    <path class="edge" d="M1265 680 C1265 735 215 705 215 760"/>
+    <path class="edge" d="M350 815 L430 815"/>
+    <path class="edge" d="M700 815 L780 815"/>
+
+    <path class="edge-dashed" d="M215 480 C215 525 215 525 215 570"/>
+    <path class="edge-dashed" d="M215 480 C215 535 565 520 565 570"/>
+    <path class="edge-dashed" d="M215 480 C215 700 215 700 215 760"/>
+    <path class="edge-dashed" d="M215 480 C215 735 915 710 915 760"/>
+    <text x="1085" y="790" class="small">점선: --stage로 특정 단계 직접 실행</text>
+  </g>
+
+  <text x="80" y="980" class="section">2. Data And Model Flow</text>
+
+  <g id="data-model">
+    <rect x="80" y="1020" width="330" height="120" class="box-amber"/>
+    <text x="110" y="1058" class="label">Raw CSV</text>
+    <text x="110" y="1090" class="body">data/merged_final_dataset_analyzed.csv</text>
+    <text x="110" y="1116" class="small">artist, lyrics, audio features, rhyme_density</text>
+
+    <rect x="500" y="1020" width="300" height="120" class="box-amber"/>
+    <text x="530" y="1058" class="label">prepare_dataset.py</text>
+    <text x="530" y="1090" class="body">clean_lines → make_chunks</text>
+    <text x="530" y="1116" class="small">8/16마디 SFT 샘플 생성</text>
+
+    <rect x="890" y="1020" width="300" height="120" class="box-amber"/>
+    <text x="920" y="1058" class="label">Prepared JSONL</text>
+    <text x="920" y="1090" class="body">data/prepared_dataset.jsonl</text>
+    <text x="920" y="1116" class="small">{ text }</text>
+
+    <rect x="80" y="1235" width="330" height="120" class="box-blue"/>
+    <text x="110" y="1273" class="label">Base Model</text>
+    <text x="110" y="1305" class="body">MODEL_ID</text>
+    <text x="110" y="1331" class="small">Qwen/Qwen2.5-1.5B 기본값</text>
+
+    <rect x="500" y="1235" width="300" height="120" class="box-purple"/>
+    <text x="530" y="1273" class="label">SFT Training</text>
+    <text x="530" y="1305" class="body">sft_qwen.py</text>
+    <text x="530" y="1331" class="small">4-bit NF4 + LoRA + Trainer</text>
+
+    <rect x="890" y="1210" width="330" height="110" class="box-green"/>
+    <text x="920" y="1248" class="label">SFT Adapter</text>
+    <text x="920" y="1280" class="body">models[/experiment]/sft_rap_qwen</text>
+    <text x="920" y="1304" class="small">LoRA adapter + tokenizer</text>
+
+    <rect x="890" y="1355" width="330" height="110" class="box"/>
+    <text x="920" y="1393" class="label">SFT Checkpoints</text>
+    <text x="920" y="1425" class="body">outputs[/experiment]/sft_qwen</text>
+    <text x="920" y="1449" class="small">checkpoint-*</text>
+
+    <rect x="80" y="1540" width="330" height="130" class="box-amber"/>
+    <text x="110" y="1578" class="label">GRPO Prompts</text>
+    <text x="110" y="1610" class="body">build_prompts()</text>
+    <text x="110" y="1636" class="small">rhyme_density 상위 TOP_N=200</text>
+    <text x="110" y="1660" class="small">각 곡 8/16마디 prompt</text>
+
+    <rect x="500" y="1540" width="300" height="130" class="box-rose"/>
+    <text x="530" y="1578" class="label">Reward Function</text>
+    <text x="530" y="1610" class="body">rhyme_reward()</text>
+    <text x="530" y="1636" class="small">라임 + 길이 + [End]</text>
+    <text x="530" y="1660" class="small">중복/연속반복 penalty</text>
+
+    <rect x="890" y="1540" width="330" height="130" class="box-purple"/>
+    <text x="920" y="1578" class="label">GRPO Training</text>
+    <text x="920" y="1610" class="body">GRPOTrainer</text>
+    <text x="920" y="1636" class="small">SFT adapter에서 시작</text>
+    <text x="920" y="1660" class="small">num_generations=4</text>
+
+    <rect x="1310" y="1515" width="330" height="110" class="box-green"/>
+    <text x="1340" y="1553" class="label">GRPO Adapter</text>
+    <text x="1340" y="1585" class="body">models[/experiment]/grpo_rap_qwen</text>
+    <text x="1340" y="1609" class="small">최종 추론 기본 adapter</text>
+
+    <rect x="1310" y="1660" width="330" height="110" class="box"/>
+    <text x="1340" y="1698" class="label">GRPO Checkpoints</text>
+    <text x="1340" y="1730" class="body">outputs[/experiment]/grpo_qwen</text>
+    <text x="1340" y="1754" class="small">checkpoint-*</text>
+
+    <rect x="890" y="1840" width="330" height="110" class="box"/>
+    <text x="920" y="1878" class="label">Loss Plots</text>
+    <text x="920" y="1910" class="body">outputs[/experiment]/plots</text>
+    <text x="920" y="1934" class="small">sft_qwen_loss.png, grpo_qwen_loss.png</text>
+
+    <rect x="1310" y="1840" width="330" height="110" class="box-blue"/>
+    <text x="1340" y="1878" class="label">Inference</text>
+    <text x="1340" y="1910" class="body">app.inference.generate</text>
+    <text x="1340" y="1934" class="small">default adapter: grpo_rap_qwen</text>
+
+    <path class="edge" d="M410 1080 L500 1080"/>
+    <path class="edge" d="M800 1080 L890 1080"/>
+    <path class="edge" d="M1040 1140 C1040 1190 650 1185 650 1235"/>
+    <path class="edge" d="M410 1295 L500 1295"/>
+    <path class="edge" d="M800 1295 L890 1265"/>
+    <path class="edge" d="M800 1295 L890 1410"/>
+    <path class="edge" d="M245 1140 C245 1300 245 1380 245 1540"/>
+    <path class="edge" d="M1220 1265 C1280 1265 1280 1605 890 1605"/>
+    <path class="edge" d="M410 1605 L500 1605"/>
+    <path class="edge" d="M800 1605 L890 1605"/>
+    <path class="edge" d="M410 1295 C460 1295 460 1500 890 1605"/>
+    <path class="edge" d="M1220 1605 L1310 1570"/>
+    <path class="edge" d="M1220 1605 L1310 1715"/>
+    <path class="edge" d="M1055 1465 C1055 1575 1055 1735 1055 1840"/>
+    <path class="edge" d="M1475 1770 C1475 1810 1055 1805 1055 1840"/>
+    <path class="edge" d="M1475 1625 L1475 1840"/>
+  </g>
+
+  <text x="80" y="2030" class="small">Generated from pmtm-ai/docs/training-pipeline.md. 코드 실행 경로는 변경하지 않고 문서용 이미지로만 저장됨.</text>
+</svg>
