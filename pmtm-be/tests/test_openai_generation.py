@@ -1,11 +1,13 @@
 import unittest
+import wave
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
+from app import demo_pipeline
 from app import main
 
 
@@ -106,6 +108,193 @@ class BeatGenerationTests(unittest.TestCase):
         self.assertEqual(response.json()["detail"], "비트 파일이 비어 있습니다.")
 
 
+class DemoGenerationTests(unittest.TestCase):
+    def test_generate_demo_from_beat_enqueues_job(self):
+        client = TestClient(main.app)
+
+        with (
+            TemporaryDirectory() as storage_dir,
+            mock.patch.object(main, "DEMO_STORAGE_ROOT", Path(storage_dir)),
+            mock.patch.object(main, "_enqueue_demo_job") as enqueue,
+        ):
+            response = client.post(
+                "/api/v1/demos/generate-from-beat",
+                data={
+                    "llm": "qwen-local",
+                    "genre": "trap",
+                    "mood": "dark",
+                    "demoLengthSec": "30",
+                    "voice": "verse",
+                },
+                files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "queued")
+        self.assertTrue(body["jobId"])
+        enqueue.assert_called_once()
+        self.assertEqual(enqueue.call_args.args[3], "qwen-local")
+        self.assertEqual(enqueue.call_args.args[4], "trap")
+        self.assertEqual(enqueue.call_args.args[5], "dark")
+        self.assertEqual(enqueue.call_args.args[6], 30)
+        self.assertEqual(enqueue.call_args.args[7], "verse")
+
+    def test_generate_demo_rejects_bad_length(self):
+        client = TestClient(main.app)
+
+        response = client.post(
+            "/api/v1/demos/generate-from-beat",
+            data={"demoLengthSec": "45", "voice": "verse"},
+            files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "데모 길이는 30초 또는 60초만 지원합니다.")
+
+    def test_demo_status_serializes_redis_payload(self):
+        client = TestClient(main.app)
+        redis_client = mock.Mock()
+        redis_client.hgetall.return_value = {
+            "jobId": "abc",
+            "status": "succeeded",
+            "progress": "1.0",
+            "bpm": "92",
+            "lyrics": "[Verse]\n가사",
+            "notes": '["done"]',
+            "audioUrl": "/api/v1/demos/abc/audio",
+        }
+
+        with mock.patch.object(main, "_get_redis_client", return_value=redis_client):
+            response = client.get("/api/v1/demos/abc")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "succeeded")
+        self.assertEqual(body["bpm"], 92)
+        self.assertEqual(body["notes"], ["done"])
+        self.assertEqual(body["audioUrl"], "/api/v1/demos/abc/audio")
+        self.assertIn("workerAvailable", body)
+
+    def test_demo_status_warns_when_queued_without_worker(self):
+        client = TestClient(main.app)
+        redis_client = mock.Mock()
+        redis_client.hgetall.return_value = {
+            "jobId": "abc",
+            "status": "queued",
+            "progress": "0.0",
+            "notes": '["queued"]',
+        }
+
+        with (
+            mock.patch.object(main, "_get_redis_client", return_value=redis_client),
+            mock.patch.object(main, "_get_demo_worker_count", return_value=0),
+        ):
+            response = client.get("/api/v1/demos/abc")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["workerAvailable"])
+        self.assertEqual(body["workerCount"], 0)
+        self.assertIn("데모 생성 워커가 실행 중이 아닙니다.", body["notes"][-1])
+
+    def test_normalize_lyric_bars_pads_to_requested_length(self):
+        bars = demo_pipeline.normalize_lyric_bars("[Verse]\none\ntwo", 4)
+
+        self.assertEqual([bar.text for bar in bars], ["one", "two", "", ""])
+
+    def test_synthesize_vocal_track_uses_one_file_per_bar(self):
+        class FakeProvider:
+            def synthesize_line(self, _text, _voice, _bpm, _bar_duration_sec, output_path):
+                _write_test_wav(output_path, duration_sec=0.05)
+
+        with TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "vocal.wav"
+            bars = [demo_pipeline.LyricBar(1, "one"), demo_pipeline.LyricBar(2, "two")]
+
+            demo_pipeline.synthesize_vocal_track(FakeProvider(), bars, "verse", 120, output_path)
+
+            self.assertTrue(output_path.exists())
+            with wave.open(str(output_path), "rb") as audio:
+                self.assertGreater(audio.getnframes(), 0)
+
+    def test_run_demo_generation_marks_failed_when_provider_fails(self):
+        class FakeRedisClient:
+            def __init__(self):
+                self.payload = {}
+
+            def hset(self, _key, mapping):
+                self.payload.update(mapping)
+
+            def expire(self, *_args):
+                pass
+
+        fake_redis_client = FakeRedisClient()
+        fake_redis_module = mock.Mock(Redis=mock.Mock(from_url=mock.Mock(return_value=fake_redis_client)))
+
+        class FailingProvider:
+            def synthesize_line(self, *_args):
+                raise RuntimeError("provider failed")
+
+        with (
+            TemporaryDirectory() as tmp,
+            mock.patch.dict("sys.modules", {"redis": fake_redis_module}),
+            mock.patch.object(main, "_analyze_beat_bpm", return_value=90),
+            mock.patch.object(main, "_generate_verse_for_model", return_value=("[Verse]\none", ["note"])),
+            mock.patch.object(demo_pipeline, "_trim_beat_segment"),
+            mock.patch.object(demo_pipeline, "get_vocal_provider", return_value=FailingProvider()),
+        ):
+            beat_path = Path(tmp) / "beat.wav"
+            _write_test_wav(beat_path)
+            demo_pipeline.run_demo_generation(
+                "job",
+                str(beat_path),
+                tmp,
+                "qwen-local",
+                "trap",
+                "dark",
+                30,
+                "verse",
+            )
+
+        self.assertEqual(fake_redis_client.payload["status"], "failed")
+        self.assertIn("provider failed", fake_redis_client.payload["error"])
+
+    def test_run_demo_generation_uses_eight_bars_for_sixty_second_demo(self):
+        class FakeRedisClient:
+            def hset(self, *_args, **_kwargs):
+                pass
+
+            def expire(self, *_args):
+                pass
+
+        fake_redis_module = mock.Mock(Redis=mock.Mock(from_url=mock.Mock(return_value=FakeRedisClient())))
+
+        with (
+            TemporaryDirectory() as tmp,
+            mock.patch.dict("sys.modules", {"redis": fake_redis_module}),
+            mock.patch.object(main, "_analyze_beat_bpm", return_value=90),
+            mock.patch.object(main, "_generate_verse_for_model", return_value=("[Verse]\none", ["note"])) as generate,
+            mock.patch.object(demo_pipeline, "_trim_beat_segment"),
+            mock.patch.object(demo_pipeline, "get_vocal_provider", return_value=mock.Mock()),
+            mock.patch.object(demo_pipeline, "synthesize_vocal_track", side_effect=RuntimeError("stop")),
+        ):
+            beat_path = Path(tmp) / "beat.wav"
+            _write_test_wav(beat_path)
+            demo_pipeline.run_demo_generation(
+                "job",
+                str(beat_path),
+                tmp,
+                "qwen-local",
+                "trap",
+                "dark",
+                60,
+                "verse",
+            )
+
+        self.assertEqual(generate.call_args.kwargs["bars"], 8)
+
+
 class RhymeAnalysisTests(unittest.TestCase):
     def test_analyze_rhyme_handles_empty_lines(self):
         client = TestClient(main.app)
@@ -124,9 +313,30 @@ class RhymeAnalysisTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(body[0]["rhymeGroup"], body[1]["rhymeGroup"])
         self.assertIsNotNone(body[0]["rhymeGroup"])
-        self.assertGreaterEqual(body[0]["score"], 0.72)
+        self.assertGreaterEqual(body[0]["score"], main.RHYME_GROUP_THRESHOLD)
         self.assertEqual(body[0]["highlightStart"], 0)
         self.assertEqual(body[0]["highlightEnd"], 1)
+        self.assertEqual(body[0]["highlightRanges"], [{"start": 0, "end": 1}])
+
+    def test_analyze_rhyme_highlights_matching_syllable_ranges(self):
+        client = TestClient(main.app)
+
+        response = client.post("/api/v1/lyrics/analyze-rhyme", json={"lines": ["강물", "방물"]})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body[0]["highlightRanges"], [{"start": 0, "end": 2}])
+        self.assertEqual(body[1]["highlightRanges"], [{"start": 0, "end": 2}])
+
+    def test_analyze_rhyme_highlights_only_similar_syllables(self):
+        client = TestClient(main.app)
+
+        response = client.post("/api/v1/lyrics/analyze-rhyme", json={"lines": ["달려가", "날아가"]})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body[0]["highlightRanges"], [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
+        self.assertEqual(body[1]["highlightRanges"], [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
 
     def test_analyze_rhyme_leaves_different_lines_ungrouped(self):
         client = TestClient(main.app)
@@ -137,6 +347,8 @@ class RhymeAnalysisTests(unittest.TestCase):
         body = response.json()
         self.assertIsNone(body[0]["rhymeGroup"])
         self.assertIsNone(body[1]["rhymeGroup"])
+        self.assertEqual(body[0]["highlightRanges"], [])
+        self.assertEqual(body[1]["highlightRanges"], [])
 
     def test_generate_lyrics_response_includes_rhyme_analysis(self):
         client = TestClient(main.app)
@@ -199,6 +411,15 @@ class OpenAIGenerationTests(unittest.TestCase):
 
         self.assertIn("status=incomplete", message)
         self.assertIn("max_output_tokens", message)
+
+
+def _write_test_wav(path: Path, duration_sec: float = 0.1, sample_rate: int = 8000) -> None:
+    frame_count = int(duration_sec * sample_rate)
+    with wave.open(str(path), "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(sample_rate)
+        audio.writeframes(b"\x00\x00" * frame_count)
 
 
 if __name__ == "__main__":

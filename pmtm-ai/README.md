@@ -36,7 +36,7 @@ pip install -r requirements.txt
 pip install g2pk || echo "g2pk 설치 실패 - fallback 사용"
 ```
 
-기본 베이스 모델은 `Qwen/Qwen2.5-1.5B`입니다. 다른 모델을 쓰려면 `PMTM_MODEL_ID` 환경변수로 덮어쓸 수 있습니다.
+기본 베이스 모델은 `Qwen/Qwen2.5-3B-Instruct`입니다. 다른 모델을 쓰려면 `PMTM_MODEL_ID` 환경변수로 덮어쓸 수 있습니다.
 
 ```bash
 PMTM_MODEL_ID=Qwen/Qwen2.5-3B python run_training.py --stage sft

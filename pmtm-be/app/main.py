@@ -7,6 +7,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -15,14 +16,25 @@ from fastapi import Form
 from fastapi import HTTPException
 from fastapi import UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.config import get_settings
+from app.demo_pipeline import DEMO_STATUS_KEY_PREFIX
+from app.demo_pipeline import parse_status_payload
+from app.demo_pipeline import run_demo_generation
+from app.demo_pipeline import sanitize_prompt_field
+from app.demo_pipeline import validate_demo_length
+from app.demo_pipeline import validate_voice
+from app.schemas import DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
-from app.schemas import RhymeLineAnalysis
+from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
-RHYME_GROUP_THRESHOLD = 0.72
+RHYME_GROUP_THRESHOLD = 0.50
+RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
+TARGET_LYRIC_BARS = 8
+DEMO_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage" / "demos"
 SUPPORTED_BEAT_CONTENT_TYPES = {
     "audio/aac",
     "audio/flac",
@@ -103,36 +115,100 @@ def analyze_rhyme(payload: RhymeAnalyzeRequest) -> list[RhymeLineAnalysis]:
     return _analyze_rhyme_lines(payload.lines)
 
 
-def _generate_verse_for_model(bpm: int, llm: LyricModel) -> tuple[str, list[str]]:
+@app.post("/api/v1/demos/generate-from-beat", response_model=DemoGenerateResponse)
+async def generate_demo_from_beat(
+    llm: LyricModel = Form("qwen-local"),
+    genre: str = Form("Korean hip-hop"),
+    mood: str = Form("confident"),
+    demoLengthSec: int = Form(30),
+    voice: str = Form("verse"),
+    beat: UploadFile = File(...),
+) -> DemoGenerateResponse:
+    try:
+        demo_length_sec = validate_demo_length(demoLengthSec)
+        voice_preset = validate_voice(voice)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    job_id = uuid.uuid4().hex
+    work_dir = DEMO_STORAGE_ROOT / job_id
+    work_dir.mkdir(parents=True, exist_ok=False)
+    beat_path = await _save_uploaded_beat(beat, target_dir=work_dir, filename_prefix="input")
+    genre_value = sanitize_prompt_field(genre, "Korean hip-hop")
+    mood_value = sanitize_prompt_field(mood, "confident")
+    _enqueue_demo_job(job_id, beat_path, str(work_dir), llm, genre_value, mood_value, demo_length_sec, voice_preset)
+    return DemoGenerateResponse(jobId=job_id, status="queued")
+
+
+@app.get("/api/v1/demos/{job_id}", response_model=DemoStatusResponse)
+def get_demo_status(job_id: str) -> DemoStatusResponse:
+    redis_client = _get_redis_client()
+    data = redis_client.hgetall(f"{DEMO_STATUS_KEY_PREFIX}{job_id}")
+    if not data:
+        raise HTTPException(status_code=404, detail="데모 작업을 찾을 수 없습니다.")
+    payload = parse_status_payload(data)
+    _sync_failed_rq_status(redis_client, job_id, payload)
+    worker_count = _get_demo_worker_count(redis_client)
+    payload["workerAvailable"] = worker_count > 0
+    payload["workerCount"] = worker_count
+    if payload["status"] == "queued" and worker_count == 0:
+        payload["notes"] = [
+            *payload["notes"],
+            "데모 생성 워커가 실행 중이 아닙니다. rq worker demo-generation을 시작해주세요.",
+        ]
+    return DemoStatusResponse(**payload)
+
+
+@app.get("/api/v1/demos/{job_id}/audio")
+def get_demo_audio(job_id: str) -> FileResponse:
+    work_dir = DEMO_STORAGE_ROOT / job_id
+    mp3_path = work_dir / "demo.mp3"
+    wav_path = work_dir / "demo.wav"
+    if mp3_path.exists():
+        return FileResponse(mp3_path, media_type="audio/mpeg", filename=f"pmtm-demo-{job_id}.mp3")
+    if wav_path.exists():
+        return FileResponse(wav_path, media_type="audio/wav", filename=f"pmtm-demo-{job_id}.wav")
+    raise HTTPException(status_code=404, detail="데모 오디오 파일을 찾을 수 없습니다.")
+
+
+def _generate_verse_for_model(
+    bpm: int,
+    llm: LyricModel,
+    *,
+    genre: str = "Korean hip-hop",
+    mood: str = "confident",
+    bars: int = 8,
+) -> tuple[str, list[str]]:
+    bars = TARGET_LYRIC_BARS
     if llm == "openai":
-        return _generate_openai_verse(bpm), [
+        return _generate_openai_verse(bpm, genre=genre, mood=mood, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",
             "OpenAI Responses API를 사용했습니다.",
         ]
     if llm == "qwen-exp-001-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen"), [
+        return _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
             "Qwen/Qwen2.5-1.5B + exp-001 SFT 어댑터 생성 결과입니다.",
             "pmtm-ai/models/exp-001/sft_rap_qwen을 사용했습니다.",
         ]
     if llm == "qwen-exp-001-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen"), [
+        return _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
             "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
             "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
         ]
     if llm == "qwen-exp-002-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen"), [
+        return _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
             "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
             "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
         ]
     if llm == "qwen-exp-002-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen"), [
+        return _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
             "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
             "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
         ]
 
-    return _generate_qwen_verse(bpm), [
-        "Qwen/Qwen2.5-1.5B 베이스 모델 생성 결과입니다.",
-        "LoRA 어댑터를 사용하지 않은 순수 Qwen 추론입니다.",
+    return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
+        "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
+        "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
     ]
 
 
@@ -149,6 +225,7 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
     line_count = len(clean_lines)
     parents = list(range(line_count))
     scores = [0.0] * line_count
+    best_match_indexes: list[int | None] = [None] * line_count
 
     def find(index: int) -> int:
         while parents[index] != index:
@@ -162,12 +239,16 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
         if left_root != right_root:
             parents[right_root] = left_root
 
-    get_line_rhyme_score = _load_rhyme_score_func()
+    get_line_rhyme_score, calculate_syllable_score, get_phonemes = _load_rhyme_analysis_funcs()
     for left in range(line_count):
         for right in range(left + 1, line_count):
             score = get_line_rhyme_score(clean_lines[left], clean_lines[right])
-            scores[left] = max(scores[left], score)
-            scores[right] = max(scores[right], score)
+            if score > scores[left]:
+                scores[left] = score
+                best_match_indexes[left] = right
+            if score > scores[right]:
+                scores[right] = score
+                best_match_indexes[right] = left
             if score >= RHYME_GROUP_THRESHOLD:
                 union(left, right)
 
@@ -189,6 +270,15 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
             rhyme_group = group_ids[root]
 
         highlight_start, highlight_end = _find_rhyme_highlight(line)
+        highlight_ranges: list[RhymeHighlightRange] = []
+        best_match_index = best_match_indexes[index]
+        if rhyme_group is not None and best_match_index is not None:
+            highlight_ranges = _find_rhyme_highlight_ranges(
+                line,
+                clean_lines[best_match_index],
+                calculate_syllable_score,
+                get_phonemes,
+            )
         analyses.append(
             RhymeLineAnalysis(
                 text=line,
@@ -196,6 +286,7 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
                 score=round(scores[index], 4),
                 highlightStart=highlight_start,
                 highlightEnd=highlight_end,
+                highlightRanges=highlight_ranges,
             )
         )
 
@@ -203,14 +294,20 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
 
 
 def _load_rhyme_score_func():
+    get_line_rhyme_score, _, _ = _load_rhyme_analysis_funcs()
+    return get_line_rhyme_score
+
+
+def _load_rhyme_analysis_funcs():
     project_root = Path(__file__).resolve().parents[2]
     scoring_root = project_root / "pmtm-ai" / "app" / "rhyme_scoring"
     if str(scoring_root) not in sys.path:
         sys.path.insert(0, str(scoring_root))
 
-    from rhyme_engine import get_line_rhyme_score
+    from phonetics_utils import get_phonemes
+    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score
 
-    return get_line_rhyme_score
+    return get_line_rhyme_score, calculate_syllable_score, get_phonemes
 
 
 def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:
@@ -221,12 +318,78 @@ def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:
     return match.start(), match.end()
 
 
-async def _save_uploaded_beat(beat: UploadFile) -> str:
+def _find_rhyme_highlight_ranges(
+    line: str,
+    match_line: str,
+    calculate_syllable_score,
+    get_phonemes,
+) -> list[RhymeHighlightRange]:
+    token_match = _find_last_rhyme_token(line)
+    if token_match is None:
+        return []
+
+    if re.fullmatch(r"[A-Za-z]+", token_match.group(0)):
+        return [RhymeHighlightRange(start=token_match.start(), end=token_match.end())]
+
+    syllable_ranges = _find_hangul_syllable_ranges(line)
+    line_phonemes = get_phonemes(line)
+    match_phonemes = get_phonemes(match_line)
+    compare_count = min(len(line_phonemes), len(match_phonemes), len(syllable_ranges), 3)
+    if compare_count <= 0:
+        return []
+
+    ranges: list[tuple[int, int]] = []
+    for offset in range(1, compare_count + 1):
+        score = calculate_syllable_score(line_phonemes[-offset], match_phonemes[-offset])
+        if score >= RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD:
+            ranges.append(syllable_ranges[-offset])
+
+    return [
+        RhymeHighlightRange(start=start, end=end)
+        for start, end in _merge_ranges(sorted(ranges))
+    ]
+
+
+def _find_last_rhyme_token(line: str) -> re.Match[str] | None:
+    matches = list(re.finditer(r"[가-힣A-Za-z]+", line))
+    return matches[-1] if matches else None
+
+
+def _find_hangul_syllable_ranges(line: str) -> list[tuple[int, int]]:
+    return [(match.start(), match.end()) for match in re.finditer(r"[가-힣]", line)]
+
+
+def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    if not ranges:
+        return []
+
+    merged: list[tuple[int, int]] = [ranges[0]]
+    for start, end in ranges[1:]:
+        previous_start, previous_end = merged[-1]
+        if start <= previous_end:
+            merged[-1] = (previous_start, max(previous_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+async def _save_uploaded_beat(
+    beat: UploadFile,
+    target_dir: Path | None = None,
+    filename_prefix: str = "beat",
+) -> str:
     if beat.content_type not in SUPPORTED_BEAT_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="지원하지 않는 오디오 형식입니다.")
 
     suffix = Path(beat.filename or "").suffix
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+    if target_dir:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        tmp_path = str(target_dir / f"{filename_prefix}{suffix or '.audio'}")
+        tmp_file = open(tmp_path, "wb")
+    else:
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+
+    with tmp_file as tmp:
         total = 0
         while chunk := await beat.read(1024 * 1024):
             total += len(chunk)
@@ -244,6 +407,98 @@ async def _save_uploaded_beat(beat: UploadFile) -> str:
         raise HTTPException(status_code=400, detail="비트 파일이 비어 있습니다.")
 
     return tmp_path
+
+
+def _get_redis_client():
+    try:
+        import redis
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="redis package is not installed.") from exc
+
+    return redis.Redis.from_url(settings.redis_url, decode_responses=True)
+
+
+def _get_demo_worker_count(redis_client) -> int:
+    try:
+        from rq import Worker
+    except ImportError:
+        return 0
+
+    try:
+        return len(Worker.all(connection=redis_client))
+    except Exception:
+        return 0
+
+
+def _sync_failed_rq_status(redis_client, job_id: str, payload: dict) -> None:
+    if payload["status"] in {"succeeded", "failed"}:
+        return
+
+    try:
+        from rq.job import Job
+        from rq.job import JobStatus
+
+        job = Job.fetch(job_id, connection=redis_client)
+        if job.get_status() != JobStatus.FAILED:
+            return
+
+        payload["status"] = "failed"
+        payload["progress"] = 1.0
+        payload["error"] = job.exc_info or "데모 생성 worker가 작업 중 예기치 않게 종료되었습니다."
+        redis_client.hset(
+            f"{DEMO_STATUS_KEY_PREFIX}{job_id}",
+            mapping={
+                "status": payload["status"],
+                "progress": str(payload["progress"]),
+                "error": payload["error"],
+            },
+        )
+    except Exception:
+        return
+
+
+def _enqueue_demo_job(
+    job_id: str,
+    beat_path: str,
+    work_dir: str,
+    llm: LyricModel,
+    genre: str,
+    mood: str,
+    demo_length_sec: int,
+    voice: str,
+) -> None:
+    try:
+        from rq import Queue
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
+
+    redis_client = _get_redis_client()
+    status_key = f"{DEMO_STATUS_KEY_PREFIX}{job_id}"
+    redis_client.hset(
+        status_key,
+        mapping={
+            "jobId": job_id,
+            "status": "queued",
+            "progress": "0.0",
+            "notes": json.dumps(["데모 생성 작업이 대기열에 등록되었습니다."], ensure_ascii=False),
+        },
+    )
+    redis_client.expire(status_key, 60 * 60)
+
+    queue = Queue("demo-generation", connection=redis_client)
+    queue.enqueue(
+        run_demo_generation,
+        job_id,
+        beat_path,
+        work_dir,
+        llm,
+        genre,
+        mood,
+        demo_length_sec,
+        voice,
+        job_id=job_id,
+        job_timeout=60 * 10,
+    )
 
 
 def _analyze_beat_bpm(file_path: str) -> int:
@@ -272,7 +527,15 @@ def _analyze_beat_bpm(file_path: str) -> int:
     return bpm
 
 
-def _generate_qwen_verse(bpm: int, adapter: str | None = None) -> str:
+def _generate_qwen_verse(
+    bpm: int,
+    adapter: str | None = None,
+    *,
+    genre: str = "Korean hip-hop",
+    mood: str = "confident",
+    bars: int = 8,
+) -> str:
+    bars = TARGET_LYRIC_BARS
     project_root = Path(__file__).resolve().parents[2]
     ai_root = project_root / "pmtm-ai"
     python_path = Path(settings.qwen_python_path)
@@ -290,12 +553,14 @@ def _generate_qwen_verse(bpm: int, adapter: str | None = None) -> str:
                 str(python_path),
                 "-m",
                 "app.inference.generate_for_api",
-                "--base-model",
-                "Qwen/Qwen2.5-1.5B",
                 "--bpm",
                 str(bpm),
+                "--genre",
+                genre,
+                "--mood",
+                mood,
                 "--bars",
-                "8",
+                str(bars),
                 "--max-new-tokens",
                 "180",
                 "--temperature",
@@ -311,13 +576,6 @@ def _generate_qwen_verse(bpm: int, adapter: str | None = None) -> str:
                     detail=f"Qwen adapter not found: {adapter_path}",
                 )
             command.extend(["--adapter", str(adapter_path)])
-        else:
-            command.extend(
-                [
-                    "--tokenizer-model",
-                    "Qwen/Qwen2.5-1.5B-Instruct",
-                ]
-            )
 
         completed = subprocess.run(
             command,
@@ -340,17 +598,24 @@ def _generate_qwen_verse(bpm: int, adapter: str | None = None) -> str:
     lines = [line.strip() for line in generated.splitlines() if line.strip()]
     if lines and lines[0].lower().startswith("[verse"):
         lines = lines[1:]
-    return "[Verse]\n" + "\n".join(lines[:8])
+    return "[Verse]\n" + "\n".join(lines[:bars])
 
 
-def _generate_openai_verse(bpm: int) -> str:
+def _generate_openai_verse(
+    bpm: int,
+    *,
+    genre: str = "Korean hip-hop",
+    mood: str = "confident",
+    bars: int = 8,
+) -> str:
+    bars = TARGET_LYRIC_BARS
     if not settings.openai_api_key:
         raise HTTPException(
             status_code=503,
             detail="OPENAI_API_KEY is not configured.",
         )
 
-    payload = _build_openai_payload(bpm)
+    payload = _build_openai_payload(bpm, genre=genre, mood=mood, bars=bars)
     data = _request_openai_response(payload)
 
     generated = _extract_openai_text(data)
@@ -360,19 +625,26 @@ def _generate_openai_verse(bpm: int) -> str:
     lines = [line.strip() for line in generated.splitlines() if line.strip()]
     if lines and lines[0].lower().startswith("[verse"):
         lines = lines[1:]
-    return "[Verse]\n" + "\n".join(lines[:8])
+    return "[Verse]\n" + "\n".join(lines[:bars])
 
 
-def _build_openai_payload(bpm: int) -> dict:
+def _build_openai_payload(
+    bpm: int,
+    *,
+    genre: str = "Korean hip-hop",
+    mood: str = "confident",
+    bars: int = 8,
+) -> dict:
+    bars = TARGET_LYRIC_BARS
     payload: dict = {
         "model": settings.openai_model,
         "instructions": (
-            "You write Korean rap lyrics. Return only an 8-line verse in Korean. "
+            f"You write Korean rap lyrics. Return only a {bars}-line verse in Korean. "
             "Use natural Korean hip-hop phrasing, with English words only as occasional ad-libs. "
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (
-            f"BPM {bpm}에 맞는 한국어 랩 8마디 벌스를 써줘. "
+            f"BPM {bpm}, 장르 {genre}, 분위기 {mood}에 맞는 한국어 랩 {bars}마디 벌스를 써줘. "
             "각 줄은 한 마디처럼 호흡이 맞아야 하고, 전체 가사의 대부분은 한국어여야 해."
         ),
         "max_output_tokens": 500,

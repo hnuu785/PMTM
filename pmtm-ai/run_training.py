@@ -49,6 +49,7 @@ def _bootstrap_experiment_name(argv: list[str]) -> None:
 _bootstrap_experiment_name(sys.argv[1:])
 
 from app.paths import DATA_DIR, EXPERIMENT_NAME, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
+from app.lyric_prompts import build_api_messages
 
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
@@ -113,12 +114,12 @@ def prepare_dataset():
     print("=" * 60)
     print("[B1] SFT 데이터셋 준비")
     print("=" * 60)
-    out = DATA_DIR / "prepared_dataset.jsonl"
+    out = DATA_DIR / "prepared_dataset_v2.jsonl"
     if out.exists():
         n = sum(1 for _ in out.open(encoding="utf-8"))
         print(f"이미 존재: {out} ({n} samples)")
     else:
-        from app.training.prepare_dataset import main as prep_main
+        from app.training.prepare_dataset_v2 import main as prep_main
 
         prep_main()
     assert out.exists(), "SFT 데이터 생성 실패"
@@ -184,9 +185,13 @@ def reward_sanity_check():
 
     df = pd.read_csv(DATA_DIR / "merged_final_dataset_analyzed.csv")
     prompts = build_prompts(df)[:20]
+    prompt_texts = [
+        tok.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+        for prompt in prompts
+    ]
 
     tok.padding_side = "left"
-    inp = tok(prompts, return_tensors="pt", padding=True, truncation=True,
+    inp = tok(prompt_texts, return_tensors="pt", padding=True, truncation=True,
               max_length=384).to(model.device)
     with torch.no_grad():
         out = model.generate(
@@ -205,7 +210,7 @@ def reward_sanity_check():
     print(f"reward stdev  : {statistics.stdev(rewards):.4f}")
     print(f"reward min/max: {min(rewards):+.4f} / {max(rewards):+.4f}")
     print("\n--- sample prompt + completion ---")
-    print(prompts[0])
+    print(prompt_texts[0])
     print(completions[0][:600])
     print()
 
@@ -266,11 +271,12 @@ def run_eval():
     model.eval()
 
     test_prompts = [
-        "아티스트: Tablo\nBPM: 90 | 에너지: 0.65 | 댄서빌리티: 0.70 | 라우드니스: -6.0dB | 밸런스: 0.50\n[Verse 8마디]\n",
-        "아티스트: Verbal Jint\nBPM: 95 | 에너지: 0.55 | 댄서빌리티: 0.60 | 라우드니스: -7.0dB | 밸런스: 0.40\n[Verse 16마디]\n",
+        build_api_messages(bpm=90),
+        build_api_messages(bpm=95),
     ]
 
-    for p in test_prompts:
+    for messages in test_prompts:
+        p = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         print("=" * 60)
         print(p)
         print("-" * 60)

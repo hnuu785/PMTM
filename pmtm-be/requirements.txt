@@ -6,3 +6,5 @@ numpy>=2.0,<3.0
 librosa>=0.10,<1.0
 jamo>=0.4,<1.0
 pronouncing>=0.2,<1.0
+redis>=5.2,<6.0
+rq>=2.0,<3.0

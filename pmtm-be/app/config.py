@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     qwen_timeout_seconds: int = 120
     openai_api_key: str = ""
     openai_model: str = "gpt-5-mini"
+    openai_tts_model: str = "gpt-4o-mini-tts"
     openai_timeout_seconds: int = 60
 
     model_config = SettingsConfigDict(

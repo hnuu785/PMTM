@@ -24,7 +24,7 @@ npm run dev
 ### 2. Backend
 
 백엔드는 로컬에서 실행합니다. 가사 생성은 업로드한 비트 파일을 `librosa`로 분석해 BPM을 추정한 뒤,
-`pmtm-ai/venv`의 순수 `Qwen/Qwen2.5-1.5B` 추론 CLI를 호출합니다.
+`pmtm-ai/venv`의 순수 `Qwen/Qwen2.5-3B-Instruct` 추론 CLI를 호출합니다.
 OpenAI 선택지를 사용하려면 `OPENAI_API_KEY`를 설정합니다.
 
 ```bash
@@ -40,6 +40,23 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
 비트 기반 생성 API는 `POST /api/v1/lyrics/generate-from-beat`를 사용합니다.
 요청 형식은 `multipart/form-data`이며 `beat` 오디오 파일과 `llm` 값을 보냅니다.
 지원 형식은 MP3, WAV, M4A/MP4, AAC, FLAC이고 파일은 임시 분석 후 저장하지 않습니다.
+
+AI 보컬 데모 생성 API는 `POST /api/v1/demos/generate-from-beat`를 사용합니다.
+요청 형식은 `multipart/form-data`이며 `beat`, `llm`, `genre`, `mood`, `demoLengthSec`, `voice` 값을 보냅니다.
+응답의 `jobId`로 `GET /api/v1/demos/{jobId}`를 polling하고, 완료 후 `GET /api/v1/demos/{jobId}/audio`에서 데모 오디오를 받을 수 있습니다.
+데모 생성은 Redis + RQ 비동기 작업이므로 백엔드와 별도로 워커를 실행해야 합니다.
+
+```bash
+cd pmtm-be
+source .venv/bin/activate
+PYTHONPATH=. rq worker demo-generation --worker-class rq.SimpleWorker --url redis://localhost:6380/0
+```
+
+로컬 macOS 개발에서는 기본 RQ worker의 fork 방식이 `librosa`/오디오 분석 단계에서 멈출 수 있어 `rq.SimpleWorker`를 사용합니다.
+
+보컬 합성은 OpenAI Speech API를 사용하므로 `OPENAI_API_KEY`가 필요합니다.
+기본 TTS 모델은 `OPENAI_TTS_MODEL=gpt-4o-mini-tts`입니다.
+MP3/M4A 등 비-WAV 비트 처리와 MP3 데모 출력을 위해 로컬 `ffmpeg` 설치가 필요합니다.
 
 ### 3. Local Infrastructure
 
@@ -74,6 +91,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-현재 로컬 기본 추론 모델은 `Qwen/Qwen2.5-1.5B`입니다. 모델 파일은 Hugging Face 캐시에 있어야 하며, 백엔드 기본 설정은 `pmtm-ai/venv/bin/python`을 호출합니다.
+현재 로컬 기본 추론 모델은 `Qwen/Qwen2.5-3B-Instruct`입니다. 모델 파일은 Hugging Face 캐시에 있어야 하며, 백엔드 기본 설정은 `pmtm-ai/venv/bin/python`을 호출합니다.
 OpenAI 선택지의 기본 모델은 `gpt-5-mini`입니다.
 학습 결과물 선택지는 `pmtm-ai/models/exp-001/sft_rap_qwen`, `pmtm-ai/models/exp-001/grpo_rap_qwen` 어댑터를 사용합니다.
