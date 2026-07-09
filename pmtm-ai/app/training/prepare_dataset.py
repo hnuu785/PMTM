@@ -2,6 +2,7 @@ import pandas as pd
 from datasets import Dataset
 import re
 
+from app.lyric_prompts import DEFAULT_GENRE, DEFAULT_MOOD, TARGET_BARS, build_api_messages
 from app.paths import DATA_DIR
 
 DATA_PATH = str(DATA_DIR / "merged_final_dataset_analyzed.csv")
@@ -31,42 +32,35 @@ def make_chunks(lines: list[str], chunk_size: int) -> list[list[str]]:
     return chunks
 
 
-def format_audio(row: pd.Series) -> str:
-    return (
-        f"BPM: {row['bpm']:.0f} | "
-        f"에너지: {row['energy']:.2f} | "
-        f"댄서빌리티: {row['danceability']:.2f} | "
-        f"라우드니스: {row['loudness']:.1f}dB | "
-        f"밸런스: {row['valence']:.2f}"
-    )
-
-
-def format_chunk(artist: str, audio: str, chunk: list[str]) -> str:
-    n = len(chunk)
+def format_assistant(chunk: list[str]) -> str:
     body = "\n".join(chunk)
-    return f"아티스트: {artist}\n{audio}\n[Verse {n}마디]\n{body}\n[End]"
+    return f"{body}\n[End]"
 
 
 def prepare(df: pd.DataFrame) -> list[dict]:
     records = []
     for _, row in df.iterrows():
-        artist = str(row["artist"])
         lyrics = str(row.get("lyrics", ""))
         lines = clean_lines(lyrics)
 
-        if len(lines) < 8:
+        if len(lines) < TARGET_BARS:
             continue
 
-        audio = format_audio(row)
-        sizes = [16, 8] if len(lines) >= 16 else [8]
         seen: set[str] = set()
 
-        for size in sizes:
-            for chunk in make_chunks(lines, size):
-                text = format_chunk(artist, audio, chunk)
-                if text not in seen:
-                    seen.add(text)
-                    records.append({"text": text})
+        for chunk in make_chunks(lines, TARGET_BARS):
+            assistant = format_assistant(chunk)
+            if assistant not in seen:
+                seen.add(assistant)
+                records.append({
+                    "messages": build_api_messages(
+                        bpm=float(row["bpm"]),
+                        genre=DEFAULT_GENRE,
+                        mood=DEFAULT_MOOD,
+                        bars=TARGET_BARS,
+                        assistant=assistant,
+                    )
+                })
 
     return records
 

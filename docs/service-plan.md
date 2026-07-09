@@ -125,13 +125,13 @@ MVP에서는 아래 기능을 제외한다.
   "bpm": 90,
   "llm": "qwen-local",
   "lyrics": "[Verse]\n...",
-  "notes": ["Qwen/Qwen2.5-1.5B 베이스 모델 생성 결과입니다."]
+  "notes": ["Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다."]
 }
 ```
 
 ## 10. 기술 전략
 
-초기 기본값은 순수 `Qwen/Qwen2.5-1.5B` 베이스 모델이다. 사용자는 `exp-001` 학습 어댑터와 OpenAI 모델도 선택할 수 있다.
+초기 기본값은 순수 `Qwen/Qwen2.5-3B-Instruct` 베이스 모델이다. 사용자는 `exp-001` 학습 어댑터와 OpenAI 모델도 선택할 수 있다.
 
 1. FastAPI에서 BPM 기반 생성 API를 만든다.
 2. Next.js에서 BPM 입력과 결과 출력 화면을 만든다.

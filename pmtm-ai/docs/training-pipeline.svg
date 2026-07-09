@@ -30,7 +30,7 @@
 
   <rect x="80" y="155" width="1640" height="120" class="note"/>
   <text x="115" y="195" class="label">Assumptions</text>
-  <text x="115" y="230" class="body">• 엔트리포인트: run_training.py  • 기본 모델: Qwen/Qwen2.5-1.5B  • 실험명: PMTM_EXPERIMENT_NAME</text>
+  <text x="115" y="230" class="body">• 엔트리포인트: run_training.py  • 기본 모델: Qwen/Qwen2.5-3B-Instruct  • 실험명: PMTM_EXPERIMENT_NAME</text>
   <text x="115" y="258" class="body">• 경로 override: PMTM_DATA_DIR, PMTM_MODELS_DIR, PMTM_OUTPUTS_DIR  • 모델 override: PMTM_MODEL_ID</text>
 
   <text x="80" y="340" class="section">1. End-to-End Flow</text>
@@ -120,17 +120,17 @@
     <rect x="500" y="1020" width="300" height="120" class="box-amber"/>
     <text x="530" y="1058" class="label">prepare_dataset.py</text>
     <text x="530" y="1090" class="body">clean_lines → make_chunks</text>
-    <text x="530" y="1116" class="small">8/16마디 SFT 샘플 생성</text>
+    <text x="530" y="1116" class="small">8마디 SFT 샘플 생성</text>
 
     <rect x="890" y="1020" width="300" height="120" class="box-amber"/>
     <text x="920" y="1058" class="label">Prepared JSONL</text>
     <text x="920" y="1090" class="body">data/prepared_dataset.jsonl</text>
-    <text x="920" y="1116" class="small">{ text }</text>
+    <text x="920" y="1116" class="small">{ messages }</text>
 
     <rect x="80" y="1235" width="330" height="120" class="box-blue"/>
     <text x="110" y="1273" class="label">Base Model</text>
     <text x="110" y="1305" class="body">MODEL_ID</text>
-    <text x="110" y="1331" class="small">Qwen/Qwen2.5-1.5B 기본값</text>
+    <text x="110" y="1331" class="small">Qwen/Qwen2.5-3B-Instruct 기본값</text>
 
     <rect x="500" y="1235" width="300" height="120" class="box-purple"/>
     <text x="530" y="1273" class="label">SFT Training</text>
@@ -151,7 +151,7 @@
     <text x="110" y="1578" class="label">GRPO Prompts</text>
     <text x="110" y="1610" class="body">build_prompts()</text>
     <text x="110" y="1636" class="small">rhyme_density 상위 TOP_N=200</text>
-    <text x="110" y="1660" class="small">각 곡 8/16마디 prompt</text>
+    <text x="110" y="1660" class="small">8마디 messages/chat-template prompt</text>
 
     <rect x="500" y="1540" width="300" height="130" class="box-rose"/>
     <text x="530" y="1578" class="label">Reward Function</text>

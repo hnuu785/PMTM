@@ -8,14 +8,13 @@ from transformers import (
     TrainingArguments,
     Trainer,
     BitsAndBytesConfig,
-    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR
 
-DATA_PATH = str(DATA_DIR / "prepared_dataset.jsonl")
+DATA_PATH = str(DATA_DIR / "prepared_dataset_v2.jsonl")
 OUTPUT_DIR = str(OUTPUTS_DIR / "sft_qwen")
 SAVE_DIR = str(MODELS_DIR / "sft_rap_qwen")
 MAX_LENGTH = 768
@@ -30,6 +29,61 @@ def _detect_precision():
     return torch.float16, False, True
 
 
+def _tokenize_messages(tokenizer, messages: list[dict], max_length: int = MAX_LENGTH) -> dict:
+    if len(messages) < 2 or messages[-1].get("role") != "assistant":
+        raise ValueError("SFT sample must contain prompt messages followed by an assistant response")
+
+    prompt_text = tokenizer.apply_chat_template(
+        messages[:-1],
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+    full_text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+    )
+
+    prompt_ids = tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
+    encoded = tokenizer(
+        full_text,
+        add_special_tokens=False,
+        truncation=True,
+        max_length=max_length,
+    )
+
+    labels = list(encoded["input_ids"])
+    prompt_len = min(len(prompt_ids), len(labels))
+    labels[:prompt_len] = [-100] * prompt_len
+
+    return {
+        "input_ids": encoded["input_ids"],
+        "attention_mask": encoded["attention_mask"],
+        "labels": labels,
+    }
+
+
+def _make_data_collator(tokenizer):
+    def collate(features):
+        model_inputs = [
+            {
+                "input_ids": feature["input_ids"],
+                "attention_mask": feature["attention_mask"],
+            }
+            for feature in features
+        ]
+        batch = tokenizer.pad(model_inputs, padding=True, return_tensors="pt")
+        max_len = batch["input_ids"].shape[1]
+        labels = [
+            feature["labels"] + [-100] * (max_len - len(feature["labels"]))
+            for feature in features
+        ]
+        batch["labels"] = torch.tensor(labels, dtype=torch.long)
+        return batch
+
+    return collate
+
+
 def train_sft():
     compute_dtype, use_bf16, use_fp16 = _detect_precision()
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
@@ -37,14 +91,21 @@ def train_sft():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
 
     raw = Dataset.from_json(DATA_PATH)
+    if "messages" not in raw.column_names:
+        raise ValueError("prepared_dataset_v2.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v2.py.")
     split = raw.train_test_split(test_size=EVAL_RATIO, seed=SEED)
     train_raw, eval_raw = split["train"], split["test"]
 
     def tokenize_function(examples):
-        texts = [t + tokenizer.eos_token for t in examples["text"]]
-        return tokenizer(texts, truncation=True, max_length=MAX_LENGTH)
+        batch = {"input_ids": [], "attention_mask": [], "labels": []}
+        for messages in examples["messages"]:
+            encoded = _tokenize_messages(tokenizer, messages)
+            for key in batch:
+                batch[key].append(encoded[key])
+        return batch
 
     train_ds = train_raw.map(tokenize_function, batched=True, remove_columns=train_raw.column_names)
     eval_ds = eval_raw.map(tokenize_function, batched=True, remove_columns=eval_raw.column_names)
@@ -80,7 +141,7 @@ def train_sft():
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    data_collator = _make_data_collator(tokenizer)
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,

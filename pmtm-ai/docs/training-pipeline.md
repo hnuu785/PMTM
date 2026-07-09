@@ -5,7 +5,7 @@
 ## Assumptions
 
 - 실행 엔트리포인트는 `run_training.py`이다.
-- 기본 베이스 모델은 `Qwen/Qwen2.5-1.5B`이며, `PMTM_MODEL_ID`로 바꿀 수 있다.
+- 기본 베이스 모델은 `Qwen/Qwen2.5-3B-Instruct`이며, `PMTM_MODEL_ID`로 바꿀 수 있다.
 - `PMTM_EXPERIMENT_NAME`을 주면 `models/<experiment>`와 `outputs/<experiment>` 아래에 결과가 저장된다.
 - `PMTM_DATA_DIR`, `PMTM_MODELS_DIR`, `PMTM_OUTPUTS_DIR`로 데이터/모델/체크포인트 루트 경로를 바꿀 수 있다.
 
@@ -39,15 +39,15 @@ flowchart TD
 ```mermaid
 flowchart LR
     RawCSV["data/merged_final_dataset_analyzed.csv<br/>artist, lyrics, audio features, rhyme_density"]
-    Prepare["prepare_dataset.py<br/>clean_lines → make_chunks<br/>8/16마디 SFT 샘플 생성"]
-    Jsonl["data/prepared_dataset.jsonl<br/>{ text }"]
+    Prepare["prepare_dataset.py<br/>clean_lines → make_chunks<br/>8마디 SFT 샘플 생성"]
+    Jsonl["data/prepared_dataset.jsonl<br/>{ messages }"]
 
-    Base["MODEL_ID<br/>Qwen/Qwen2.5-1.5B 기본값"]
+    Base["MODEL_ID<br/>Qwen/Qwen2.5-3B-Instruct 기본값"]
     SFTTrain["sft_qwen.py<br/>4-bit NF4 + LoRA<br/>Trainer"]
     SFTOut["models[/experiment]/sft_rap_qwen<br/>SFT LoRA adapter + tokenizer"]
     SFTCkpt["outputs[/experiment]/sft_qwen<br/>checkpoint-*"]
 
-    PromptBuild["grpo_qwen.py build_prompts()<br/>rhyme_density 상위 TOP_N=200<br/>각 곡 8/16마디 prompt"]
+    PromptBuild["grpo_qwen.py build_prompts()<br/>rhyme_density 상위 TOP_N=200<br/>8마디 messages/chat-template prompt"]
     Reward["rhyme_reward()<br/>라임 점수 + 길이 + [End]<br/>중복/연속반복 penalty"]
     GRPOTrain["GRPOTrainer<br/>SFT adapter에서 시작<br/>num_generations=4"]
     GRPOOut["models[/experiment]/grpo_rap_qwen<br/>GRPO adapter"]
@@ -80,7 +80,7 @@ flowchart LR
 | Stage | Command | Main work | Required input | Main output |
 |---|---|---|---|---|
 | `all` | `python run_training.py` | phonetics test, dataset prep, SFT, reward sanity, GRPO, eval | GPU, CSV dataset | SFT/GRPO adapters, checkpoints, loss plots |
-| `sft` | `python run_training.py --stage sft` | build SFT JSONL if missing, train SFT LoRA | `data/merged_final_dataset_analyzed.csv` | `models[/experiment]/sft_rap_qwen` |
+| `sft` | `python run_training.py --stage sft` | build messages-format SFT JSONL if missing, train SFT LoRA | `data/merged_final_dataset_analyzed.csv` | `models[/experiment]/sft_rap_qwen` |
 | `sanity` | `python run_training.py --stage sanity` | generate 20 completions with SFT and print reward stats | SFT adapter | reward mean/stdev/min/max |
 | `grpo` | `python run_training.py --stage grpo` | train GRPO from SFT adapter | SFT adapter, analyzed CSV | `models[/experiment]/grpo_rap_qwen` |
 | `eval` | `python run_training.py --stage eval` | generate sample lyrics | GRPO adapter, or SFT fallback | console samples |

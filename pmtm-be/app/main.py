@@ -33,6 +33,7 @@ settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
 RHYME_GROUP_THRESHOLD = 0.50
 RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
+TARGET_LYRIC_BARS = 8
 DEMO_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage" / "demos"
 SUPPORTED_BEAT_CONTENT_TYPES = {
     "audio/aac",
@@ -178,6 +179,7 @@ def _generate_verse_for_model(
     mood: str = "confident",
     bars: int = 8,
 ) -> tuple[str, list[str]]:
+    bars = TARGET_LYRIC_BARS
     if llm == "openai":
         return _generate_openai_verse(bpm, genre=genre, mood=mood, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",
@@ -205,8 +207,8 @@ def _generate_verse_for_model(
         ]
 
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
-        "Qwen/Qwen2.5-1.5B 베이스 모델 생성 결과입니다.",
-        "LoRA 어댑터를 사용하지 않은 순수 Qwen 추론입니다.",
+        "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
+        "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
     ]
 
 
@@ -533,6 +535,7 @@ def _generate_qwen_verse(
     mood: str = "confident",
     bars: int = 8,
 ) -> str:
+    bars = TARGET_LYRIC_BARS
     project_root = Path(__file__).resolve().parents[2]
     ai_root = project_root / "pmtm-ai"
     python_path = Path(settings.qwen_python_path)
@@ -550,8 +553,6 @@ def _generate_qwen_verse(
                 str(python_path),
                 "-m",
                 "app.inference.generate_for_api",
-                "--base-model",
-                "Qwen/Qwen2.5-1.5B",
                 "--bpm",
                 str(bpm),
                 "--genre",
@@ -561,7 +562,7 @@ def _generate_qwen_verse(
                 "--bars",
                 str(bars),
                 "--max-new-tokens",
-                "260" if bars > 8 else "180",
+                "180",
                 "--temperature",
                 "0.85",
                 "--top-p",
@@ -575,13 +576,6 @@ def _generate_qwen_verse(
                     detail=f"Qwen adapter not found: {adapter_path}",
                 )
             command.extend(["--adapter", str(adapter_path)])
-        else:
-            command.extend(
-                [
-                    "--tokenizer-model",
-                    "Qwen/Qwen2.5-1.5B-Instruct",
-                ]
-            )
 
         completed = subprocess.run(
             command,
@@ -614,6 +608,7 @@ def _generate_openai_verse(
     mood: str = "confident",
     bars: int = 8,
 ) -> str:
+    bars = TARGET_LYRIC_BARS
     if not settings.openai_api_key:
         raise HTTPException(
             status_code=503,
@@ -640,6 +635,7 @@ def _build_openai_payload(
     mood: str = "confident",
     bars: int = 8,
 ) -> dict:
+    bars = TARGET_LYRIC_BARS
     payload: dict = {
         "model": settings.openai_model,
         "instructions": (
@@ -651,7 +647,7 @@ def _build_openai_payload(
             f"BPM {bpm}, 장르 {genre}, 분위기 {mood}에 맞는 한국어 랩 {bars}마디 벌스를 써줘. "
             "각 줄은 한 마디처럼 호흡이 맞아야 하고, 전체 가사의 대부분은 한국어여야 해."
         ),
-        "max_output_tokens": 700 if bars > 8 else 500,
+        "max_output_tokens": 500,
     }
 
     if settings.openai_model.startswith("gpt-5"):

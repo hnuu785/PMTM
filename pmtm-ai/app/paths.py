@@ -25,7 +25,7 @@ DATA_DIR = Path(os.getenv("PMTM_DATA_DIR", str(PROJECT_ROOT / "data"))).expandus
 MODELS_DIR = _resolve_results_dir("PMTM_MODELS_DIR", PROJECT_ROOT / "models")
 OUTPUTS_DIR = _resolve_results_dir("PMTM_OUTPUTS_DIR", PROJECT_ROOT / "outputs")
 TESTS_DIR = PROJECT_ROOT / "tests"
-DEFAULT_MODEL_ID = "Qwen/Qwen2.5-1.5B"
+DEFAULT_MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
 MODEL_ID = os.getenv("PMTM_MODEL_ID", DEFAULT_MODEL_ID)
 EXPERIMENT_NAME = os.getenv("PMTM_EXPERIMENT_NAME", "").strip() or None
 

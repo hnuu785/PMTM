@@ -2,9 +2,11 @@ import argparse
 import json
 from pathlib import Path
 
+from app.lyric_prompts import TARGET_BARS, build_api_messages, build_api_user_prompt
 from app.paths import MODEL_ID, MODELS_DIR
 
 DEFAULT_ADAPTER = MODELS_DIR / "grpo_rap_qwen"
+PROMPT_FORMATS = ("auto", "chat", "raw")
 
 
 def parse_args():
@@ -20,7 +22,7 @@ def parse_args():
     p.add_argument("--danceability", type=float, required=True, help="Danceability score (0-1)")
     p.add_argument("--loudness", type=float, required=True, help="Loudness in dB")
     p.add_argument("--valence", type=float, required=True, help="Valence score (0-1)")
-    p.add_argument("--bars", type=int, choices=[8, 16], default=8, help="Target bar count")
+    p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=220, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.9, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=0.95, help="Top-p sampling")
@@ -34,19 +36,29 @@ def parse_args():
         action="store_true",
         help="Print the constructed prompt before generation",
     )
+    p.add_argument(
+        "--prompt-format",
+        choices=PROMPT_FORMATS,
+        default="auto",
+        help="Prompt format. auto uses chat template for Instruct base models and raw text otherwise.",
+    )
     return p.parse_args()
 
 
 def build_prompt(args) -> str:
-    return (
-        f"아티스트: {args.artist}\n"
-        f"BPM: {args.bpm:.0f} | "
-        f"에너지: {args.energy:.2f} | "
-        f"댄서빌리티: {args.danceability:.2f} | "
-        f"라우드니스: {args.loudness:.1f}dB | "
-        f"밸런스: {args.valence:.2f}\n"
-        f"[Verse {args.bars}마디]\n"
-    )
+    return build_api_user_prompt(bpm=args.bpm, bars=args.bars)
+
+
+def build_messages(args) -> list[dict[str, str]]:
+    return build_api_messages(bpm=args.bpm, bars=args.bars)
+
+
+def should_use_chat_template(base_model: str, prompt_format: str) -> bool:
+    if prompt_format == "chat":
+        return True
+    if prompt_format == "raw":
+        return False
+    return "instruct" in base_model.lower()
 
 
 def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
@@ -74,6 +86,20 @@ def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
             return str(base_model)
 
     return MODEL_ID
+
+
+def build_model_input_text(tokenizer, base_model: str, prompt_format: str, prompt: str, messages: list[dict[str, str]]) -> str:
+    if not should_use_chat_template(base_model, prompt_format):
+        return prompt
+
+    if not getattr(tokenizer, "chat_template", None):
+        raise ValueError(f"tokenizer has no chat_template: {getattr(tokenizer, 'name_or_path', base_model)}")
+
+    return tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
 
 
 def build_model(base_model: str, adapter_path: Path | None):
@@ -142,13 +168,18 @@ def main():
             raise FileNotFoundError(f"adapter not found: {adapter_path}")
 
     base_model = resolve_base_model(adapter_path, args.base_model)
-    prompt = build_prompt(args)
+    raw_prompt = build_prompt(args)
+    messages = build_messages(args)
 
     if args.print_prompt:
-        print(prompt)
+        if should_use_chat_template(base_model, args.prompt_format):
+            print(json.dumps(messages, ensure_ascii=False, indent=2))
+        else:
+            print(raw_prompt)
         print("-" * 60)
 
     tokenizer, model = build_model(base_model, adapter_path)
+    prompt = build_model_input_text(tokenizer, base_model, args.prompt_format, raw_prompt, messages)
     text = generate_text(
         tokenizer,
         model,

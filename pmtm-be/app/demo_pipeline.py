@@ -16,6 +16,7 @@ from app.schemas import LyricModel
 DEMO_STATUS_KEY_PREFIX = "pmtm:demo:"
 DEMO_JOB_TIMEOUT_SECONDS = 600
 DEMO_LENGTH_SECONDS = {30, 60}
+TARGET_LYRIC_BARS = 8
 VOICE_PRESETS = {
     "alloy",
     "ash",
@@ -140,7 +141,7 @@ def run_demo_generation(
         _trim_beat_segment(beat_file, work_path / "beat_segment.wav", demo_length_sec)
 
         _set_status(redis_client, job_id, "writing", progress=0.32, bpm=bpm)
-        bars = 8 if demo_length_sec == 30 else 16
+        bars = TARGET_LYRIC_BARS
         lyrics, notes = main._generate_verse_for_model(
             bpm,
             llm,

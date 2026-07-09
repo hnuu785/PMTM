@@ -2,7 +2,10 @@ import argparse
 import json
 from pathlib import Path
 
+from app.lyric_prompts import TARGET_BARS, build_api_messages, build_api_user_prompt
 from app.paths import MODEL_ID
+
+PROMPT_FORMATS = ("auto", "chat", "raw")
 
 
 def parse_args():
@@ -21,24 +24,33 @@ def parse_args():
         default=None,
         help="Override tokenizer id/path. Useful when the base model cache lacks tokenizer files.",
     )
-    p.add_argument("--bars", type=int, choices=[8, 16], default=8, help="Target bar count")
+    p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=180, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.85, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=0.92, help="Top-p sampling")
+    p.add_argument(
+        "--prompt-format",
+        choices=PROMPT_FORMATS,
+        default="auto",
+        help="Prompt format. auto uses chat template for Instruct base models and raw text otherwise.",
+    )
     return p.parse_args()
 
 
 def build_prompt(args) -> str:
-    return (
-        f"You write rap lyrics. Return only a {args.bars}-line verse. "
-        "Do not include title, explanation, numbering, or markdown.\n"
-        f"Write a {args.bars}-bar rap verse for BPM {args.bpm:.0f}. "
-        "Each line should feel like one bar and match the BPM's breathing and line length.\n"
-        f"BPM: {args.bpm:.0f}\n"
-        f"Genre: {args.genre}\n"
-        f"Mood: {args.mood}\n"
-        f"[Verse {args.bars}마디]\n"
-    )
+    return build_api_user_prompt(bpm=args.bpm, bars=args.bars)
+
+
+def build_messages(args) -> list[dict[str, str]]:
+    return build_api_messages(bpm=args.bpm, bars=args.bars)
+
+
+def should_use_chat_template(base_model: str, prompt_format: str) -> bool:
+    if prompt_format == "chat":
+        return True
+    if prompt_format == "raw":
+        return False
+    return "instruct" in base_model.lower()
 
 
 def resolve_base_model(adapter_path: Path | None, override: str) -> str:
@@ -63,6 +75,20 @@ def resolve_base_model(adapter_path: Path | None, override: str) -> str:
             return str(base_model)
 
     return override
+
+
+def build_model_input_text(tokenizer, base_model: str, prompt_format: str, prompt: str, messages: list[dict[str, str]]) -> str:
+    if not should_use_chat_template(base_model, prompt_format):
+        return prompt
+
+    if not getattr(tokenizer, "chat_template", None):
+        raise ValueError(f"tokenizer has no chat_template: {getattr(tokenizer, 'name_or_path', base_model)}")
+
+    return tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
 
 
 def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str | None):
@@ -119,10 +145,17 @@ def main():
 
     base_model = resolve_base_model(adapter_path, args.base_model)
     tokenizer, model = build_model(base_model, adapter_path, args.tokenizer_model)
+    prompt = build_model_input_text(
+        tokenizer,
+        base_model,
+        args.prompt_format,
+        build_prompt(args),
+        build_messages(args),
+    )
     text = generate_text(
         tokenizer,
         model,
-        build_prompt(args),
+        prompt,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p,

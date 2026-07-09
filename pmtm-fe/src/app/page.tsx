@@ -77,7 +77,7 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
   {
     value: "qwen-local",
     label: "Qwen local",
-    detail: "Qwen2.5-1.5B",
+    detail: "Qwen2.5-3B-Instruct",
   },
   {
     value: "qwen-exp-001-sft",

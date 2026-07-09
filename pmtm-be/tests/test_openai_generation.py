@@ -260,6 +260,40 @@ class DemoGenerationTests(unittest.TestCase):
         self.assertEqual(fake_redis_client.payload["status"], "failed")
         self.assertIn("provider failed", fake_redis_client.payload["error"])
 
+    def test_run_demo_generation_uses_eight_bars_for_sixty_second_demo(self):
+        class FakeRedisClient:
+            def hset(self, *_args, **_kwargs):
+                pass
+
+            def expire(self, *_args):
+                pass
+
+        fake_redis_module = mock.Mock(Redis=mock.Mock(from_url=mock.Mock(return_value=FakeRedisClient())))
+
+        with (
+            TemporaryDirectory() as tmp,
+            mock.patch.dict("sys.modules", {"redis": fake_redis_module}),
+            mock.patch.object(main, "_analyze_beat_bpm", return_value=90),
+            mock.patch.object(main, "_generate_verse_for_model", return_value=("[Verse]\none", ["note"])) as generate,
+            mock.patch.object(demo_pipeline, "_trim_beat_segment"),
+            mock.patch.object(demo_pipeline, "get_vocal_provider", return_value=mock.Mock()),
+            mock.patch.object(demo_pipeline, "synthesize_vocal_track", side_effect=RuntimeError("stop")),
+        ):
+            beat_path = Path(tmp) / "beat.wav"
+            _write_test_wav(beat_path)
+            demo_pipeline.run_demo_generation(
+                "job",
+                str(beat_path),
+                tmp,
+                "qwen-local",
+                "trap",
+                "dark",
+                60,
+                "verse",
+            )
+
+        self.assertEqual(generate.call_args.kwargs["bars"], 8)
+
 
 class RhymeAnalysisTests(unittest.TestCase):
     def test_analyze_rhyme_handles_empty_lines(self):
