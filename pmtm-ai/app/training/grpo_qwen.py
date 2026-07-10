@@ -244,15 +244,21 @@ def train_grpo():
 
     cfg = GRPOConfig(
         output_dir=OUTPUT_DIR,
-        learning_rate=1e-5,
+        learning_rate=1e-6,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
         num_train_epochs=6,
         num_generations=4,
         max_completion_length=160,
         beta=0.04,
+        scale_rewards="none",
+        cast_lm_head_to_fp32=True,
         temperature=1.0,
         top_p=0.95,
+        generation_kwargs={
+            "remove_invalid_values": True,
+            "renormalize_logits": True,
+        },
         save_strategy="steps",
         save_steps=50,
         save_total_limit=3,
