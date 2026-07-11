@@ -62,6 +62,7 @@ type OutputMode = "lyrics" | "demo";
 
 const BPM_PRESETS = [80, 90, 120, 140];
 const DEMO_VOICES = ["verse", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer"];
+const VOCAL_START_BAR_OPTIONS = [0, 2, 4, 8] as const;
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
   { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
@@ -92,6 +93,7 @@ export default function Home() {
   const [mood, setMood] = useState("confident");
   const [demoLengthSec, setDemoLengthSec] = useState<30 | 60>(30);
   const [voice, setVoice] = useState("verse");
+  const [vocalStartBars, setVocalStartBars] = useState<0 | 2 | 4 | 8>(4);
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
   const [lyricLines, setLyricLines] = useState<string[]>([]);
@@ -311,6 +313,7 @@ export default function Home() {
     body.append("mood", mood);
     body.append("demoLengthSec", String(demoLengthSec));
     body.append("voice", voice);
+    body.append("vocalStartBars", String(vocalStartBars));
 
     return fetch(`${apiBaseUrl}/api/v1/demos/generate-from-beat`, {
       method: "POST",
@@ -571,6 +574,25 @@ export default function Home() {
                         ))}
                       </select>
                     </label>
+                    <div>
+                      <span className="text-sm font-semibold text-[#d8b993]">Rap start</span>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {VOCAL_START_BAR_OPTIONS.map((bars) => (
+                          <button
+                            key={bars}
+                            type="button"
+                            onClick={() => setVocalStartBars(bars)}
+                            className={`h-10 border text-sm font-bold transition ${
+                              vocalStartBars === bars
+                                ? "border-[#ffb23f] bg-[#ff5a1f] text-white"
+                                : "border-[#f5b950]/22 bg-[#130806]/82 text-[#d8b993] hover:border-[#f5b950]/60"
+                            }`}
+                          >
+                            {bars} bars
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 
