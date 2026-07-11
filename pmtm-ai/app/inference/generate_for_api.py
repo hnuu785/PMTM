@@ -2,6 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
+from app.inference.device import model_device, move_model_to_device, select_inference_device
 from app.lyric_prompts import TARGET_BARS, build_api_messages, build_api_user_prompt
 from app.paths import MODEL_ID
 
@@ -105,16 +106,17 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    device, dtype = select_inference_device(torch)
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        torch_dtype=torch_dtype,
-        device_map="auto" if torch.cuda.is_available() else None,
+        dtype=dtype,
+        device_map="auto" if device == "cuda" else None,
         trust_remote_code=True,
         local_files_only=True,
     )
     if adapter_path:
         model = PeftModel.from_pretrained(model, str(adapter_path))
+    model = move_model_to_device(model, device)
 
     model.eval()
     return tokenizer, model
@@ -123,7 +125,7 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
 def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float) -> str:
     import torch
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(prompt, return_tensors="pt").to(model_device(model))
     with torch.no_grad():
         output = model.generate(
             **inputs,
