@@ -4,14 +4,29 @@ from pathlib import Path
 from unittest import mock
 
 import pandas as pd
+import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.lyric_prompts import build_api_messages
-from app.training.grpo_qwen import _repeated_ngram_ratio, _short_line_ratio, build_prompts, rhyme_reward
+from app.training.grpo_qwen import _format_finite_summary, _repeated_ngram_ratio, _short_line_ratio
+from app.training.grpo_qwen import _summarize_tensors, build_prompts, rhyme_reward
 
 
 class GrpoMessagesTests(unittest.TestCase):
+    def test_summarize_tensors_detects_nonfinite_values(self):
+        summary = _summarize_tensors([
+            ("ok", torch.tensor([1.0, -2.0])),
+            ("bad", torch.tensor([float("nan"), float("inf")])),
+        ])
+
+        self.assertFalse(summary.ok)
+        self.assertEqual(summary.total, 4)
+        self.assertEqual(summary.nonfinite, 2)
+        self.assertEqual(summary.max_abs, 2.0)
+        self.assertEqual(summary.examples, ["bad"])
+        self.assertIn("BAD", _format_finite_summary("test", summary))
+
     def test_build_prompts_outputs_chat_messages(self):
         df = pd.DataFrame([
             {"bpm": 90, "rhyme_density": 0.7},

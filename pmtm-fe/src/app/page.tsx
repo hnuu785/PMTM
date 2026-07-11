@@ -51,6 +51,8 @@ type RhymeLineAnalysis = {
 
 type LyricModel =
   | "qwen-local"
+  | "qwen-exp-005-sft"
+  | "qwen-exp-005-grpo"
   | "openai";
 
 type ApiErrorResponse = {
@@ -75,6 +77,16 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
     value: "qwen-local",
     label: "Qwen local",
     detail: "Qwen2.5-3B-Instruct",
+  },
+  {
+    value: "qwen-exp-005-sft",
+    label: "SFT exp-005",
+    detail: "Qwen + exp-005 SFT",
+  },
+  {
+    value: "qwen-exp-005-grpo",
+    label: "GRPO exp-005",
+    detail: "Qwen + exp-005 LoRA",
   },
   {
     value: "openai",

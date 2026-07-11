@@ -46,9 +46,12 @@ PMTM_MODEL_ID=Qwen/Qwen2.5-3B python run_training.py --stage sft
 
 ```bash
 python run_training.py --experiment-name exp-001 --stage sft
+python run_training.py --experiment-name exp-001 --stage grpo-smoke --smoke-steps 10
 python run_training.py --experiment-name exp-001 --stage grpo
 python -m app.inference.generate --artist "Tablo" --bpm 90 --energy 0.65 --danceability 0.70 --loudness -6.0 --valence 0.50 --bars 8
 ```
+
+`grpo-smoke`는 GRPO를 1~10 step만 실행하면서 학습 전 forward logits, optimizer step 직전 gradient, optimizer step 직후 LoRA weight의 finite 여부를 검사합니다. 여기서 NaN이 잡히면 본 GRPO 학습을 진행하지 말고 precision/optimizer/KL 설정을 먼저 고칩니다.
 
 위처럼 실행하면 기본 경로 기준 결과물은 아래에 쌓입니다.
 

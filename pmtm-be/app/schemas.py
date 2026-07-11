@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 LyricModel = Literal[
     "qwen-local",
+    "qwen-exp-005-sft",
+    "qwen-exp-005-grpo",
     "openai",
 ]
 

@@ -448,6 +448,34 @@ class RhymeAnalysisTests(unittest.TestCase):
 
 
 class OpenAIGenerationTests(unittest.TestCase):
+    def test_exp_005_sft_model_uses_adapter(self):
+        with mock.patch.object(main, "_generate_qwen_verse", return_value="[Verse]\none") as generate:
+            lyrics, notes = main._generate_verse_for_model(90, "qwen-exp-005-sft")
+
+        self.assertEqual(lyrics, "[Verse]\none")
+        generate.assert_called_once_with(
+            90,
+            main.EXP_005_SFT_ADAPTER,
+            genre="Korean hip-hop",
+            mood="confident",
+            bars=8,
+        )
+        self.assertIn("exp-005 SFT", notes[0])
+
+    def test_exp_005_grpo_model_uses_adapter(self):
+        with mock.patch.object(main, "_generate_qwen_verse", return_value="[Verse]\none") as generate:
+            lyrics, notes = main._generate_verse_for_model(90, "qwen-exp-005-grpo")
+
+        self.assertEqual(lyrics, "[Verse]\none")
+        generate.assert_called_once_with(
+            90,
+            main.EXP_005_GRPO_ADAPTER,
+            genre="Korean hip-hop",
+            mood="confident",
+            bars=8,
+        )
+        self.assertIn("exp-005 GRPO", notes[0])
+
     def test_openai_payload_limits_gpt5_reasoning(self):
         original_model = main.settings.openai_model
         main.settings.openai_model = "gpt-5-mini"

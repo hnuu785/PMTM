@@ -231,6 +231,19 @@ def run_grpo():
     print()
 
 
+def run_grpo_smoke(steps: int):
+    print("=" * 60)
+    print(f"[C3-smoke] GRPO finite smoke test ({steps} steps)")
+    print("=" * 60)
+    assert (MODELS_DIR / "sft_rap_qwen").exists(), (
+        "SFT 어댑터 없음 — 먼저 --stage sft 로 SFT를 실행하세요"
+    )
+    from app.training.grpo_qwen import run_grpo_smoke_test
+
+    run_grpo_smoke_test(max_steps=steps)
+    print()
+
+
 def run_eval():
     print("=" * 60)
     print("[D] 생성 평가")
@@ -303,7 +316,7 @@ def parse_args():
     )
     p.add_argument(
         "--stage",
-        choices=["all", "sft", "sanity", "grpo", "eval"],
+        choices=["all", "sft", "sanity", "grpo-smoke", "grpo", "eval"],
         default="all",
         help="실행 단계 선택 (기본 all = 전체)",
     )
@@ -311,6 +324,7 @@ def parse_args():
     p.add_argument("--skip-phonetics", action="store_true", help="phonetics 회귀 테스트 스킵")
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
+    p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~10)")
     return p.parse_args()
 
 
@@ -335,6 +349,10 @@ def main():
     if args.stage == "grpo":
         run_grpo()
         save_loss_plots_if_possible()
+        return
+
+    if args.stage == "grpo-smoke":
+        run_grpo_smoke(args.smoke_steps)
         return
 
     if args.stage == "eval":

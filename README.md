@@ -24,7 +24,8 @@ npm run dev
 ### 2. Backend
 
 백엔드는 로컬에서 실행합니다. 가사 생성은 업로드한 비트 파일을 `librosa`로 분석해 BPM을 추정한 뒤,
-`pmtm-ai/venv`의 순수 `Qwen/Qwen2.5-3B-Instruct` 추론 CLI를 호출합니다.
+`pmtm-ai/venv`의 `Qwen/Qwen2.5-3B-Instruct` 추론 CLI를 호출합니다.
+LLM 선택값 `qwen-exp-005-sft`는 `pmtm-ai/models/exp-005/sft_rap_qwen`, `qwen-exp-005-grpo`는 `pmtm-ai/models/exp-005/grpo_rap_qwen` LoRA 어댑터를 적용합니다.
 OpenAI 선택지를 사용하려면 `OPENAI_API_KEY`를 설정합니다.
 
 ```bash
@@ -92,4 +93,5 @@ pip install -r requirements.txt
 ```
 
 현재 로컬 기본 추론 모델은 `Qwen/Qwen2.5-3B-Instruct`입니다. 모델 파일은 Hugging Face 캐시에 있어야 하며, 백엔드 기본 설정은 `pmtm-ai/venv/bin/python`을 호출합니다.
+exp-005 시연 모델은 `llm=qwen-exp-005-sft` 또는 `llm=qwen-exp-005-grpo`로 호출하며, 어댑터 파일은 각각 `pmtm-ai/models/exp-005/sft_rap_qwen`, `pmtm-ai/models/exp-005/grpo_rap_qwen`에 있어야 합니다.
 OpenAI 선택지의 기본 모델은 `gpt-5-mini`입니다.

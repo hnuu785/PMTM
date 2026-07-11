@@ -155,6 +155,7 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
             do_sample=True,
             temperature=temperature,
             top_p=top_p,
+            remove_invalid_values=True,
             pad_token_id=tokenizer.eos_token_id,
         )
     generated = output[0][inputs["input_ids"].shape[1]:]

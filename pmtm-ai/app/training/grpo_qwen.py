@@ -4,12 +4,15 @@ os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 import glob
 import re
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 
 import pandas as pd
 import torch
 from datasets import Dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import TrainerCallback
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_api_messages
@@ -23,6 +26,121 @@ DATA_PATH = str(DATA_DIR / "merged_final_dataset_analyzed.csv")
 OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 TOP_N = 200
+SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
+
+
+@dataclass
+class FiniteSummary:
+    total: int
+    nonfinite: int
+    max_abs: float
+    examples: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return self.nonfinite == 0
+
+
+def _summarize_tensors(named_tensors, *, max_examples: int = 5) -> FiniteSummary:
+    total = 0
+    nonfinite = 0
+    max_abs = 0.0
+    examples: list[str] = []
+
+    for name, tensor in named_tensors:
+        if tensor is None:
+            continue
+        data = tensor.detach().float()
+        total += data.numel()
+        finite_mask = torch.isfinite(data)
+        bad_count = data.numel() - int(finite_mask.sum().item())
+        nonfinite += bad_count
+        if bad_count and len(examples) < max_examples:
+            examples.append(name)
+        if finite_mask.any():
+            max_abs = max(max_abs, float(data[finite_mask].abs().max().item()))
+
+    return FiniteSummary(
+        total=total,
+        nonfinite=nonfinite,
+        max_abs=max_abs,
+        examples=examples,
+    )
+
+
+def _format_finite_summary(label: str, summary: FiniteSummary) -> str:
+    status = "OK" if summary.ok else "BAD"
+    return (
+        f"[finite:{label}] {status} "
+        f"total={summary.total} nonfinite={summary.nonfinite} "
+        f"max_abs={summary.max_abs:.6g} examples={summary.examples}"
+    )
+
+
+def _trainable_parameter_summary(model) -> FiniteSummary:
+    return _summarize_tensors(
+        (name, param.data)
+        for name, param in model.named_parameters()
+        if param.requires_grad
+    )
+
+
+def _gradient_summary(model) -> FiniteSummary:
+    return _summarize_tensors(
+        (name, param.grad)
+        for name, param in model.named_parameters()
+        if param.requires_grad and param.grad is not None
+    )
+
+
+def _assert_finite(label: str, summary: FiniteSummary) -> None:
+    print(_format_finite_summary(label, summary))
+    if not summary.ok:
+        raise RuntimeError(f"Non-finite tensor detected during {label}: {summary.examples}")
+
+
+def _model_device(model):
+    return next(model.parameters()).device
+
+
+def _forward_logits_summary(model, tokenizer, prompt: list[dict[str, str]]) -> FiniteSummary:
+    prompt_text = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(prompt_text, return_tensors="pt").to(_model_device(model))
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        outputs = model(**inputs)
+    if was_training:
+        model.train()
+    return _summarize_tensors([("logits", outputs.logits)])
+
+
+class GrpoFiniteTraceCallback(TrainerCallback):
+    def on_train_begin(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite("train_begin.weights", _trainable_parameter_summary(model))
+
+    def on_pre_optimizer_step(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite(f"step_{state.global_step}.before_optimizer.gradients", _gradient_summary(model))
+
+    def on_optimizer_step(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite(f"step_{state.global_step}.after_optimizer.weights", _trainable_parameter_summary(model))
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        bad = {
+            key: value
+            for key, value in logs.items()
+            if isinstance(value, float) and not torch.isfinite(torch.tensor(value))
+        }
+        if bad:
+            raise RuntimeError(f"Non-finite trainer log at step {state.global_step}: {bad}")
 
 
 def _latest_checkpoint(output_dir: str) -> str | None:
@@ -227,7 +345,53 @@ def load_model(compute_dtype):
     return model
 
 
-def train_grpo():
+def _build_grpo_config(
+    *,
+    output_dir: str,
+    max_steps: int = -1,
+    save_strategy: str = "steps",
+    save_steps: int = 50,
+    save_total_limit: int | None = 3,
+) -> GRPOConfig:
+    compute_dtype, use_bf16, use_fp16 = _detect_precision()
+    return GRPOConfig(
+        output_dir=output_dir,
+        learning_rate=1e-6,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=8,
+        num_train_epochs=6,
+        max_steps=max_steps,
+        num_generations=4,
+        max_completion_length=160,
+        beta=0.04,
+        scale_rewards="none",
+        cast_lm_head_to_fp32=False,
+        temperature=1.0,
+        top_p=0.95,
+        generation_kwargs={
+            "remove_invalid_values": True,
+            "renormalize_logits": True,
+        },
+        save_strategy=save_strategy,
+        save_steps=save_steps,
+        save_total_limit=save_total_limit,
+        logging_steps=5,
+        bf16=use_bf16,
+        fp16=use_fp16,
+        report_to="none",
+        seed=42,
+    )
+
+
+def _build_grpo_trainer(
+    *,
+    output_dir: str,
+    max_steps: int = -1,
+    callbacks: list[TrainerCallback] | None = None,
+    save_strategy: str = "steps",
+    save_steps: int = 50,
+    save_total_limit: int | None = 3,
+) -> tuple[GRPOTrainer, list[list[dict[str, str]]]]:
     compute_dtype, use_bf16, use_fp16 = _detect_precision()
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
 
@@ -241,32 +405,15 @@ def train_grpo():
     print(f"prompts: {len(prompts)}")
 
     model = load_model(compute_dtype)
+    _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
+    _assert_finite("loaded_sft.forward_logits", _forward_logits_summary(model, tokenizer, prompts[0]))
 
-    cfg = GRPOConfig(
-        output_dir=OUTPUT_DIR,
-        learning_rate=1e-6,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=8,
-        num_train_epochs=6,
-        num_generations=4,
-        max_completion_length=160,
-        beta=0.04,
-        scale_rewards="none",
-        cast_lm_head_to_fp32=False,
-        temperature=1.0,
-        top_p=0.95,
-        generation_kwargs={
-            "remove_invalid_values": True,
-            "renormalize_logits": True,
-        },
-        save_strategy="steps",
-        save_steps=50,
-        save_total_limit=3,
-        logging_steps=5,
-        bf16=use_bf16,
-        fp16=use_fp16,
-        report_to="none",
-        seed=42,
+    cfg = _build_grpo_config(
+        output_dir=output_dir,
+        max_steps=max_steps,
+        save_strategy=save_strategy,
+        save_steps=save_steps,
+        save_total_limit=save_total_limit,
     )
 
     trainer = GRPOTrainer(
@@ -275,7 +422,13 @@ def train_grpo():
         args=cfg,
         train_dataset=dataset,
         processing_class=tokenizer,
+        callbacks=callbacks,
     )
+    return trainer, prompts
+
+
+def train_grpo():
+    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR)
 
     resume = _latest_checkpoint(OUTPUT_DIR)
     print(f"Starting GRPO ({MODEL_ID})...")
@@ -284,6 +437,26 @@ def train_grpo():
     trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(SAVE_DIR)
     print(f"GRPO done -> {SAVE_DIR}")
+
+
+def run_grpo_smoke_test(max_steps: int = 10) -> None:
+    if max_steps < 1 or max_steps > 10:
+        raise ValueError("GRPO smoke test supports 1 to 10 steps.")
+
+    output_dir = Path(SMOKE_OUTPUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    trainer, _prompts = _build_grpo_trainer(
+        output_dir=str(output_dir),
+        max_steps=max_steps,
+        callbacks=[GrpoFiniteTraceCallback()],
+        save_strategy="no",
+        save_total_limit=None,
+    )
+
+    print(f"Starting GRPO smoke test ({max_steps} steps, output_dir={output_dir})...")
+    trainer.train(resume_from_checkpoint=None)
+    _assert_finite("smoke_end.weights", _trainable_parameter_summary(trainer.model))
+    print("GRPO smoke test completed without non-finite tensors.")
 
 
 if __name__ == "__main__":

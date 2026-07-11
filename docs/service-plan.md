@@ -35,7 +35,7 @@ PMTM은 사용자가 BPM을 입력하고 사용할 LLM을 선택하면 바로 �
 MVP의 필수 입력값은 BPM 하나다. 사용자는 생성에 사용할 LLM을 선택할 수 있다.
 
 - BPM: 예시 `80`, `90`, `120`, `140`
-- LLM: `qwen-local`, `openai`
+- LLM: `qwen-local`, `qwen-exp-005-sft`, `qwen-exp-005-grpo`, `openai`
 
 초기에는 주제, 장르, 무드, 섹션 구조 같은 추가 입력을 받지 않는다. 제품이 복잡해지는 것을 막기 위해 BPM 기반 생성 경험을 먼저 검증한다.
 
