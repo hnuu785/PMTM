@@ -51,10 +51,6 @@ type RhymeLineAnalysis = {
 
 type LyricModel =
   | "qwen-local"
-  | "qwen-exp-001-sft"
-  | "qwen-exp-001-grpo"
-  | "qwen-exp-002-sft"
-  | "qwen-exp-002-grpo"
   | "openai";
 
 type ApiErrorResponse = {
@@ -66,6 +62,7 @@ type OutputMode = "lyrics" | "demo";
 
 const BPM_PRESETS = [80, 90, 120, 140];
 const DEMO_VOICES = ["verse", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer"];
+const VOCAL_START_BAR_OPTIONS = [0, 2, 4, 8] as const;
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
   { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
@@ -80,26 +77,6 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
     detail: "Qwen2.5-3B-Instruct",
   },
   {
-    value: "qwen-exp-001-sft",
-    label: "exp-001 SFT",
-    detail: "Qwen + SFT adapter",
-  },
-  {
-    value: "qwen-exp-001-grpo",
-    label: "exp-001 GRPO",
-    detail: "Qwen + GRPO adapter",
-  },
-  {
-    value: "qwen-exp-002-sft",
-    label: "exp-002 SFT",
-    detail: "Qwen + SFT adapter",
-  },
-  {
-    value: "qwen-exp-002-grpo",
-    label: "exp-002 GRPO",
-    detail: "Qwen + GRPO adapter",
-  },
-  {
     value: "openai",
     label: "OpenAI",
     detail: "gpt-5-mini",
@@ -112,10 +89,9 @@ export default function Home() {
   const [beatFile, setBeatFile] = useState<File | null>(null);
   const [bpm, setBpm] = useState("90");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
-  const [genre, setGenre] = useState("Korean hip-hop");
-  const [mood, setMood] = useState("confident");
   const [demoLengthSec, setDemoLengthSec] = useState<30 | 60>(30);
   const [voice, setVoice] = useState("verse");
+  const [vocalStartBars, setVocalStartBars] = useState<0 | 2 | 4 | 8>(4);
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
   const [lyricLines, setLyricLines] = useState<string[]>([]);
@@ -331,10 +307,9 @@ export default function Home() {
     const body = new FormData();
     body.append("beat", beatFile as File);
     body.append("llm", llm);
-    body.append("genre", genre);
-    body.append("mood", mood);
     body.append("demoLengthSec", String(demoLengthSec));
     body.append("voice", voice);
+    body.append("vocalStartBars", String(vocalStartBars));
 
     return fetch(`${apiBaseUrl}/api/v1/demos/generate-from-beat`, {
       method: "POST",
@@ -549,22 +524,6 @@ export default function Home() {
 
                 {outputMode === "demo" ? (
                   <div className="space-y-3 border border-[#f5b950]/25 bg-black/20 p-3">
-                    <label className="block">
-                      <span className="text-sm font-semibold text-[#d8b993]">Genre</span>
-                      <input
-                        value={genre}
-                        onChange={(event) => setGenre(event.target.value)}
-                        className="mt-2 h-10 w-full border border-[#f5b950]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none transition focus:border-[#ffb23f]"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-sm font-semibold text-[#d8b993]">Mood</span>
-                      <input
-                        value={mood}
-                        onChange={(event) => setMood(event.target.value)}
-                        className="mt-2 h-10 w-full border border-[#f5b950]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none transition focus:border-[#ffb23f]"
-                      />
-                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       {[30, 60].map((seconds) => (
                         <button
@@ -595,6 +554,25 @@ export default function Home() {
                         ))}
                       </select>
                     </label>
+                    <div>
+                      <span className="text-sm font-semibold text-[#d8b993]">Rap start</span>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {VOCAL_START_BAR_OPTIONS.map((bars) => (
+                          <button
+                            key={bars}
+                            type="button"
+                            onClick={() => setVocalStartBars(bars)}
+                            className={`h-10 border text-sm font-bold transition ${
+                              vocalStartBars === bars
+                                ? "border-[#ffb23f] bg-[#ff5a1f] text-white"
+                                : "border-[#f5b950]/22 bg-[#130806]/82 text-[#d8b993] hover:border-[#f5b950]/60"
+                            }`}
+                          >
+                            {bars} bars
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 

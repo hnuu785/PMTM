@@ -12,6 +12,7 @@ else:
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.inference import generate, generate_for_api
+from app.inference.device import select_inference_device
 
 
 class FakeTokenizer:
@@ -30,7 +31,47 @@ class FakeTokenizer:
         return "CHAT_PROMPT"
 
 
+class FakeCuda:
+    def __init__(self, available):
+        self.available = available
+
+    def is_available(self):
+        return self.available
+
+
+class FakeMps:
+    def __init__(self, available):
+        self.available = available
+
+    def is_available(self):
+        return self.available
+
+
+class FakeTorch:
+    float16 = "float16"
+    float32 = "float32"
+
+    def __init__(self, *, cuda_available=False, mps_available=False):
+        self.cuda = FakeCuda(cuda_available)
+        self.backends = SimpleNamespace(mps=FakeMps(mps_available))
+
+
 class InferencePromptingTests(unittest.TestCase):
+    def test_inference_device_prefers_cuda(self):
+        self.assertEqual(
+            select_inference_device(FakeTorch(cuda_available=True, mps_available=True)),
+            ("cuda", "float16"),
+        )
+
+    def test_inference_device_uses_mps_when_cuda_is_unavailable(self):
+        self.assertEqual(
+            select_inference_device(FakeTorch(mps_available=True)),
+            ("mps", "float16"),
+        )
+
+    def test_inference_device_falls_back_to_cpu(self):
+        self.assertEqual(select_inference_device(FakeTorch()), ("cpu", "float32"))
+
     def test_auto_prompt_format_uses_chat_for_instruct_models_only(self):
         self.assertTrue(generate_for_api.should_use_chat_template("Qwen/Qwen2.5-3B-Instruct", "auto"))
         self.assertFalse(generate_for_api.should_use_chat_template("Qwen/Qwen2.5-3B", "auto"))

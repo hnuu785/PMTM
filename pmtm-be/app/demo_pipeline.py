@@ -17,6 +17,7 @@ DEMO_STATUS_KEY_PREFIX = "pmtm:demo:"
 DEMO_JOB_TIMEOUT_SECONDS = 600
 DEMO_LENGTH_SECONDS = {30, 60}
 TARGET_LYRIC_BARS = 8
+VOCAL_START_BARS = {0, 2, 4, 8}
 VOICE_PRESETS = {
     "alloy",
     "ash",
@@ -125,6 +126,7 @@ def run_demo_generation(
     mood: str,
     demo_length_sec: int,
     voice: str,
+    vocal_start_bars: int = 4,
 ) -> None:
     from app import main
 
@@ -162,7 +164,8 @@ def run_demo_generation(
 
         provider = get_vocal_provider()
         vocal_path = work_path / "vocal.wav"
-        synthesize_vocal_track(provider, lyric_bars, voice, bpm, vocal_path)
+        start_offset_sec = calculate_vocal_start_offset_sec(bpm, len(lyric_bars), demo_length_sec, vocal_start_bars)
+        synthesize_vocal_track(provider, lyric_bars, voice, bpm, vocal_path, start_offset_sec=start_offset_sec)
 
         _set_status(redis_client, job_id, "mixing", progress=0.82, bpm=bpm, lyrics=lyrics, notes=notes)
         output_path = mix_demo_audio(work_path / "beat_segment.wav", vocal_path, work_path)
@@ -174,7 +177,12 @@ def run_demo_generation(
             progress=1.0,
             bpm=bpm,
             lyrics=lyrics,
-            notes=["librosa tempo 분석값을 BPM으로 사용했습니다.", *notes, f"데모 파일: {output_path.name}"],
+            notes=[
+                "librosa tempo 분석값을 BPM으로 사용했습니다.",
+                f"랩 시작을 비트 시작 후 {start_offset_sec:.1f}초로 맞췄습니다.",
+                *notes,
+                f"데모 파일: {output_path.name}",
+            ],
             audio_url=audio_url,
         )
     except Exception as exc:
@@ -193,7 +201,23 @@ def normalize_lyric_bars(lyrics: str, bars: int) -> list[LyricBar]:
     return [LyricBar(bar_index=index + 1, text=text) for index, text in enumerate(selected)]
 
 
-def synthesize_vocal_track(provider: VocalProvider, bars: list[LyricBar], voice: str, bpm: int, output_path: Path) -> None:
+def calculate_vocal_start_offset_sec(bpm: int, lyric_bars: int, demo_length_sec: int, requested_start_bars: int) -> float:
+    bar_duration_sec = 60.0 / bpm * 4.0
+    requested_offset_sec = requested_start_bars * bar_duration_sec
+    vocal_duration_sec = lyric_bars * bar_duration_sec
+    max_offset_sec = max(0.0, demo_length_sec - vocal_duration_sec)
+    return min(requested_offset_sec, max_offset_sec)
+
+
+def synthesize_vocal_track(
+    provider: VocalProvider,
+    bars: list[LyricBar],
+    voice: str,
+    bpm: int,
+    output_path: Path,
+    *,
+    start_offset_sec: float = 0.0,
+) -> None:
     bar_duration_sec = 60.0 / bpm * 4.0
     line_paths: list[Path] = []
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,7 +230,23 @@ def synthesize_vocal_track(provider: VocalProvider, bars: list[LyricBar], voice:
         align_wav_to_duration(line_path, aligned_path, bar_duration_sec)
         line_paths.append(aligned_path)
 
+    if start_offset_sec > 0:
+        silence_path = output_path.parent / "vocal_start_silence.wav"
+        write_silence_like(line_paths[0], silence_path, start_offset_sec)
+        line_paths.insert(0, silence_path)
+
     concatenate_wavs(line_paths, output_path)
+
+
+def write_silence_like(reference_path: Path, output_path: Path, duration_sec: float) -> None:
+    with wave.open(str(reference_path), "rb") as reference:
+        params = reference.getparams()
+
+    frame_count = max(1, round(duration_sec * params.framerate))
+    frame_width = params.sampwidth * params.nchannels
+    with wave.open(str(output_path), "wb") as target:
+        target.setparams(params._replace(nframes=frame_count))
+        target.writeframes(b"\x00" * frame_width * frame_count)
 
 
 def align_wav_to_duration(input_path: Path, output_path: Path, target_duration_sec: float) -> None:
@@ -223,11 +263,12 @@ def align_wav_to_duration(input_path: Path, output_path: Path, target_duration_s
         output_path.write_bytes(input_path.read_bytes())
         return
 
-    if current_frames < target_frames:
-        silence = b"\x00" * frame_width * (target_frames - current_frames)
-        adjusted = frames + silence
-    else:
-        adjusted = frames[: target_frames * frame_width]
+    if current_frames > target_frames:
+        output_path.write_bytes(input_path.read_bytes())
+        return
+
+    silence = b"\x00" * frame_width * (target_frames - current_frames)
+    adjusted = frames + silence
 
     with wave.open(str(output_path), "wb") as target:
         target.setparams(params._replace(nframes=target_frames))
@@ -388,6 +429,12 @@ def parse_status_payload(data: dict[str, str]) -> dict:
 def validate_demo_length(value: int) -> int:
     if value not in DEMO_LENGTH_SECONDS:
         raise ValueError("데모 길이는 30초 또는 60초만 지원합니다.")
+    return value
+
+
+def validate_vocal_start_bars(value: int) -> int:
+    if value not in VOCAL_START_BARS:
+        raise ValueError("랩 시작 대기는 0, 2, 4, 8마디만 지원합니다.")
     return value
 
 

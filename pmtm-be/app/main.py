@@ -24,6 +24,7 @@ from app.demo_pipeline import parse_status_payload
 from app.demo_pipeline import run_demo_generation
 from app.demo_pipeline import sanitize_prompt_field
 from app.demo_pipeline import validate_demo_length
+from app.demo_pipeline import validate_vocal_start_bars
 from app.demo_pipeline import validate_voice
 from app.schemas import DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
@@ -122,11 +123,13 @@ async def generate_demo_from_beat(
     mood: str = Form("confident"),
     demoLengthSec: int = Form(30),
     voice: str = Form("verse"),
+    vocalStartBars: int = Form(4),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
     try:
         demo_length_sec = validate_demo_length(demoLengthSec)
         voice_preset = validate_voice(voice)
+        vocal_start_bars = validate_vocal_start_bars(vocalStartBars)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -136,7 +139,17 @@ async def generate_demo_from_beat(
     beat_path = await _save_uploaded_beat(beat, target_dir=work_dir, filename_prefix="input")
     genre_value = sanitize_prompt_field(genre, "Korean hip-hop")
     mood_value = sanitize_prompt_field(mood, "confident")
-    _enqueue_demo_job(job_id, beat_path, str(work_dir), llm, genre_value, mood_value, demo_length_sec, voice_preset)
+    _enqueue_demo_job(
+        job_id,
+        beat_path,
+        str(work_dir),
+        llm,
+        genre_value,
+        mood_value,
+        demo_length_sec,
+        voice_preset,
+        vocal_start_bars,
+    )
     return DemoGenerateResponse(jobId=job_id, status="queued")
 
 
@@ -185,27 +198,6 @@ def _generate_verse_for_model(
             f"{settings.openai_model} 생성 결과입니다.",
             "OpenAI Responses API를 사용했습니다.",
         ]
-    if llm == "qwen-exp-001-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-001 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/sft_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-001-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-002-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-002-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
-        ]
-
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
         "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
@@ -466,6 +458,7 @@ def _enqueue_demo_job(
     mood: str,
     demo_length_sec: int,
     voice: str,
+    vocal_start_bars: int,
 ) -> None:
     try:
         from rq import Queue
@@ -496,6 +489,7 @@ def _enqueue_demo_job(
         mood,
         demo_length_sec,
         voice,
+        vocal_start_bars,
         job_id=job_id,
         job_timeout=60 * 10,
     )

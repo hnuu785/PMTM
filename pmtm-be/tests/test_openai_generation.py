@@ -125,6 +125,7 @@ class DemoGenerationTests(unittest.TestCase):
                     "mood": "dark",
                     "demoLengthSec": "30",
                     "voice": "verse",
+                    "vocalStartBars": "2",
                 },
                 files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
             )
@@ -139,6 +140,7 @@ class DemoGenerationTests(unittest.TestCase):
         self.assertEqual(enqueue.call_args.args[5], "dark")
         self.assertEqual(enqueue.call_args.args[6], 30)
         self.assertEqual(enqueue.call_args.args[7], "verse")
+        self.assertEqual(enqueue.call_args.args[8], 2)
 
     def test_generate_demo_rejects_bad_length(self):
         client = TestClient(main.app)
@@ -151,6 +153,18 @@ class DemoGenerationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "데모 길이는 30초 또는 60초만 지원합니다.")
+
+    def test_generate_demo_rejects_bad_vocal_start_bars(self):
+        client = TestClient(main.app)
+
+        response = client.post(
+            "/api/v1/demos/generate-from-beat",
+            data={"demoLengthSec": "30", "voice": "verse", "vocalStartBars": "3"},
+            files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "랩 시작 대기는 0, 2, 4, 8마디만 지원합니다.")
 
     def test_demo_status_serializes_redis_payload(self):
         client = TestClient(main.app)
@@ -217,6 +231,38 @@ class DemoGenerationTests(unittest.TestCase):
             self.assertTrue(output_path.exists())
             with wave.open(str(output_path), "rb") as audio:
                 self.assertGreater(audio.getnframes(), 0)
+
+    def test_synthesize_vocal_track_can_wait_before_first_bar(self):
+        class FakeProvider:
+            def synthesize_line(self, _text, _voice, _bpm, _bar_duration_sec, output_path):
+                _write_test_wav(output_path, duration_sec=0.05)
+
+        with TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "vocal.wav"
+            bars = [demo_pipeline.LyricBar(1, "one")]
+
+            demo_pipeline.synthesize_vocal_track(
+                FakeProvider(),
+                bars,
+                "verse",
+                120,
+                output_path,
+                start_offset_sec=0.5,
+            )
+
+            with wave.open(str(output_path), "rb") as audio:
+                self.assertGreaterEqual(audio.getnframes(), int(0.55 * audio.getframerate()))
+
+    def test_align_wav_to_duration_does_not_cut_long_lines(self):
+        with TemporaryDirectory() as tmp:
+            input_path = Path(tmp) / "line.wav"
+            output_path = Path(tmp) / "aligned.wav"
+            _write_test_wav(input_path, duration_sec=0.4)
+
+            demo_pipeline.align_wav_to_duration(input_path, output_path, target_duration_sec=0.2)
+
+            with wave.open(str(output_path), "rb") as audio:
+                self.assertEqual(audio.getnframes(), int(0.4 * audio.getframerate()))
 
     def test_run_demo_generation_marks_failed_when_provider_fails(self):
         class FakeRedisClient:
@@ -293,6 +339,41 @@ class DemoGenerationTests(unittest.TestCase):
             )
 
         self.assertEqual(generate.call_args.kwargs["bars"], 8)
+
+    def test_run_demo_generation_passes_capped_vocal_start_offset(self):
+        class FakeRedisClient:
+            def hset(self, *_args, **_kwargs):
+                pass
+
+            def expire(self, *_args):
+                pass
+
+        fake_redis_module = mock.Mock(Redis=mock.Mock(from_url=mock.Mock(return_value=FakeRedisClient())))
+
+        with (
+            TemporaryDirectory() as tmp,
+            mock.patch.dict("sys.modules", {"redis": fake_redis_module}),
+            mock.patch.object(main, "_analyze_beat_bpm", return_value=90),
+            mock.patch.object(main, "_generate_verse_for_model", return_value=("[Verse]\none", ["note"])),
+            mock.patch.object(demo_pipeline, "_trim_beat_segment"),
+            mock.patch.object(demo_pipeline, "get_vocal_provider", return_value=mock.Mock()),
+            mock.patch.object(demo_pipeline, "synthesize_vocal_track", side_effect=RuntimeError("stop")) as synthesize,
+        ):
+            beat_path = Path(tmp) / "beat.wav"
+            _write_test_wav(beat_path)
+            demo_pipeline.run_demo_generation(
+                "job",
+                str(beat_path),
+                tmp,
+                "qwen-local",
+                "trap",
+                "dark",
+                30,
+                "verse",
+                4,
+            )
+
+        self.assertAlmostEqual(synthesize.call_args.kwargs["start_offset_sec"], 30 - (8 * (60.0 / 90 * 4.0)))
 
 
 class RhymeAnalysisTests(unittest.TestCase):

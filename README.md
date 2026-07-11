@@ -93,4 +93,3 @@ pip install -r requirements.txt
 
 현재 로컬 기본 추론 모델은 `Qwen/Qwen2.5-3B-Instruct`입니다. 모델 파일은 Hugging Face 캐시에 있어야 하며, 백엔드 기본 설정은 `pmtm-ai/venv/bin/python`을 호출합니다.
 OpenAI 선택지의 기본 모델은 `gpt-5-mini`입니다.
-학습 결과물 선택지는 `pmtm-ai/models/exp-001/sft_rap_qwen`, `pmtm-ai/models/exp-001/grpo_rap_qwen` 어댑터를 사용합니다.
