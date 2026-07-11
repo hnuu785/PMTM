@@ -440,8 +440,8 @@ def train_grpo():
 
 
 def run_grpo_smoke_test(max_steps: int = 10) -> None:
-    if max_steps < 1 or max_steps > 10:
-        raise ValueError("GRPO smoke test supports 1 to 10 steps.")
+    if max_steps < 1 or max_steps > 50:
+        raise ValueError("GRPO smoke test supports 1 to 50 steps.")
 
     output_dir = Path(SMOKE_OUTPUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)

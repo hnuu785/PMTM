@@ -324,7 +324,7 @@ def parse_args():
     p.add_argument("--skip-phonetics", action="store_true", help="phonetics 회귀 테스트 스킵")
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
-    p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~10)")
+    p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~50)")
     return p.parse_args()
 
 
