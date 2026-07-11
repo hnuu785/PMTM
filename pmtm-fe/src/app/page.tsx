@@ -89,8 +89,6 @@ export default function Home() {
   const [beatFile, setBeatFile] = useState<File | null>(null);
   const [bpm, setBpm] = useState("90");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
-  const [genre, setGenre] = useState("Korean hip-hop");
-  const [mood, setMood] = useState("confident");
   const [demoLengthSec, setDemoLengthSec] = useState<30 | 60>(30);
   const [voice, setVoice] = useState("verse");
   const [vocalStartBars, setVocalStartBars] = useState<0 | 2 | 4 | 8>(4);
@@ -309,8 +307,6 @@ export default function Home() {
     const body = new FormData();
     body.append("beat", beatFile as File);
     body.append("llm", llm);
-    body.append("genre", genre);
-    body.append("mood", mood);
     body.append("demoLengthSec", String(demoLengthSec));
     body.append("voice", voice);
     body.append("vocalStartBars", String(vocalStartBars));
@@ -528,22 +524,6 @@ export default function Home() {
 
                 {outputMode === "demo" ? (
                   <div className="space-y-3 border border-[#f5b950]/25 bg-black/20 p-3">
-                    <label className="block">
-                      <span className="text-sm font-semibold text-[#d8b993]">Genre</span>
-                      <input
-                        value={genre}
-                        onChange={(event) => setGenre(event.target.value)}
-                        className="mt-2 h-10 w-full border border-[#f5b950]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none transition focus:border-[#ffb23f]"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-sm font-semibold text-[#d8b993]">Mood</span>
-                      <input
-                        value={mood}
-                        onChange={(event) => setMood(event.target.value)}
-                        className="mt-2 h-10 w-full border border-[#f5b950]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none transition focus:border-[#ffb23f]"
-                      />
-                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       {[30, 60].map((seconds) => (
                         <button
