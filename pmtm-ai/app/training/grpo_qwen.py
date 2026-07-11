@@ -252,7 +252,7 @@ def train_grpo():
         max_completion_length=160,
         beta=0.04,
         scale_rewards="none",
-        cast_lm_head_to_fp32=True,
+        cast_lm_head_to_fp32=False,
         temperature=1.0,
         top_p=0.95,
         generation_kwargs={
