@@ -185,27 +185,6 @@ def _generate_verse_for_model(
             f"{settings.openai_model} 생성 결과입니다.",
             "OpenAI Responses API를 사용했습니다.",
         ]
-    if llm == "qwen-exp-001-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-001/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-001 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/sft_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-001-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-001/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-001 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-001/grpo_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-002-sft":
-        return _generate_qwen_verse(bpm, adapter="exp-002/sft_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-002 SFT 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/sft_rap_qwen을 사용했습니다.",
-        ]
-    if llm == "qwen-exp-002-grpo":
-        return _generate_qwen_verse(bpm, adapter="exp-002/grpo_rap_qwen", genre=genre, mood=mood, bars=bars), [
-            "Qwen/Qwen2.5-1.5B + exp-002 GRPO 어댑터 생성 결과입니다.",
-            "pmtm-ai/models/exp-002/grpo_rap_qwen을 사용했습니다.",
-        ]
-
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
         "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",

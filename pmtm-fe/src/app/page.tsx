@@ -51,10 +51,6 @@ type RhymeLineAnalysis = {
 
 type LyricModel =
   | "qwen-local"
-  | "qwen-exp-001-sft"
-  | "qwen-exp-001-grpo"
-  | "qwen-exp-002-sft"
-  | "qwen-exp-002-grpo"
   | "openai";
 
 type ApiErrorResponse = {
@@ -78,26 +74,6 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
     value: "qwen-local",
     label: "Qwen local",
     detail: "Qwen2.5-3B-Instruct",
-  },
-  {
-    value: "qwen-exp-001-sft",
-    label: "exp-001 SFT",
-    detail: "Qwen + SFT adapter",
-  },
-  {
-    value: "qwen-exp-001-grpo",
-    label: "exp-001 GRPO",
-    detail: "Qwen + GRPO adapter",
-  },
-  {
-    value: "qwen-exp-002-sft",
-    label: "exp-002 SFT",
-    detail: "Qwen + SFT adapter",
-  },
-  {
-    value: "qwen-exp-002-grpo",
-    label: "exp-002 GRPO",
-    detail: "Qwen + GRPO adapter",
   },
   {
     value: "openai",
