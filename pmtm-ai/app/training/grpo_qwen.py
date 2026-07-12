@@ -427,11 +427,14 @@ def _build_grpo_trainer(
     return trainer, prompts
 
 
-def train_grpo():
-    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR)
+def train_grpo(*, trace_finite: bool = False):
+    callbacks = [GrpoFiniteTraceCallback()] if trace_finite else None
+    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks)
 
     resume = _latest_checkpoint(OUTPUT_DIR)
     print(f"Starting GRPO ({MODEL_ID})...")
+    if trace_finite:
+        print("[trace] finite checks enabled for full GRPO training")
     if resume:
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)

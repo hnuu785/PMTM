@@ -218,7 +218,7 @@ def reward_sanity_check():
     torch.cuda.empty_cache()
 
 
-def run_grpo():
+def run_grpo(trace_finite: bool = False):
     print("=" * 60)
     print("[C3] GRPO 학습")
     print("=" * 60)
@@ -227,7 +227,7 @@ def run_grpo():
     )
     from app.training.grpo_qwen import train_grpo
 
-    train_grpo()
+    train_grpo(trace_finite=trace_finite)
     print()
 
 
@@ -325,6 +325,7 @@ def parse_args():
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
     p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~50)")
+    p.add_argument("--trace-finite", action="store_true", help="본 GRPO 학습 중 gradient/weight finite check 활성화")
     return p.parse_args()
 
 
@@ -347,7 +348,7 @@ def main():
         return
 
     if args.stage == "grpo":
-        run_grpo()
+        run_grpo(trace_finite=args.trace_finite)
         save_loss_plots_if_possible()
         return
 
@@ -367,7 +368,7 @@ def main():
     save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check()
-    run_grpo()
+    run_grpo(trace_finite=args.trace_finite)
     save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval()
