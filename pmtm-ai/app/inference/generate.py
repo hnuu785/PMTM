@@ -17,12 +17,12 @@ def parse_args():
         default=str(DEFAULT_ADAPTER),
         help="LoRA adapter directory path (default: models/grpo_rap_qwen). Set to 'none' to run the base model only.",
     )
-    p.add_argument("--artist", required=True, help="Artist style name")
-    p.add_argument("--bpm", type=float, required=True, help="Track BPM")
-    p.add_argument("--energy", type=float, required=True, help="Energy score (0-1)")
-    p.add_argument("--danceability", type=float, required=True, help="Danceability score (0-1)")
-    p.add_argument("--loudness", type=float, required=True, help="Loudness in dB")
-    p.add_argument("--valence", type=float, required=True, help="Valence score (0-1)")
+    p.add_argument("--artist", help="Artist style name")
+    p.add_argument("--bpm", type=float, help="Track BPM")
+    p.add_argument("--energy", type=float, help="Energy score (0-1)")
+    p.add_argument("--danceability", type=float, help="Danceability score (0-1)")
+    p.add_argument("--loudness", type=float, help="Loudness in dB")
+    p.add_argument("--valence", type=float, help="Valence score (0-1)")
     p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=220, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.9, help="Sampling temperature")

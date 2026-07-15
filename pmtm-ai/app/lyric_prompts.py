@@ -5,13 +5,14 @@ DEFAULT_MOOD = "confident"
 
 def build_api_user_prompt(
     *,
-    bpm: float,
+    bpm: float | None = None,
     genre: str = DEFAULT_GENRE,
     mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,
 ) -> str:
+    bpm_prompt = f"BPM {bpm:.0f}. " if bpm is not None else ""
     return (
-        f"BPM {bpm:.0f}. Write exactly {bars} lines of Korean rap verse. "
+        f"{bpm_prompt}Write exactly {bars} lines of Korean rap verse. "
         "Use natural rhymes and consistent line breathing. "
         "Avoid repeating the same words, phrases, or ending words."
     )
@@ -19,7 +20,7 @@ def build_api_user_prompt(
 
 def build_api_messages(
     *,
-    bpm: float,
+    bpm: float | None = None,
     genre: str = DEFAULT_GENRE,
     mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,

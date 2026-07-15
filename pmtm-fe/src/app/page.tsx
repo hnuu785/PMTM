@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
@@ -381,9 +382,17 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-[#f5b950] uppercase">
-            <span className="h-2 w-2 rounded-full bg-[#ff5a1f] shadow-[0_0_16px_rgba(255,90,31,0.9)]" />
-            Beat Draft
+          <div className="flex items-center gap-3">
+            <Link
+              href="/beat-analysis"
+              className="border border-[#f5b950]/55 px-3 py-2 text-xs font-bold tracking-[0.08em] text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
+            >
+              Librosa 분석
+            </Link>
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-[#f5b950] uppercase">
+              <span className="h-2 w-2 rounded-full bg-[#ff5a1f] shadow-[0_0_16px_rgba(255,90,31,0.9)]" />
+              Beat Draft
+            </div>
           </div>
         </header>
 

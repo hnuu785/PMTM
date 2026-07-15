@@ -132,6 +132,17 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertIn("exactly 8 lines", messages[0]["content"])
         self.assertNotIn("Tablo", messages[0]["content"])
 
+    def test_local_cli_messages_omit_bpm_when_unspecified(self):
+        args = SimpleNamespace(bpm=None, bars=8)
+        messages = generate.build_messages(args)
+
+        self.assertEqual(
+            messages[0]["content"],
+            "Write exactly 8 lines of Korean rap verse. "
+            "Use natural rhymes and consistent line breathing. "
+            "Avoid repeating the same words, phrases, or ending words.",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

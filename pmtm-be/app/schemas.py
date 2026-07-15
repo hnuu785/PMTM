@@ -42,6 +42,36 @@ class LyricGenerateResponse(BaseModel):
     rhymeAnalysis: list[RhymeLineAnalysis] = Field(default_factory=list)
 
 
+class TimedValue(BaseModel):
+    time: float
+    value: float
+
+
+class BeatAnalysisResponse(BaseModel):
+    fileName: str
+    durationSec: float
+    sampleRate: int
+    sampleCount: int
+    tempo: float
+    timeSignature: str
+    timeSignatureSource: str
+    introStartSec: float
+    introEndSec: float
+    drumEntrySec: float
+    firstBeatSec: float
+    firstBarStartSec: float
+    firstBarEndSec: float
+    firstBarBeatTimes: list[float]
+    beatTimes: list[float]
+    onsetTimes: list[float]
+    waveform: list[TimedValue]
+    rms: list[TimedValue]
+    onsetStrength: list[TimedValue]
+    spectral: dict[str, float]
+    chroma: list[float]
+    mfcc: list[float]
+
+
 DemoStatus = Literal[
     "queued",
     "analyzing",

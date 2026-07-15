@@ -26,7 +26,7 @@ from app.demo_pipeline import sanitize_prompt_field
 from app.demo_pipeline import validate_demo_length
 from app.demo_pipeline import validate_vocal_start_bars
 from app.demo_pipeline import validate_voice
-from app.schemas import DemoGenerateResponse, DemoStatusResponse
+from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
 
@@ -111,6 +111,19 @@ async def generate_lyrics_from_beat(
         notes=notes,
         rhymeAnalysis=_analyze_rhyme_lines(lyric_lines),
     )
+
+
+@app.post("/api/v1/beats/analyze", response_model=BeatAnalysisResponse)
+async def analyze_beat(beat: UploadFile = File(...)) -> BeatAnalysisResponse:
+    file_name = beat.filename or "beat"
+    beat_path = await _save_uploaded_beat(beat)
+    try:
+        return _analyze_beat(beat_path, file_name)
+    finally:
+        try:
+            os.unlink(beat_path)
+        except FileNotFoundError:
+            pass
 
 
 @app.post("/api/v1/lyrics/analyze-rhyme", response_model=list[RhymeLineAnalysis])
@@ -531,6 +544,174 @@ def _analyze_beat_bpm(file_path: str) -> int:
         raise HTTPException(status_code=400, detail="BPM 분석 실패")
 
     return bpm
+
+
+def _analyze_beat(file_path: str, file_name: str) -> BeatAnalysisResponse:
+    try:
+        import librosa
+        import numpy as np
+
+        y, sr = librosa.load(file_path, sr=None, mono=True, duration=60)
+        if len(y) == 0:
+            raise ValueError("empty audio")
+
+        hop_length = 512
+        onset_envelope = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
+        tempo, beat_frames = librosa.beat.beat_track(
+            y=y,
+            sr=sr,
+            onset_envelope=onset_envelope,
+            hop_length=hop_length,
+        )
+        tempo_value = float(np.asarray(tempo).reshape(-1)[0])
+        if not math.isfinite(tempo_value):
+            raise ValueError("invalid tempo")
+
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_length)
+        _, percussive = librosa.effects.hpss(y)
+        percussive_onset_envelope = librosa.onset.onset_strength(
+            y=percussive,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        percussive_onset_frames = librosa.onset.onset_detect(
+            onset_envelope=percussive_onset_envelope,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        drum_entry_frame = _select_sustained_onset(
+            percussive_onset_frames,
+            percussive_onset_envelope[percussive_onset_frames],
+            round(2 * sr / hop_length),
+        )
+        drum_entry_sec = (
+            float(librosa.frames_to_time(drum_entry_frame, sr=sr, hop_length=hop_length))
+            if drum_entry_frame is not None
+            else 0.0
+        )
+        first_beat_sec = (
+            min((float(value) for value in beat_times), key=lambda value: abs(value - drum_entry_sec))
+            if len(beat_times) > 0
+            else drum_entry_sec
+        )
+        first_bar_beat_times, first_bar_end_sec = _build_first_bar(
+            beat_times,
+            first_beat_sec,
+            tempo_value,
+        )
+
+        onset_frames = librosa.onset.onset_detect(
+            onset_envelope=onset_envelope,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+        zero_crossing_rate = librosa.feature.zero_crossing_rate(y, hop_length=hop_length)[0]
+        centroid = librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop_length)[0]
+        bandwidth = librosa.feature.spectral_bandwidth(y=y, sr=sr, hop_length=hop_length)[0]
+        rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr, hop_length=hop_length)[0]
+        chroma = librosa.feature.chroma_stft(y=y, sr=sr, hop_length=hop_length)
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, hop_length=hop_length)
+
+        frame_times = librosa.frames_to_time(
+            np.arange(len(onset_envelope)),
+            sr=sr,
+            hop_length=hop_length,
+        )
+        rms_times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
+        waveform_times = np.arange(len(y), dtype=float) / sr
+
+        return BeatAnalysisResponse(
+            fileName=file_name,
+            durationSec=round(float(librosa.get_duration(y=y, sr=sr)), 3),
+            sampleRate=int(sr),
+            sampleCount=int(len(y)),
+            tempo=round(tempo_value, 2),
+            timeSignature="4/4",
+            timeSignatureSource="assumed",
+            introStartSec=0.0,
+            introEndSec=round(first_beat_sec, 4),
+            drumEntrySec=round(drum_entry_sec, 4),
+            firstBeatSec=round(first_beat_sec, 4),
+            firstBarStartSec=round(first_beat_sec, 4),
+            firstBarEndSec=round(first_bar_end_sec, 4),
+            firstBarBeatTimes=_rounded_list(first_bar_beat_times),
+            beatTimes=_rounded_list(beat_times),
+            onsetTimes=_rounded_list(librosa.frames_to_time(onset_frames, sr=sr, hop_length=hop_length)),
+            waveform=_downsample_series(waveform_times, y, 700),
+            rms=_downsample_series(rms_times, rms, 400),
+            onsetStrength=_downsample_series(frame_times, onset_envelope, 400),
+            spectral={
+                "rmsMean": round(float(np.mean(rms)), 6),
+                "rmsMax": round(float(np.max(rms)), 6),
+                "zeroCrossingRateMean": round(float(np.mean(zero_crossing_rate)), 6),
+                "centroidMeanHz": round(float(np.mean(centroid)), 2),
+                "bandwidthMeanHz": round(float(np.mean(bandwidth)), 2),
+                "rolloffMeanHz": round(float(np.mean(rolloff)), 2),
+            },
+            chroma=[round(float(value), 6) for value in np.mean(chroma, axis=1)],
+            mfcc=[round(float(value), 4) for value in np.mean(mfcc, axis=1)],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="비트 분석 실패") from exc
+
+
+def _rounded_list(values) -> list[float]:
+    return [round(float(value), 4) for value in values]
+
+
+def _select_sustained_onset(onset_frames, strengths, horizon_frames: int) -> int | None:
+    if len(onset_frames) == 0:
+        return None
+
+    strength_values = [float(value) for value in strengths]
+    threshold = max(strength_values) * 0.25
+    frame_values = [int(value) for value in onset_frames]
+    for index, frame in enumerate(frame_values):
+        if strength_values[index] < threshold:
+            continue
+        following_count = sum(frame <= candidate <= frame + horizon_frames for candidate in frame_values)
+        if following_count >= 3:
+            return frame
+
+    return frame_values[0]
+
+
+def _build_first_bar(beat_times, first_beat_sec: float, tempo: float) -> tuple[list[float], float]:
+    values = [float(value) for value in beat_times]
+    beat_interval = 60 / tempo if tempo > 0 else 0.0
+    first_index = (
+        min(range(len(values)), key=lambda index: abs(values[index] - first_beat_sec))
+        if values
+        else 0
+    )
+    bar_beats = [
+        values[first_index + offset]
+        if first_index + offset < len(values)
+        else first_beat_sec + beat_interval * offset
+        for offset in range(4)
+    ]
+    bar_end = (
+        values[first_index + 4]
+        if first_index + 4 < len(values)
+        else first_beat_sec + beat_interval * 4
+    )
+    return bar_beats, bar_end
+
+
+def _downsample_series(times, values, max_points: int) -> list[dict[str, float]]:
+    import numpy as np
+
+    value_count = min(len(times), len(values))
+    if value_count == 0:
+        return []
+    indexes = np.linspace(0, value_count - 1, min(value_count, max_points), dtype=int)
+    return [
+        {"time": round(float(times[index]), 4), "value": round(float(values[index]), 6)}
+        for index in indexes
+    ]
 
 
 def _generate_qwen_verse(

@@ -107,6 +107,68 @@ class BeatGenerationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "비트 파일이 비어 있습니다.")
 
+    def test_analyze_beat_returns_full_analysis_and_removes_upload(self):
+        client = TestClient(main.app)
+        analysis = {
+            "fileName": "beat.wav",
+            "durationSec": 12.5,
+            "sampleRate": 22050,
+            "sampleCount": 275625,
+            "tempo": 92.4,
+            "timeSignature": "4/4",
+            "timeSignatureSource": "assumed",
+            "introStartSec": 0.0,
+            "introEndSec": 4.1,
+            "drumEntrySec": 4.05,
+            "firstBeatSec": 4.1,
+            "firstBarStartSec": 4.1,
+            "firstBarEndSec": 6.7,
+            "firstBarBeatTimes": [4.1, 4.75, 5.4, 6.05],
+            "beatTimes": [0.5, 1.15],
+            "onsetTimes": [0.2, 0.5],
+            "waveform": [{"time": 0.0, "value": 0.1}],
+            "rms": [{"time": 0.0, "value": 0.2}],
+            "onsetStrength": [{"time": 0.0, "value": 0.3}],
+            "spectral": {"rmsMean": 0.2},
+            "chroma": [0.1] * 12,
+            "mfcc": [0.2] * 13,
+        }
+
+        with mock.patch.object(main, "_analyze_beat", return_value=analysis) as analyze:
+            response = client.post(
+                "/api/v1/beats/analyze",
+                files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["tempo"], 92.4)
+        self.assertEqual(response.json()["timeSignature"], "4/4")
+        self.assertEqual(response.json()["firstBeatSec"], 4.1)
+        self.assertEqual(response.json()["firstBarEndSec"], 6.7)
+        self.assertEqual(response.json()["chroma"], [0.1] * 12)
+        analyze.assert_called_once()
+        self.assertEqual(analyze.call_args.args[1], "beat.wav")
+        self.assertFalse(Path(analyze.call_args.args[0]).exists())
+
+    def test_select_sustained_onset_skips_isolated_intro_hit(self):
+        frame = main._select_sustained_onset(
+            onset_frames=[5, 40, 52, 64, 90],
+            strengths=[0.8, 1.0, 0.9, 0.7, 0.8],
+            horizon_frames=25,
+        )
+
+        self.assertEqual(frame, 40)
+
+    def test_build_first_bar_uses_four_detected_beats_and_next_boundary(self):
+        beats, end = main._build_first_bar(
+            beat_times=[1.0, 1.5, 2.0, 2.5, 3.0, 3.5],
+            first_beat_sec=1.0,
+            tempo=120.0,
+        )
+
+        self.assertEqual(beats, [1.0, 1.5, 2.0, 2.5])
+        self.assertEqual(end, 3.0)
+
 
 class DemoGenerationTests(unittest.TestCase):
     def test_generate_demo_from_beat_enqueues_job(self):
