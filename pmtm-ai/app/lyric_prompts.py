@@ -13,6 +13,7 @@ def build_api_user_prompt(
     bpm_prompt = f"BPM {bpm:.0f}. " if bpm is not None else ""
     return (
         f"{bpm_prompt}Write exactly {bars} lines of Korean rap verse. "
+        "Use Hangul lyrics only without Latin letters or numbers. "
         "Use natural rhymes and consistent line breathing. "
         "Avoid repeating the same words, phrases, or ending words."
     )

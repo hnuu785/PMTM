@@ -76,7 +76,9 @@ DemoStatus = Literal[
     "queued",
     "analyzing",
     "writing",
+    "planning",
     "voicing",
+    "rendering",
     "mixing",
     "succeeded",
     "failed",
@@ -99,3 +101,12 @@ class DemoStatusResponse(BaseModel):
     notes: list[str] = Field(default_factory=list)
     error: str | None = None
     audioUrl: str | None = None
+    vocalUrl: str | None = None
+    flowPlanUrl: str | None = None
+    voicebank: str | None = None
+
+
+class VoicebankResponse(BaseModel):
+    id: str
+    label: str
+    available: bool

@@ -26,9 +26,16 @@ from app.demo_pipeline import sanitize_prompt_field
 from app.demo_pipeline import validate_demo_length
 from app.demo_pipeline import validate_vocal_start_bars
 from app.demo_pipeline import validate_voice
+from app.guide_pipeline import enqueue_guide_demo
+from app.guide_pipeline import list_voicebanks
+from app.guide_pipeline import validate_bpm as validate_guide_bpm
+from app.guide_pipeline import validate_first_bar_start
+from app.guide_pipeline import validate_guide_flow
+from app.guide_pipeline import validate_voicebank
 from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
+from app.schemas import VoicebankResponse
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -168,6 +175,47 @@ async def generate_demo_from_beat(
     return DemoGenerateResponse(jobId=job_id, status="queued")
 
 
+@app.get("/api/v1/guide-demos/voicebanks", response_model=list[VoicebankResponse])
+def get_guide_voicebanks() -> list[VoicebankResponse]:
+    return [VoicebankResponse(**item) for item in list_voicebanks()]
+
+
+@app.post("/api/v1/guide-demos", response_model=DemoGenerateResponse)
+async def generate_guide_demo(
+    lyrics: str = Form(...),
+    bpm: int = Form(...),
+    firstBarStartSec: float = Form(...),
+    voicebank: str = Form("potg"),
+    beat: UploadFile = File(...),
+) -> DemoGenerateResponse:
+    try:
+        bpm_value = validate_guide_bpm(bpm)
+        first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
+        voicebank_id = validate_voicebank(voicebank)
+        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    job_id = uuid.uuid4().hex
+    work_dir = DEMO_STORAGE_ROOT / job_id
+    work_dir.mkdir(parents=True, exist_ok=False)
+    beat_path = await _save_uploaded_beat(beat, target_dir=work_dir, filename_prefix="input")
+    try:
+        enqueue_guide_demo(
+            _get_redis_client(),
+            job_id,
+            beat_path,
+            str(work_dir),
+            lyrics,
+            bpm_value,
+            first_bar_start_sec,
+            voicebank_id,
+        )
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
+    return DemoGenerateResponse(jobId=job_id, status="queued")
+
+
 @app.get("/api/v1/demos/{job_id}", response_model=DemoStatusResponse)
 def get_demo_status(job_id: str) -> DemoStatusResponse:
     redis_client = _get_redis_client()
@@ -197,6 +245,26 @@ def get_demo_audio(job_id: str) -> FileResponse:
     if wav_path.exists():
         return FileResponse(wav_path, media_type="audio/wav", filename=f"pmtm-demo-{job_id}.wav")
     raise HTTPException(status_code=404, detail="데모 오디오 파일을 찾을 수 없습니다.")
+
+
+@app.get("/api/v1/demos/{job_id}/vocal")
+def get_demo_vocal(job_id: str) -> FileResponse:
+    vocal_path = DEMO_STORAGE_ROOT / job_id / "vocal.wav"
+    if vocal_path.exists():
+        return FileResponse(vocal_path, media_type="audio/wav", filename=f"pmtm-vocal-{job_id}.wav")
+    raise HTTPException(status_code=404, detail="드라이 보컬 파일을 찾을 수 없습니다.")
+
+
+@app.get("/api/v1/demos/{job_id}/flow-plan")
+def get_demo_flow_plan(job_id: str) -> FileResponse:
+    flow_plan_path = DEMO_STORAGE_ROOT / job_id / "flow-plan.json"
+    if flow_plan_path.exists():
+        return FileResponse(
+            flow_plan_path,
+            media_type="application/json",
+            filename=f"pmtm-flow-plan-{job_id}.json",
+        )
+    raise HTTPException(status_code=404, detail="FlowPlan 파일을 찾을 수 없습니다.")
 
 
 def _generate_verse_for_model(
@@ -827,7 +895,7 @@ def _build_openai_payload(
         "model": settings.openai_model,
         "instructions": (
             f"You write Korean rap lyrics. Return only a {bars}-line verse in Korean. "
-            "Use natural Korean hip-hop phrasing, with English words only as occasional ad-libs. "
+            "Use natural Korean hip-hop phrasing and Hangul lyrics only; do not use Latin letters or numbers. "
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (

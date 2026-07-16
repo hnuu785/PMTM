@@ -423,6 +423,9 @@ def parse_status_payload(data: dict[str, str]) -> dict:
         "notes": notes,
         "error": data.get("error"),
         "audioUrl": data.get("audioUrl"),
+        "vocalUrl": data.get("vocalUrl"),
+        "flowPlanUrl": data.get("flowPlanUrl"),
+        "voicebank": data.get("voicebank"),
     }
 
 

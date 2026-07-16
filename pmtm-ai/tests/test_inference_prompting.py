@@ -139,6 +139,7 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertEqual(
             messages[0]["content"],
             "Write exactly 8 lines of Korean rap verse. "
+            "Use Hangul lyrics only without Latin letters or numbers. "
             "Use natural rhymes and consistent line breathing. "
             "Avoid repeating the same words, phrases, or ending words.",
         )
