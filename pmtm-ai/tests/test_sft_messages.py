@@ -3,8 +3,6 @@ import sys
 import unittest
 from pathlib import Path
 
-import pandas as pd
-
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 else:
@@ -12,7 +10,7 @@ else:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.training.prepare_dataset import prepare
+from app.training.prepare_dataset_v3 import build_record
 from app.training.sft_qwen import _tokenize_messages
 
 
@@ -39,26 +37,15 @@ class FakeTokenizer:
 
 class SftMessagesTests(unittest.TestCase):
     def test_prepare_outputs_chat_messages_with_assistant_lyrics(self):
-        df = pd.DataFrame([
-            {
-                "artist": "artist",
-                "lyrics": "\n".join(f"line {i}" for i in range(1, 9)),
-                "bpm": 90,
-                "energy": 0.5,
-                "danceability": 0.5,
-                "loudness": -6.0,
-                "valence": 0.5,
-            }
-        ])
+        lines = [f"line {i}" for i in range(1, 9)]
+        record = build_record(lines, "붐뱁")
 
-        records = prepare(df)
-
-        self.assertEqual(len(records), 1)
-        messages = records[0]["messages"]
+        messages = record["messages"]
         self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
-        self.assertIn("BPM 90", messages[0]["content"])
-        self.assertIn("exactly 8 lines", messages[0]["content"])
-        self.assertTrue(messages[1]["content"].endswith("[End]"))
+        self.assertIn("붐뱁 장르의 한국어 랩 가사", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
+        self.assertIn("1. line 1 (6음절)", messages[1]["content"])
+        self.assertIn("8. line 8 (6음절)", messages[1]["content"])
 
     def test_tokenize_messages_masks_user_tokens(self):
         messages = [

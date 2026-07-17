@@ -14,7 +14,7 @@ from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR
 
-DATA_PATH = str(DATA_DIR / "prepared_dataset_v2.jsonl")
+DATA_PATH = str(DATA_DIR / "prepared_dataset_v3.jsonl")
 OUTPUT_DIR = str(OUTPUTS_DIR / "sft_qwen")
 SAVE_DIR = str(MODELS_DIR / "sft_rap_qwen")
 MAX_LENGTH = 768

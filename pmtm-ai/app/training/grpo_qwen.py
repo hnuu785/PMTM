@@ -157,14 +157,18 @@ def _detect_precision():
     return torch.float16, False, True
 
 
+import random
+
 def build_prompts(df: pd.DataFrame) -> list[list[dict[str, str]]]:
     top = df.sort_values("rhyme_density", ascending=False).head(TOP_N)
     prompts = []
     for _, row in top.iterrows():
+        scheme = "AAAABBBB"
         prompts.append(
             build_api_messages(
                 bpm=float(row["bpm"]),
                 bars=TARGET_BARS,
+                rhyme_scheme=scheme,
             )
         )
     return prompts
@@ -204,8 +208,27 @@ def _message_content(value) -> str:
 
 
 def _extract_verse(completion) -> list[str]:
-    body = _END_RE.split(_message_content(completion), 1)[0]
-    return [ln.strip() for ln in body.split("\n") if ln.strip()]
+    text = _message_content(completion)
+    if "[수정된 지침에 따른 가사]" in text:
+        parts = text.split("[수정된 지침에 따른 가사]")
+        body = parts[1] if len(parts) > 1 else text
+    else:
+        body = text
+    body = _END_RE.split(body, 1)[0]
+    
+    lines = []
+    for ln in body.split("\n"):
+        ln = ln.strip()
+        if not ln:
+            continue
+        if not re.match(r"^\d+\.", ln):
+            continue
+        ln = re.sub(r"^\d+\.\s*", "", ln)  # 마디 번호 제거
+        ln = re.sub(r"\(\d+음절\)\s*$", "", ln)  # 음절 표시 제거
+        ln = ln.strip()
+        if ln:
+            lines.append(ln)
+    return lines
 
 
 def _parse_target_bars(prompt, default: int = TARGET_BARS) -> int:
@@ -264,53 +287,51 @@ def _short_line_ratio(lines: list[str], target_bars: int) -> float:
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """반복 가사가 라임 점수를 부풀리지 못하도록 보상 계산."""
+    """지정된 라임 스키마(AAAABBBB) 준수 여부만 정밀하게 채점하여 보상 제공."""
     if prompts is None:
         prompts = [""] * len(completions)
     rewards = []
+    
     for prompt, comp in zip(prompts, completions):
-        completion_text = _message_content(comp)
         lines = _extract_verse(comp)
-        n_target = _parse_target_bars(prompt)
-
-        if len(lines) < 2:
-            rhyme = 0.0
-        else:
-            scores = [get_line_rhyme_score(lines[i], lines[i + 1])
-                      for i in range(len(lines) - 1)]
-            rhyme = sum(scores) / len(scores)
-
-        format_ok = 1.0 if "[End]" in completion_text else 0.0
-        length_score = max(0.0, 1.0 - abs(len(lines) - n_target) / n_target)
-        dup_ratio = 1.0 - len(set(lines)) / len(lines) if lines else 1.0
-        max_run = _max_consecutive_duplicate_run(lines)
-        run_penalty = max(0.0, (max_run - 1) / max(1, len(lines) - 1)) if lines else 1.0
-        ngram_repeat_ratio = _repeated_ngram_ratio(lines)
-        short_line_ratio = _short_line_ratio(lines, n_target)
-
-        # 반복이 많을수록 라임 보상 자체를 줄여서 "반복 = 고득점"을 차단한다.
-        repetition_pressure = max(dup_ratio, ngram_repeat_ratio)
-        effective_rhyme = rhyme * (1.0 - repetition_pressure)
-        r = (
-            0.5 * effective_rhyme
-            + 0.2 * length_score
-            + 0.2 * format_ok
-            - 1.0 * dup_ratio
-            - 1.0 * run_penalty
-            - NGRAM_REPEAT_PENALTY_WEIGHT * ngram_repeat_ratio
-            - SHORT_LINE_PENALTY_WEIGHT * short_line_ratio
-        )
-
-        # 중복이 심하거나 연속 중복이 발생한 completion은 최종 보상 상한을 강제로 크게 낮춘다.
-        if (
-            dup_ratio >= 0.3
-            or max_run >= 2
-            or ngram_repeat_ratio >= SEVERE_NGRAM_REPEAT_RATIO
-            or short_line_ratio >= SEVERE_SHORT_LINE_RATIO
-        ):
-            r = min(r, -1.5)
-
+        
+        # 8마디 분량을 보장해야 라임 계산이 유의미하므로, 
+        # 라인 수가 부족하면 강력한 감점
+        if len(lines) < 8:
+            rewards.append(float(-1.5 + (len(lines) / 8.0) * 0.5))
+            continue
+            
+        # 8마디 이상일 때, 상위 8줄만 사용하여 라임 평가
+        eval_lines = lines[:8]
+        
+        # 중복 라인 감지 (동일 문장 반복으로 라임 꼼수 쓰는 것 방지)
+        dup_ratio = 1.0 - len(set(eval_lines)) / 8.0
+        
+        # AAAABBBB 채점
+        # 1~4행 통일도 (1행 기준 2~4행 비교)
+        scores_a = [get_line_rhyme_score(eval_lines[0], eval_lines[i]) for i in range(1, 4)]
+        # 5~8행 통일도 (5행 기준 6~8행 비교)
+        scores_b = [get_line_rhyme_score(eval_lines[4], eval_lines[i]) for i in range(5, 8)]
+        
+        rhyme_score = (sum(scores_a)/3.0 + sum(scores_b)/3.0) / 2.0
+        
+        # A와 B가 너무 같은 모음군이면 감점 (다양성 확보)
+        cross_similarity = get_line_rhyme_score(eval_lines[0], eval_lines[4])
+        if cross_similarity > 0.6:
+            rhyme_score -= (cross_similarity - 0.6) * 0.2
+        
+        # 중복으로 점수를 얻으려는 리워드 해킹 감점
+        effective_rhyme = rhyme_score * (1.0 - dup_ratio)
+        
+        # 최종 보상 산출 (오직 라이밍 점수에 비례)
+        r = effective_rhyme
+        
+        # 중복이 극단적으로 심하면 강한 감점
+        if dup_ratio >= 0.3:
+            r = min(r, -1.0)
+            
         rewards.append(float(r))
+        
     return rewards
 
 

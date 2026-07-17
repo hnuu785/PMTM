@@ -9,26 +9,18 @@
 우리가 목표로 잡은 좋은 랩 벌스는 아래 조건을 만족하는 8줄 랩 벌스다.
 
 - 라임이 자연스럽다.
-- 줄 단위 호흡이 일정하다.
-- 동일 단어, 구, 끝단어 반복이 적다.
-- 현재 데이터 수준에서는 과한 조건보다 라임/호흡/반복 억제를 우선한다.
-
-초기에는 구체적 이미지나 8줄 안의 작은 전개도 목표로 논의했지만, 현재 CSV에서 기계적으로 뽑은 8줄 chunk가 항상 그 조건을 만족하지는 않았다. 그래서 SFT 프롬프트는 데이터가 실제로 지지할 수 있는 수준으로 낮췄다.
-
-## 변경사항
-
-### 1. `prepared_dataset_v2.jsonl` 생성
+- 줄 단위 호흡이 일정하�### 1. `prepared_dataset_v3.jsonl` 생성
 
 새 SFT 데이터셋을 만들었다.
 
-- 파일: `pmtm-ai/data/prepared_dataset_v2.jsonl`
-- 생성기: `pmtm-ai/app/training/prepare_dataset_v2.py`
+- 파일: `pmtm-ai/data/prepared_dataset_v3.jsonl`
+- 생성기: `pmtm-ai/app/training/prepare_dataset_v3.py`
 - 후보 8줄 chunk: 5,954개
 - 최종 샘플: 2,868개
 - 메시지 구조: `user -> assistant`
-- assistant 형식: 정확히 8줄 + `[End]`
+- assistant 형식: 정확히 8줄의 가사 본문만 바로 출력 (마디 번호 `1.~8.` 및 `(X음절)` 가이드 마커 포함)
 
-기존 `prepared_dataset.jsonl`은 거의 모든 8줄 chunk를 학습에 넣는 구조였다. v2는 좋은 벌스 기준에 맞춰 품질 필터를 적용한다.
+기존 `prepared_dataset.jsonl`은 거의 모든 8줄 chunk를 학습에 넣는 구조였다. v3은 좋은 벌스 기준에 맞춰 품질 필터를 적용하고, 마디 제어 및 음수율 유도를 강화했다.
 
 필터 기준:
 
@@ -50,15 +42,15 @@
 - `line_repeat`: 167
 - `phrase_repeat`: 127
 
-### 2. SFT 입력을 v2 데이터셋으로 변경
+### 2. SFT 입력을 v3 데이터셋으로 변경
 
 `pmtm-ai/app/training/sft_qwen.py`의 SFT 입력을 아래로 바꿨다.
 
 ```python
-DATA_PATH = str(DATA_DIR / "prepared_dataset_v2.jsonl")
+DATA_PATH = str(DATA_DIR / "prepared_dataset_v3.jsonl")
 ```
 
-`run_training.py`도 SFT 데이터 준비 단계에서 `prepared_dataset_v2.jsonl`을 확인하고, 없으면 `prepare_dataset_v2.py`를 실행하도록 바꿨다.
+`run_training.py`도 SFT 데이터 준비 단계에서 `prepared_dataset_v3.jsonl`을 확인하고, 없으면 `prepare_dataset_v3.py`를 실행하도록 바꿨다.
 
 변경 이유:
 
@@ -68,18 +60,18 @@ DATA_PATH = str(DATA_DIR / "prepared_dataset_v2.jsonl")
 
 ### 3. 학습/GRPO/추론 프롬프트 통일
 
-최종 프롬프트를 아래 형태로 통일했다.
+최종 프롬프트를 Instruct 모델 지시 순응에 유리한 자연어 명령문 형태로 통일했다.
 
 ```text
-BPM 90. Write exactly 8 lines of Korean rap verse. Use natural rhymes and consistent line breathing. Avoid repeating the same words, phrases, or ending words.
+{g_name} 장르의 한국어 랩 가사를 작성해 주세요. 한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, 마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요. (GRPO 시: 추가로, 끝단어의 라임은 반드시 {rhyme_scheme} 스키마를 준수해 주세요.)
 ```
 
-이 프롬프트는 SFT 데이터, GRPO prompt, API 추론, 로컬 CLI 추론에서 동일하게 사용된다.
+이 프롬프트는 SFT 데이터, GRPO prompt, API 추론, 로컬 CLI 추론에서 동일한 자연어 지시 의미 체계로 사용된다.
 
 변경한 경로:
 
 - `pmtm-ai/app/lyric_prompts.py`
-- `pmtm-ai/app/training/prepare_dataset_v2.py`
+- `pmtm-ai/app/training/prepare_dataset_v3.py`
 - `pmtm-ai/app/training/grpo_qwen.py`
 - `pmtm-ai/app/inference/generate_for_api.py`
 - `pmtm-ai/app/inference/generate.py`
@@ -89,17 +81,16 @@ BPM 90. Write exactly 8 lines of Korean rap verse. Use natural rhymes and consis
 
 - SFT 때 본 입력 형식과 추론 입력 형식이 다르면 모델 품질이 흔들린다.
 - GRPO도 SFT와 같은 prompt 분포에서 진행되어야 한다.
-- 이전에는 SFT, GRPO, API 추론, 로컬 CLI 추론이 서로 다른 prompt를 사용했다.
+- 질문 자체에 명확한 자연어 규칙이 포함되어야 모델의 지시어 이해 능력이 극대화된다.
 
-### 4. `system` 메시지 제거
+### 4. `system` 메시지 및 마디 번호 및 음절 태그 태그 제거
 
-기존 SFT 샘플은 `system -> user -> assistant` 구조였다. 현재는 `user -> assistant`만 사용한다.
+기존 SFT 샘플은 `system -> user -> assistant` 구조였다. 현재는 `user -> assistant`만 사용한다. 또한 불필요한 연산 낭비와 GRPO 보상 교란을 차단하기 위해 `assistant`의 지침 분석문 껍데기 및 가사 끝의 마디 번호 및 음절 태그 마커를 전면 제거했다.
 
 변경 이유:
 
 - system 문구가 모든 행에서 동일하게 반복되어 학습 신호로서 가치가 낮았다.
-- 핵심 지시는 user prompt에 이미 포함되어 있다.
-- 추론에서도 system 없이 같은 user prompt를 쓰는 편이 단순하고 일관적이다.
+- GRPO 강화학습 도중 모델이 50~60자 분량의 무거운 분석문이나 태그를 매번 뱉느라 토큰 예산을 낭비하고 수렴 속도가 느려지는 문제를 사전에 차단했다.
 
 현재 데이터 구조:
 
@@ -107,11 +98,68 @@ BPM 90. Write exactly 8 lines of Korean rap verse. Use natural rhymes and consis
 [
   {
     "role": "user",
-    "content": "BPM 117. Write exactly 8 lines of Korean rap verse. Use natural rhymes and consistent line breathing. Avoid repeating the same words, phrases, or ending words."
+    "content": "트랩 장르의 한국어 랩 가사를 작성해 주세요. 한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 8마디로 구성해야 하며, 마디당 음절 수는 14~18 범위 내로 조절해 주세요."
   },
   {
     "role": "assistant",
-    "content": "...\n[End]"
+    "content": "1. 가사 한 줄... (15음절)\n2. 가사 두 줄... (16음절)\n...\n8. 가사 여덟 줄... (15음절)"
+  }
+]
+```
+
+### 5. `genre`와 `target_syllables` 직접 제어 토큰 장착
+
+기존 프롬프트에 있던 고정 조건(`genre Korean hip-hop, mood confident`)은 걷어내고, 실제 비트 템포에 연동하여 작동하는 **직접 제어 토큰(`장르`, `목표 음절`)**을 도입했다.
+
+변경 이유:
+
+- 모델이 BPM 숫자를 크기 비교하여 장르를 판별하는 수학적 추론 오차가 날 수 있으므로, 처음부터 `장르: 트랩`, `목표 음절: 14~18` 형태로 주입하여 오차를 방지했다.
+- **BPM 110**을 임계값 기준으로 붐뱁(`10~14`)과 트랩(`14~18`)으로 맵핑한다.
+
+### 6. 프롬프트 강도 낮춤
+
+한때 프롬프트에 아래 조건이 들어갔다.
+
+```text
+concrete imagery
+a small progression across the verse
+```
+
+최종적으로 제거했다.
+
+변경 이유:
+
+- 현재 8줄 chunk가 항상 구체적 이미지나 명확한 전개를 갖고 있지 않다.
+- 프롬프트가 정답 데이터보다 높은 요구를 하면 SFT 신호가 흐려진다.
+- “small progression”은 LLM이 음악적 chord progression이나 과한 서사 구조로 오해할 여지가 있었다.
+
+현재 프롬프트는 데이터가 실제로 지지하는 핵심 조건인 라임, 호흡, 반복 억제에 집중한다.
+
+## `run_training.py` 상태
+
+`run_training.py`는 현재 변경 방향과 맞는다.
+
+- SFT stage는 `prepared_dataset_v3.jsonl`을 사용한다.
+- 파일이 없으면 `prepare_dataset_v3.py`로 생성한다.
+- reward sanity check는 GRPO와 같은 user-only prompt를 쓴다.
+- eval도 `build_api_messages(bpm=90)`, `build_api_messages(bpm=95)`를 사용한다.
+
+주의할 점:
+
+- 기존 `models/.../sft_rap_qwen`이 있으면 SFT는 자동 스킵된다.
+- v3로 새 학습하려면 새 experiment를 쓰는 편이 안전하다.
+
+예:
+
+```bash
+python run_training.py --experiment-name exp-v3 --stage sft
+python run_training.py --experiment-name exp-v3 --stage sanity
+python run_training.py --experiment-name exp-v3 --stage grpo
+```of Korean rap verse. {genre} 장르의 한국어 랩 가사를 작성해 주세요. 한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, 마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
+  },
+  {
+    "role": "assistant",
+    "content": "...\n"
   }
 ]
 ```
@@ -157,8 +205,8 @@ a small progression across the verse
 
 `run_training.py`는 현재 변경 방향과 맞는다.
 
-- SFT stage는 `prepared_dataset_v2.jsonl`을 사용한다.
-- 파일이 없으면 `prepare_dataset_v2.py`로 생성한다.
+- SFT stage는 `prepared_dataset_v3.jsonl`을 사용한다.
+- 파일이 없으면 `prepare_dataset_v3.py`로 생성한다.
 - reward sanity check는 GRPO와 같은 user-only prompt를 쓴다.
 - eval도 `build_api_messages(bpm=90)`, `build_api_messages(bpm=95)`를 사용한다.
 
@@ -170,9 +218,9 @@ a small progression across the verse
 예:
 
 ```bash
-python run_training.py --experiment-name exp-v2 --stage sft
-python run_training.py --experiment-name exp-v2 --stage sanity
-python run_training.py --experiment-name exp-v2 --stage grpo
+python run_training.py --experiment-name exp-v3 --stage sft
+python run_training.py --experiment-name exp-v3 --stage sanity
+python run_training.py --experiment-name exp-v3 --stage grpo
 ```
 
 ## 대화에서 얻은 인사이트
@@ -209,7 +257,7 @@ SFT의 역할:
 GRPO의 역할:
 
 - 자동 점수화 가능한 항목을 더 강화한다.
-- 라임 점수, `[End]`, 정확한 줄 수, 반복 억제 같은 목표에 적합하다.
+- 라임 점수, 마디 번호 및 음절 태그, 정확한 줄 수, 반복 억제 같은 목표에 적합하다.
 
 GRPO가 구체적 이미지, 창의성, 한국어 자연스러움, 작은 전개까지 해결한다고 기대하면 reward hacking이 생길 수 있다. 그런 고차 품질은 추후 preference data나 judge 기반 평가가 더 적합하다.
 
@@ -220,18 +268,18 @@ SFT 샘플은 “프롬프트 -> 정답 출력” 쌍이다. 프롬프트가 높
 그래서 현재는 아래처럼 낮고 명확한 prompt가 더 낫다.
 
 ```text
-Use natural rhymes and consistent line breathing. Avoid repeating the same words, phrases, or ending words.
+{genre} 장르의 한국어 랩 가사를 작성해 주세요. 한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, 마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요.
 ```
 
 ### 5. 같은 user prompt가 반복되는 것은 무조건 문제는 아니다
 
-`prepared_dataset_v2.jsonl`은 assistant 가사 chunk 완전 중복은 제거되어 있다. 같은 BPM prompt에 여러 답변이 붙는 구조는 “같은 요청에 대한 다양한 정답”으로 볼 수 있다.
+`prepared_dataset_v3.jsonl`은 assistant 가사 chunk 완전 중복은 제거되어 있다. 같은 BPM prompt에 여러 답변이 붙는 구조는 “같은 요청에 대한 다양한 정답”으로 볼 수 있다.
 
 다만 prompt가 너무 단조로우면 조건 학습이 약해질 수 있다. 향후 `flow density`, `rhyme level`, `repetition level` 같은 신뢰 가능한 라벨을 만들 수 있다면 prompt를 더 세분화할 수 있다.
 
 ### 6. 현재 단계에서 가장 효과가 큰 수정은 데이터 품질이다
 
-모델 구조를 바꾸기 전에, SFT 데이터가 좋은 벌스 후보로 정제되어야 한다. 현재 변경의 핵심도 모델 변경이 아니라 `prepared_dataset_v2` 생성과 prompt 정합성 확보였다.
+모델 구조를 바꾸기 전에, SFT 데이터가 좋은 벌스 후보로 정제되어야 한다. 현재 변경의 핵심도 모델 변경이 아니라 `prepared_dataset_v3` 생성과 prompt 정합성 확보였다.
 
 ## 남은 선택지
 
@@ -261,8 +309,8 @@ Use natural rhymes and consistent line breathing. Avoid repeating the same words
 
 ```bash
 cd pmtm-ai
-python run_training.py --experiment-name exp-v2 --stage sft
-python run_training.py --experiment-name exp-v2 --stage sanity
-python run_training.py --experiment-name exp-v2 --stage grpo
-python run_training.py --experiment-name exp-v2 --stage eval
+python run_training.py --experiment-name exp-v3 --stage sft
+python run_training.py --experiment-name exp-v3 --stage sanity
+python run_training.py --experiment-name exp-v3 --stage grpo
+python run_training.py --experiment-name exp-v3 --stage eval
 ```

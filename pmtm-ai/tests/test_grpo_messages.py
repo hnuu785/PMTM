@@ -29,7 +29,7 @@ class GrpoMessagesTests(unittest.TestCase):
 
     def test_build_prompts_outputs_chat_messages(self):
         df = pd.DataFrame([
-            {"bpm": 90, "rhyme_density": 0.7},
+            {"bpm": 90, "rhyme_density": 0.7, "title": "test_title"},
         ])
 
         prompts = build_prompts(df)
@@ -37,25 +37,28 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertEqual(len(prompts), 1)
         messages = prompts[0]
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("BPM 90", messages[0]["content"])
-        self.assertIn("exactly 8 lines", messages[0]["content"])
+        self.assertIn("붐뱁 장르의 한국어 랩 가사", messages[0]["content"])
+        self.assertIn("AAAABBBB 스키마를 준수", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
-        prompt = build_api_messages(bpm=90)
+        prompt = build_api_messages(bpm=90, rhyme_scheme="AAAABBBB")
+        raw_lines = [
+            "밤을 지나 나는 다시 올라가",
+            "맘을 비워도 박자는 돌아가",
+            "길 위의 불빛이 나를 불러가",
+            "진심을 눌러도 rhyme은 흘러가",
+            "차가운 빗줄기가 어깨에 내렸지",
+            "이 밤이 흐르기 전 모든 걸 바쳤지",
+            "과거의 기억들을 저 멀리 버렸지",
+            "내 앞을 막아선 저 쇠창살을 막았지",
+        ]
+        formatted_lines = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(raw_lines, 1)]
+        content = "\n".join(formatted_lines)
+        
         completion = [[
             {
                 "role": "assistant",
-                "content": "\n".join([
-                    "밤을 지나 나는 다시 올라가",
-                    "맘을 비워도 박자는 돌아가",
-                    "길 위의 불빛이 나를 불러가",
-                    "진심을 눌러도 rhyme은 흘러가",
-                    "숨을 고르고 다음 줄로 걸어가",
-                    "흔들려도 내 발은 앞으로 가",
-                    "끝을 모르지만 계속 써 내려가",
-                    "무대 위에서 내 이름을 불러봐",
-                    "[End]",
-                ]),
+                "content": content,
             }
         ]]
 
@@ -65,7 +68,7 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertIsInstance(rewards[0], float)
 
     def test_rhyme_reward_penalizes_repeated_ngrams(self):
-        prompt = build_api_messages(bpm=90)
+        prompt = build_api_messages(bpm=90, rhyme_scheme="AAAABBBB")
         repeated_lines = [
             "나는 계속 달려가 밤길",
             "나는 계속 달려가 별빛",
@@ -86,9 +89,14 @@ class GrpoMessagesTests(unittest.TestCase):
             "흔들림 없이 내일",
             "마지막 줄에 불빛",
         ]
+        
+        def format_content(lines):
+            formatted = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(lines, 1)]
+            return "\n".join(formatted)
+            
         completions = [
-            [{"role": "assistant", "content": "\n".join([*repeated_lines, "[End]"])}],
-            [{"role": "assistant", "content": "\n".join([*varied_lines, "[End]"])}],
+            [{"role": "assistant", "content": format_content(repeated_lines)}],
+            [{"role": "assistant", "content": format_content(varied_lines)}],
         ]
 
         self.assertGreater(_repeated_ngram_ratio(repeated_lines), _repeated_ngram_ratio(varied_lines))
@@ -96,39 +104,6 @@ class GrpoMessagesTests(unittest.TestCase):
             repeated_reward, varied_reward = rhyme_reward(completions, prompts=[prompt, prompt])
 
         self.assertLess(repeated_reward, varied_reward)
-
-    def test_rhyme_reward_penalizes_short_lines(self):
-        prompt = build_api_messages(bpm=90)
-        short_lines = [
-            "야",
-            "빛을 따라 걸어가",
-            "왜",
-            "박자 위로 올라가",
-            "숨을 고르고 말해",
-            "무대 앞에 서 있어",
-            "끝을 보고 달려가",
-            "내일 쪽으로 걸어가",
-        ]
-        full_lines = [
-            "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
-            "숨을 고르고 다음 줄로 걸어가",
-            "흔들려도 내 발은 앞으로 가",
-            "끝을 모르지만 계속 써 내려가",
-            "무대 위에서 내 이름을 불러봐",
-        ]
-        completions = [
-            [{"role": "assistant", "content": "\n".join([*short_lines, "[End]"])}],
-            [{"role": "assistant", "content": "\n".join([*full_lines, "[End]"])}],
-        ]
-
-        self.assertGreater(_short_line_ratio(short_lines, 8), _short_line_ratio(full_lines, 8))
-        with mock.patch("app.training.grpo_qwen.get_line_rhyme_score", return_value=0.5):
-            short_reward, full_reward = rhyme_reward(completions, prompts=[prompt, prompt])
-
-        self.assertLess(short_reward, full_reward)
 
 
 if __name__ == "__main__":

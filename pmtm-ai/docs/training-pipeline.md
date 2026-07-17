@@ -39,8 +39,8 @@ flowchart TD
 ```mermaid
 flowchart LR
     RawCSV["data/merged_final_dataset_analyzed.csv<br/>artist, lyrics, audio features, rhyme_density"]
-    Prepare["prepare_dataset.py<br/>clean_lines → make_chunks<br/>8마디 SFT 샘플 생성"]
-    Jsonl["data/prepared_dataset.jsonl<br/>{ messages }"]
+    Prepare["prepare_dataset_v3.py<br/>clean_lines → make_chunks<br/>8마디 SFT 샘플 생성"]
+    Jsonl["data/prepared_dataset_v3.jsonl<br/>{ messages }"]
 
     Base["MODEL_ID<br/>Qwen/Qwen2.5-3B-Instruct 기본값"]
     SFTTrain["sft_qwen.py<br/>4-bit NF4 + LoRA<br/>Trainer"]
@@ -48,7 +48,7 @@ flowchart LR
     SFTCkpt["outputs[/experiment]/sft_qwen<br/>checkpoint-*"]
 
     PromptBuild["grpo_qwen.py build_prompts()<br/>rhyme_density 상위 TOP_N=200<br/>8마디 messages/chat-template prompt"]
-    Reward["rhyme_reward()<br/>라임 점수 + 길이 + [End]<br/>중복/연속반복 penalty"]
+    Reward["rhyme_reward()<br/>라임 점수 + 길이(8마디)<br/>중복/연속반복 penalty"]
     GRPOTrain["GRPOTrainer<br/>SFT adapter에서 시작<br/>num_generations=4"]
     GRPOOut["models[/experiment]/grpo_rap_qwen<br/>GRPO adapter"]
     GRPOCkpt["outputs[/experiment]/grpo_qwen<br/>checkpoint-*"]
