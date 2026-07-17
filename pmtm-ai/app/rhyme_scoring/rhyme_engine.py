@@ -11,7 +11,7 @@ def calculate_syllable_score(s1, s2):
     # 1. 모음 점수 (80%)
     if s1['v'] == s2['v']:
         v_score = 1.0
-    elif VOWEL_GROUPS.get(s1['v']) == s2['v']:
+    elif any(s1['v'] in g and s2['v'] in g for g in VOWEL_GROUPS):
         v_score = 0.8  # 유사 모음 점수
         
     # 2. 종성(받침) 점수 (20%)

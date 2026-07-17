@@ -128,6 +128,19 @@ s = calculate_syllable_score(gang, bom)
 check("강↔봄 (모음 다름, 종성 유사) ~= 0.14",
       approx(s, 0.14, 0.01), f"got {s}")
 
+# ─── 4.5 유사 모음 군집 대칭성 테스트 (예 ↔ 에 ↔ 얘) ───
+ye = get_phonemes("예")[0]   # {ㅖ, None}
+yae = get_phonemes("얘")[0]  # {ㅒ, None}
+e = get_phonemes("에")[0]    # {ㅔ, None}
+
+s_ye_e = calculate_syllable_score(ye, e)     # ㅖ ↔ ㅔ
+s_e_ye = calculate_syllable_score(e, ye)     # ㅔ ↔ ㅖ
+s_ye_yae = calculate_syllable_score(ye, yae) # ㅖ ↔ ㅒ
+
+check("예↔에 (대칭성) = 0.8 * 0.8 + 1.0 * 0.2 = 0.84", approx(s_ye_e, 0.84), f"got {s_ye_e}")
+check("에↔예 (역방향) = 0.84", approx(s_e_ye, 0.84), f"got {s_e_ye}")
+check("예↔얘 (교차 군집) = 0.84", approx(s_ye_yae, 0.84), f"got {s_ye_yae}")
+
 
 # ─── 5. 줄 단위 라임 점수 ─────────────────────────────────
 print("\n=== 줄 단위 라임 점수 ===")

@@ -175,6 +175,7 @@ def post_process_lyrics(raw_text: str) -> str:
         if not line:
             continue
         line = re.sub(r"^\d+\.\s*", "", line)
+        line = re.sub(r"^\(\d+음절\)\s*", "", line)
         line = re.sub(r"\(\d+음절\)\s*$", "", line)
         line = line.strip()
         if line:

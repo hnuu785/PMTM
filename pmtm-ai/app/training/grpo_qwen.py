@@ -224,7 +224,8 @@ def _extract_verse(completion) -> list[str]:
         if not re.match(r"^\d+\.", ln):
             continue
         ln = re.sub(r"^\d+\.\s*", "", ln)  # 마디 번호 제거
-        ln = re.sub(r"\(\d+음절\)\s*$", "", ln)  # 음절 표시 제거
+        ln = re.sub(r"^\(\d+음절\)\s*", "", ln)  # 음절 표시 제거 (앞단어)
+        ln = re.sub(r"\(\d+음절\)\s*$", "", ln)  # 음절 표시 제거 (뒷단어)
         ln = ln.strip()
         if ln:
             lines.append(ln)
@@ -314,11 +315,6 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         scores_b = [get_line_rhyme_score(eval_lines[4], eval_lines[i]) for i in range(5, 8)]
         
         rhyme_score = (sum(scores_a)/3.0 + sum(scores_b)/3.0) / 2.0
-        
-        # A와 B가 너무 같은 모음군이면 감점 (다양성 확보)
-        cross_similarity = get_line_rhyme_score(eval_lines[0], eval_lines[4])
-        if cross_similarity > 0.6:
-            rhyme_score -= (cross_similarity - 0.6) * 0.2
         
         # 중복으로 점수를 얻으려는 리워드 해킹 감점
         effective_rhyme = rhyme_score * (1.0 - dup_ratio)

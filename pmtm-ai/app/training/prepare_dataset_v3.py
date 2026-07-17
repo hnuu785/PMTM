@@ -35,14 +35,13 @@ CODAS = [
     "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ",
     "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
 ]
-VOWEL_GROUPS = {
-    "ㅐ": "ㅔ", "ㅔ": "ㅐ", "ㅖ": "ㅔ", "ㅒ": "ㅐ",
-    "ㅗ": "ㅜ", "ㅜ": "ㅗ",
-    "ㅡ": "ㅣ", "ㅣ": "ㅡ",
-    "ㅏ": "ㅑ", "ㅑ": "ㅏ",
-    "ㅓ": "ㅕ", "ㅕ": "ㅓ",
-    "ㅙ": "ㅐ", "ㅚ": "ㅔ", "ㅞ": "ㅔ",
-}
+VOWEL_GROUPS = [
+    {"ㅐ", "ㅔ", "ㅖ", "ㅒ", "ㅙ", "ㅚ", "ㅞ"},  # 에/애/예/얘/왜/외/웨 계열 통합
+    {"ㅗ", "ㅜ"},
+    {"ㅡ", "ㅣ"},
+    {"ㅏ", "ㅑ"},
+    {"ㅓ", "ㅕ"},
+]
 CODA_GROUPS = {
     "ㄴ": "nasal", "ㅁ": "nasal", "ㅇ": "nasal",
     "ㄱ": "stop", "ㅂ": "stop", "ㄷ": "stop", "ㅅ": "stop",
@@ -170,7 +169,7 @@ def syllable_rhyme_score(a: tuple[str, str | None], b: tuple[str, str | None]) -
     v2, c2 = b
     if v1 == v2:
         vowel_score = 1.0
-    elif VOWEL_GROUPS.get(v1) == v2:
+    elif any(v1 in g and v2 in g for g in VOWEL_GROUPS):
         vowel_score = 0.8
     else:
         vowel_score = 0.0
@@ -264,7 +263,7 @@ def build_record(lines: list[str], genre: str) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
         syllables = count_syllables(line)
-        formatted_lines.append(f"{i}. {line} ({syllables}음절)")
+        formatted_lines.append(f"{i}. ({syllables}음절) {line}")
 
     assistant_content = "\n".join(formatted_lines)
 
@@ -307,7 +306,8 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                genre = "붐뱁" if bpm < 110 else "트랩"
+                judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+                genre = "붐뱁" if judgment_bpm < 110 else "트랩"
                 
                 # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]

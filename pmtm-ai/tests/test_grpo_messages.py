@@ -37,8 +37,19 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertEqual(len(prompts), 1)
         messages = prompts[0]
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("붐뱁 장르의 한국어 랩 가사", messages[0]["content"])
+        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
         self.assertIn("AAAABBBB 스키마를 준수", messages[0]["content"])
+
+    def test_build_prompts_doubles_halftime_bpm(self):
+        df = pd.DataFrame([
+            {"bpm": 70, "rhyme_density": 0.7, "title": "test_title"},
+        ])
+        prompts = build_prompts(df)
+        self.assertEqual(len(prompts), 1)
+        messages = prompts[0]
+        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
+        self.assertIn("14~18 범위 내로", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
         prompt = build_api_messages(bpm=90, rhyme_scheme="AAAABBBB")

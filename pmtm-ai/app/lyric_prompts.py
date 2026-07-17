@@ -13,7 +13,8 @@ def build_api_user_prompt(
 ) -> str:
     g_normalized = genre.strip().lower()
     if bpm is not None:
-        g_name = "붐뱁" if bpm < 110 else "트랩"
+        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+        g_name = "붐뱁" if judgment_bpm < 110 else "트랩"
     elif "boom" in g_normalized or "붐뱁" in g_normalized:
         g_name = "붐뱁"
     else:
@@ -21,7 +22,7 @@ def build_api_user_prompt(
 
     target_syllables = "10~14" if g_name == "붐뱁" else "14~18"
     base_prompt = (
-        f"{g_name} 장르의 한국어 랩 가사를 작성해 주세요. "
+        f"랩을 작성해 주세요. "
         f"한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, "
         f"마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
     )
