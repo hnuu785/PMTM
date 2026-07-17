@@ -130,8 +130,8 @@ def train_sft():
     model = prepare_model_for_kbit_training(model)
 
     lora_config = LoraConfig(
-        r=32,
-        lora_alpha=64,
+        r=16,
+        lora_alpha=32,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
         lora_dropout=0.05,
@@ -148,8 +148,8 @@ def train_sft():
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=8,
-        num_train_epochs=1,
-        learning_rate=2e-4,
+        num_train_epochs=3,
+        learning_rate=1e-4,
         bf16=use_bf16,
         fp16=use_fp16,
         warmup_ratio=0.03,
