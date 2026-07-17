@@ -6,6 +6,7 @@ LyricModel = Literal[
     "qwen-local",
     "qwen-exp-005-sft",
     "qwen-exp-005-grpo",
+    "qwen-exp-005-grpo-checkpoint-450",
     "openai",
 ]
 

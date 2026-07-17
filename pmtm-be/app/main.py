@@ -42,8 +42,9 @@ MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
 RHYME_GROUP_THRESHOLD = 0.50
 RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
 TARGET_LYRIC_BARS = 8
-EXP_005_SFT_ADAPTER = "exp-005/sft_rap_qwen"
-EXP_005_GRPO_ADAPTER = "exp-005/grpo_rap_qwen"
+EXP_005_SFT_ADAPTER = "models/exp-005/sft_rap_qwen"
+EXP_005_GRPO_ADAPTER = "models/exp-005/grpo_rap_qwen"
+EXP_005_GRPO_CHECKPOINT_450_ADAPTER = "outputs/exp-005/grpo_qwen/checkpoint-450"
 DEMO_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage" / "demos"
 SUPPORTED_BEAT_CONTENT_TYPES = {
     "audio/aac",
@@ -290,6 +291,17 @@ def _generate_verse_for_model(
         return _generate_qwen_verse(bpm, EXP_005_GRPO_ADAPTER, genre=genre, mood=mood, bars=bars), [
             "exp-005 GRPO LoRA 어댑터 생성 결과입니다.",
             "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_rap_qwen 어댑터를 적용했습니다.",
+        ]
+    if llm == "qwen-exp-005-grpo-checkpoint-450":
+        return _generate_qwen_verse(
+            bpm,
+            EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
+            genre=genre,
+            mood=mood,
+            bars=bars,
+        ), [
+            "exp-005 GRPO checkpoint-450 LoRA 어댑터 생성 결과입니다.",
+            "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_qwen/checkpoint-450 어댑터를 적용했습니다.",
         ]
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
@@ -824,7 +836,7 @@ def _generate_qwen_verse(
                 "0.92",
         ]
         if adapter:
-            adapter_path = ai_root / "models" / adapter
+            adapter_path = ai_root / adapter
             if not adapter_path.exists():
                 raise HTTPException(
                     status_code=503,

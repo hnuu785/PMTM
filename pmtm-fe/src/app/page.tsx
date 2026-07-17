@@ -70,6 +70,7 @@ type LyricModel =
   | "qwen-local"
   | "qwen-exp-005-sft"
   | "qwen-exp-005-grpo"
+  | "qwen-exp-005-grpo-checkpoint-450"
   | "openai";
 
 type ApiErrorResponse = {
@@ -107,6 +108,11 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
     value: "qwen-exp-005-grpo",
     label: "GRPO exp-005",
     detail: "Qwen + exp-005 LoRA",
+  },
+  {
+    value: "qwen-exp-005-grpo-checkpoint-450",
+    label: "GRPO checkpoint-450",
+    detail: "Qwen + exp-005 step 450",
   },
   {
     value: "openai",
