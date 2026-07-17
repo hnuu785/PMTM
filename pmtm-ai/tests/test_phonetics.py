@@ -149,8 +149,17 @@ s = get_line_rhyme_score("강", "방")
 check("'강'↔'방' = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "방물")
-# 끝 2음절 모두 동일 -> 1.0
+# 끝 2음절 모두 동일하며, 서로 다른 단어이므로 1.0
 check("'강물'↔'방물' = 1.0", approx(s, 1.0), f"got {s}")
+
+s = get_line_rhyme_score("강물", "강물")
+check("'강물'↔'강물' (동일 단어 반복 감점) = 0.0", s == 0.0, f"got {s}")
+
+s = get_line_rhyme_score("오늘 밤 너를 사랑해!", "내일도 너를 사랑해")
+check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.0", s == 0.0, f"got {s}")
+
+s = get_line_rhyme_score("너의 smile", "나의 Smile")
+check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.0", s == 0.0, f"got {s}")
 
 s = get_line_rhyme_score("바다", "마차")
 # 바(ㅏ,_)다(ㅏ,_) vs 마(ㅏ,_)차(ㅏ,_) -> 모든 끝 음절 일치 -> 1.0

@@ -12,6 +12,7 @@ from app.lyric_prompts import TARGET_BARS, build_api_user_prompt
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes
 from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
@@ -26,28 +27,7 @@ MAX_ENDING_WORD_COUNT = 2
 MAX_REPEATED_BIGRAMS = 5
 MAX_REPEATED_TRIGRAMS = 1
 
-VOWELS = [
-    "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ",
-    "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ",
-]
-CODAS = [
-    None, "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ",
-    "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ",
-    "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
-]
-VOWEL_GROUPS = [
-    {"ㅐ", "ㅔ", "ㅖ", "ㅒ", "ㅙ", "ㅚ", "ㅞ"},  # 에/애/예/얘/왜/외/웨 계열 통합
-    {"ㅗ", "ㅜ"},
-    {"ㅡ", "ㅣ"},
-    {"ㅏ", "ㅑ"},
-    {"ㅓ", "ㅕ"},
-]
-CODA_GROUPS = {
-    "ㄴ": "nasal", "ㅁ": "nasal", "ㅇ": "nasal",
-    "ㄱ": "stop", "ㅂ": "stop", "ㄷ": "stop", "ㅅ": "stop",
-    "ㅋ": "stop", "ㅌ": "stop", "ㅍ": "stop",
-    "ㄹ": "liquid",
-}
+
 
 
 def clean_lines(lyrics: str) -> list[str]:
@@ -151,53 +131,7 @@ def korean_ratio(lines: list[str]) -> float:
     return len(re.findall(r"[가-힣]", text)) / len(letters)
 
 
-def hangul_phonemes(text: str) -> list[tuple[str, str | None]]:
-    phonemes = []
-    for ch in text:
-        code = ord(ch)
-        if not 0xAC00 <= code <= 0xD7A3:
-            continue
-        idx = code - 0xAC00
-        vowel = VOWELS[(idx % 588) // 28]
-        coda = CODAS[idx % 28]
-        phonemes.append((vowel, coda))
-    return phonemes
 
-
-def syllable_rhyme_score(a: tuple[str, str | None], b: tuple[str, str | None]) -> float:
-    v1, c1 = a
-    v2, c2 = b
-    if v1 == v2:
-        vowel_score = 1.0
-    elif any(v1 in g and v2 in g for g in VOWEL_GROUPS):
-        vowel_score = 0.8
-    else:
-        vowel_score = 0.0
-
-    if c1 == c2:
-        coda_score = 1.0
-    elif c1 and c2 and CODA_GROUPS.get(c1) == CODA_GROUPS.get(c2):
-        coda_score = 0.7
-    elif not c1 and not c2:
-        coda_score = 1.0
-    else:
-        coda_score = 0.0
-
-    return vowel_score * 0.8 + coda_score * 0.2
-
-
-def line_rhyme_score(line1: str, line2: str) -> float:
-    p1 = hangul_phonemes(line1)
-    p2 = hangul_phonemes(line2)
-    if not p1 or not p2:
-        return 0.0
-
-    weights = [1.0, 0.5, 0.3]
-    count = min(len(p1), len(p2), len(weights))
-    total = 0.0
-    for i in range(1, count + 1):
-        total += syllable_rhyme_score(p1[-i], p2[-i]) * weights[i - 1]
-    return total / sum(weights[:count])
 
 
 def repeated_ngram_count(lines: list[str], n: int) -> int:
@@ -217,7 +151,7 @@ def chunk_features(lines: list[str]) -> dict[str, float | int]:
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_scores = [line_rhyme_score(lines[i], lines[i + 1]) for i in range(len(lines) - 1)]
+    rhyme_scores = [get_line_rhyme_score(lines[i], lines[i + 1]) for i in range(len(lines) - 1)]
     return {
         "rhyme_score": sum(rhyme_scores) / len(rhyme_scores),
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
@@ -254,7 +188,8 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
 
 
 def build_user_prompt(genre: str) -> str:
-    return build_api_user_prompt(genre=genre, bars=TARGET_BARS)
+    bpm = 90.0 if genre == "붐뱁" else 140.0
+    return build_api_user_prompt(bpm=bpm, bars=TARGET_BARS)
 
 
 def build_record(lines: list[str], genre: str) -> dict:

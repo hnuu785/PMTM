@@ -28,6 +28,17 @@ def calculate_syllable_score(s1, s2):
 
 def get_line_rhyme_score(line1, line2):
     """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절)"""
+    # 0) 어미/동일 단어 단순 반복 감점: 마지막 어절이 철자법상 완전히 동일한 경우 0점 처리
+    w1 = line1.strip().split()[-1] if line1.strip().split() else ""
+    w2 = line2.strip().split()[-1] if line2.strip().split() else ""
+    
+    import re
+    w1_clean = re.sub(r"[^\w]", "", w1).lower()
+    w2_clean = re.sub(r"[^\w]", "", w2).lower()
+    
+    if w1_clean == w2_clean and w1_clean != "":
+        return 0.0
+
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
     

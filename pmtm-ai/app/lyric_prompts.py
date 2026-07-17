@@ -1,22 +1,15 @@
 TARGET_BARS = 8
-DEFAULT_GENRE = "Korean hip-hop"
-DEFAULT_MOOD = "confident"
 
 
 def build_api_user_prompt(
     *,
     bpm: float | None = None,
-    genre: str = DEFAULT_GENRE,
-    mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,
     rhyme_scheme: str | None = None,
 ) -> str:
-    g_normalized = genre.strip().lower()
     if bpm is not None:
         judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
         g_name = "붐뱁" if judgment_bpm < 110 else "트랩"
-    elif "boom" in g_normalized or "붐뱁" in g_normalized:
-        g_name = "붐뱁"
     else:
         g_name = "트랩"
 
@@ -35,8 +28,6 @@ def build_api_user_prompt(
 def build_api_messages(
     *,
     bpm: float | None = None,
-    genre: str = DEFAULT_GENRE,
-    mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,
     rhyme_scheme: str | None = None,
     assistant: str | None = None,
@@ -45,7 +36,7 @@ def build_api_messages(
         {
             "role": "user",
             "content": build_api_user_prompt(
-                bpm=bpm, genre=genre, mood=mood, bars=bars, rhyme_scheme=rhyme_scheme
+                bpm=bpm, bars=bars, rhyme_scheme=rhyme_scheme
             ),
         },
     ]

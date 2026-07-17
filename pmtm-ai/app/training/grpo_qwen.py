@@ -7,7 +7,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 import torch
 from datasets import Dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
@@ -16,17 +15,17 @@ from transformers import TrainerCallback
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_api_messages
-from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
+from app.paths import MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
 from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
 sys.path.append(str(PROJECT_ROOT))
 
 SFT_PATH = str(MODELS_DIR / "sft_rap_qwen")
-DATA_PATH = str(DATA_DIR / "merged_final_dataset_analyzed.csv")
 OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
-TOP_N = 200
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
+# 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
+GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(10~14음절), 트랩(14~18음절)
 
 
 @dataclass
@@ -143,6 +142,44 @@ class GrpoFiniteTraceCallback(TrainerCallback):
             raise RuntimeError(f"Non-finite trainer log at step {state.global_step}: {bad}")
 
 
+class GrpoRewardStdEarlyStoppingCallback(TrainerCallback):
+    """reward_std가 threshold 이하로 patience step 연속 유지되면
+    체크포인트를 저장하고 학습을 조기 종료한다.
+
+    프롬프트 종류가 고정된 환경에서 모델이 수렴하면 그룹 내 reward 분산이
+    0에 가까워져 scale_rewards='std' 정규화가 불안정해지므로, 해당 시점에
+    학습을 멈추는 것이 안전하다.
+    """
+
+    def __init__(self, threshold: float = 0.05, patience: int = 3):
+        self.threshold = threshold
+        self.patience = patience
+        self._count = 0
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        reward_std = logs.get("reward_std")
+        if reward_std is None:
+            return
+        if reward_std < self.threshold:
+            self._count += 1
+            print(
+                f"[early_stop] step={state.global_step} "
+                f"reward_std={reward_std:.4f} < {self.threshold} "
+                f"({self._count}/{self.patience})"
+            )
+            if self._count >= self.patience:
+                print(
+                    f"[early_stop] reward_std converged — "
+                    f"saving checkpoint and stopping training."
+                )
+                control.should_save = True
+                control.should_training_stop = True
+        else:
+            self._count = 0
+
+
 def _latest_checkpoint(output_dir: str) -> str | None:
     ckpts = sorted(
         glob.glob(os.path.join(output_dir, "checkpoint-*")),
@@ -156,31 +193,19 @@ def _detect_precision():
         return torch.bfloat16, True, False
     return torch.float16, False, True
 
-def build_prompts(df: pd.DataFrame) -> list[list[dict[str, str]]]:
-    top = df.sort_values("rhyme_density", ascending=False).head(TOP_N)
-    prompts = []
-    for _, row in top.iterrows():
-        scheme = "AAAABBBB"
-        prompts.append(
-            build_api_messages(
-                bpm=float(row["bpm"]),
-                bars=TARGET_BARS,
-                rhyme_scheme=scheme,
-            )
-        )
-    return prompts
+def build_prompts(df=None) -> list[list[dict[str, str]]]:
+    """GRPO_BPMS의 대표 BPM으로 프롬프트를 생성한다.
+    학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
+    """
+    return [
+        build_api_messages(bpm=bpm, bars=TARGET_BARS)
+        for bpm in GRPO_BPMS
+    ]
 
 
 _END_RE = re.compile(r"\[End\]")
 _BARS_RE = re.compile(r"\[Verse\s+(\d+)\s*마디\]")
 _LINES_RE = re.compile(r"exactly\s+(\d+)\s+lines", re.IGNORECASE)
-_TOKEN_RE = re.compile(r"[가-힣A-Za-z0-9]+")
-_TEXT_CHAR_RE = re.compile(r"[가-힣A-Za-z0-9]")
-NGRAM_REPEAT_PENALTY_WEIGHT = 0.8
-SEVERE_NGRAM_REPEAT_RATIO = 0.25
-SHORT_LINE_MAX_CHARS = 3
-SHORT_LINE_PENALTY_WEIGHT = 0.8
-SEVERE_SHORT_LINE_RATIO = 0.25
 
 
 def _message_content(value) -> str:
@@ -253,39 +278,10 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
     return max_run
 
 
-def _repeated_ngram_ratio(lines: list[str], min_n: int = 2, max_n: int = 4) -> float:
-    counts: dict[tuple[str, ...], int] = {}
-    total = 0
-    for line in lines:
-        words = _TOKEN_RE.findall(line.lower())
-        for n in range(min_n, max_n + 1):
-            if len(words) < n:
-                continue
-            for i in range(len(words) - n + 1):
-                ngram = tuple(words[i:i + n])
-                counts[ngram] = counts.get(ngram, 0) + 1
-                total += 1
-
-    if total == 0:
-        return 0.0
-
-    repeated = sum(count - 1 for count in counts.values() if count > 1)
-    return repeated / total
-
-
-def _line_char_length(line: str) -> int:
-    return len(_TEXT_CHAR_RE.findall(line))
-
-
-def _short_line_ratio(lines: list[str], target_bars: int) -> float:
-    if not lines or target_bars <= 0:
-        return 1.0
-    short_lines = sum(1 for line in lines if _line_char_length(line) <= SHORT_LINE_MAX_CHARS)
-    return short_lines / target_bars
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """지정된 라임 스키마(AAAABBBB) 준수 여부만 정밀하게 채점하여 보상 제공."""
+    """지정된 라임 스키마(AAAABBBB) 준수 여부를 패딩 왜곡 없이 동적으로 채점."""
     if prompts is None:
         prompts = [""] * len(completions)
     rewards = []
@@ -293,35 +289,55 @@ def rhyme_reward(completions, prompts=None, **kwargs):
     for prompt, comp in zip(prompts, completions):
         lines = _extract_verse(comp)
         
-        # 8마디 분량을 보장해야 라임 계산이 유의미하므로, 
-        # 라인 수가 부족하면 강력한 감점
-        if len(lines) < 8:
-            rewards.append(float(-1.5 + (len(lines) / 8.0) * 0.5))
+        # 아예 한 줄도 생성하지 못한 극단적인 경우 0점 처리
+        if not lines:
+            rewards.append(0.0)
             continue
             
-        # 8마디 이상일 때, 상위 8줄만 사용하여 라임 평가
-        eval_lines = lines[:8]
+        actual_lines = lines[:8]
+        actual_len = len(actual_lines)
         
-        # 중복 라인 감지 (동일 문장 반복으로 라임 꼼수 쓰는 것 방지)
-        dup_ratio = 1.0 - len(set(eval_lines)) / 8.0
+        # 1) 실제 줄들의 중복 비율 계산
+        dup_ratio = (1.0 - len(set(actual_lines)) / actual_len) if actual_len > 0 else 0.0
         
-        # AAAABBBB 채점
-        # 1~4행 통일도 (1행 기준 2~4행 비교)
-        scores_a = [get_line_rhyme_score(eval_lines[0], eval_lines[i]) for i in range(1, 4)]
-        # 5~8행 통일도 (5행 기준 6~8행 비교)
-        scores_b = [get_line_rhyme_score(eval_lines[4], eval_lines[i]) for i in range(5, 8)]
+        # 2) A 파트(1~4행)와 B 파트(5~8행) 동적 분할
+        lines_a = actual_lines[0:4]
+        lines_b = actual_lines[4:8]
         
-        rhyme_score = (sum(scores_a)/3.0 + sum(scores_b)/3.0) / 2.0
+        part_scores = []
         
-        # 중복으로 점수를 얻으려는 리워드 해킹 감점
+        # A 파트 채점 (2줄 이상일 때만 비교 가능)
+        if len(lines_a) > 1:
+            scores_a = [get_line_rhyme_score(lines_a[0], lines_a[i]) for i in range(1, len(lines_a))]
+            part_scores.append(sum(scores_a) / len(scores_a))
+        elif len(lines_a) == 1:
+            part_scores.append(0.0)  # 1줄만 있으면 라임 형성 불가로 0점
+            
+        # B 파트 채점 (2줄 이상일 때만 비교 가능)
+        if len(lines_b) > 1:
+            scores_b = [get_line_rhyme_score(lines_b[0], lines_b[i]) for i in range(1, len(lines_b))]
+            part_scores.append(sum(scores_b) / len(scores_b))
+        elif len(lines_b) == 1:
+            part_scores.append(0.0)  # B 파트가 시작은 되었으나 1줄이라 라임 형성 불가로 0점
+        # len(lines_b) == 0 인 경우는 계산에서 완전 제외
+        
+        # 3) 최종 라임 점수 계산 (유효한 파트 점수의 평균)
+        if part_scores:
+            rhyme_score = sum(part_scores) / len(part_scores)
+        else:
+            rhyme_score = 0.0
+            
+        # 4) 중복 리워드 해킹 방지
         effective_rhyme = rhyme_score * (1.0 - dup_ratio)
-        
-        # 최종 보상 산출 (오직 라이밍 점수에 비례)
         r = effective_rhyme
         
         # 중복이 극단적으로 심하면 강한 감점
         if dup_ratio >= 0.3:
             r = min(r, -1.0)
+            
+        # 5) 분량이 8마디 미만인 경우 비례 스케일링 (단일 분량 페널티)
+        if actual_len < 8:
+            r = r * (actual_len / 8.0)
             
         rewards.append(float(r))
         
@@ -373,7 +389,6 @@ def _build_grpo_config(
         learning_rate=1e-6,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
-        num_train_epochs=6,
         max_steps=max_steps,
         num_generations=4,
         max_completion_length=160,
@@ -413,10 +428,9 @@ def _build_grpo_trainer(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    df = pd.read_csv(DATA_PATH)
-    prompts = build_prompts(df)
+    prompts = build_prompts()
     dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
-    print(f"prompts: {len(prompts)}")
+    print(f"prompts: {len(prompts)} (bpms={GRPO_BPMS})")
 
     model = load_model(compute_dtype)
     _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
@@ -441,9 +455,11 @@ def _build_grpo_trainer(
     return trainer, prompts
 
 
-def train_grpo(*, trace_finite: bool = False):
-    callbacks = [GrpoFiniteTraceCallback()] if trace_finite else None
-    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks)
+def train_grpo(*, trace_finite: bool = False, max_steps: int = 200):
+    callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback()]
+    if trace_finite:
+        callbacks.append(GrpoFiniteTraceCallback())
+    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks, max_steps=max_steps)
 
     resume = _latest_checkpoint(OUTPUT_DIR)
     print(f"Starting GRPO ({MODEL_ID})...")

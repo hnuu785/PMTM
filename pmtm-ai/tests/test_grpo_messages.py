@@ -3,13 +3,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import pandas as pd
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.lyric_prompts import build_api_messages
-from app.training.grpo_qwen import _format_finite_summary, _repeated_ngram_ratio, _short_line_ratio
+from app.training.grpo_qwen import _format_finite_summary
 from app.training.grpo_qwen import _summarize_tensors, build_prompts, rhyme_reward
 
 
@@ -28,31 +27,33 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertIn("BAD", _format_finite_summary("test", summary))
 
     def test_build_prompts_outputs_chat_messages(self):
-        df = pd.DataFrame([
-            {"bpm": 90, "rhyme_density": 0.7, "title": "test_title"},
-        ])
+        prompts = build_prompts()
 
-        prompts = build_prompts(df)
+        self.assertEqual(len(prompts), 2)
+        
+        # 1st prompt (bpm=90, 붐뱁)
+        msg1 = prompts[0]
+        self.assertEqual([m["role"] for m in msg1], ["user"])
+        self.assertIn("랩을 작성해 주세요", msg1[0]["content"])
+        self.assertIn("10~14 범위 내로", msg1[0]["content"])
+        self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
-        self.assertEqual(len(prompts), 1)
-        messages = prompts[0]
-        self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
-        self.assertIn("10~14 범위 내로", messages[0]["content"])
-        self.assertIn("AAAABBBB 스키마를 준수", messages[0]["content"])
+        # 2nd prompt (bpm=140, 트랩)
+        msg2 = prompts[1]
+        self.assertEqual([m["role"] for m in msg2], ["user"])
+        self.assertIn("랩을 작성해 주세요", msg2[0]["content"])
+        self.assertIn("14~18 범위 내로", msg2[0]["content"])
+        self.assertNotIn("AAAABBBB 스키마를 준수", msg2[0]["content"])
 
     def test_build_prompts_doubles_halftime_bpm(self):
-        df = pd.DataFrame([
-            {"bpm": 70, "rhyme_density": 0.7, "title": "test_title"},
-        ])
-        prompts = build_prompts(df)
-        self.assertEqual(len(prompts), 1)
-        messages = prompts[0]
+        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (14~18 syllables)
+        messages = build_api_messages(bpm=70)
+        self.assertEqual(len(messages), 1)
         self.assertIn("랩을 작성해 주세요", messages[0]["content"])
         self.assertIn("14~18 범위 내로", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
-        prompt = build_api_messages(bpm=90, rhyme_scheme="AAAABBBB")
+        prompt = build_api_messages(bpm=90)
         raw_lines = [
             "밤을 지나 나는 다시 올라가",
             "맘을 비워도 박자는 돌아가",
