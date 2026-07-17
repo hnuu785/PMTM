@@ -147,7 +147,7 @@ class GrpoRewardStdEarlyStoppingCallback(TrainerCallback):
     체크포인트를 저장하고 학습을 조기 종료한다.
 
     프롬프트 종류가 고정된 환경에서 모델이 수렴하면 그룹 내 reward 분산이
-    0에 가까워져 scale_rewards='std' 정규화가 불안정해지므로, 해당 시점에
+    0에 가까워져 scale_rewards='group' 정규화가 불안정해지므로, 해당 시점에
     학습을 멈추는 것이 안전하다.
     """
 
@@ -393,7 +393,7 @@ def _build_grpo_config(
         num_generations=4,
         max_completion_length=160,
         beta=0.04,
-        scale_rewards="std",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
+        scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,
         temperature=1.0,
         top_p=0.95,
