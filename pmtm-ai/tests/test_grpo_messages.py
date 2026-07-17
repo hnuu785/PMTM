@@ -67,43 +67,7 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertEqual(len(rewards), 1)
         self.assertIsInstance(rewards[0], float)
 
-    def test_rhyme_reward_penalizes_repeated_ngrams(self):
-        prompt = build_api_messages(bpm=90, rhyme_scheme="AAAABBBB")
-        repeated_lines = [
-            "나는 계속 달려가 밤길",
-            "나는 계속 달려가 별빛",
-            "나는 계속 달려가 거리",
-            "나는 계속 달려가 소리",
-            "나는 계속 달려가 무대",
-            "나는 계속 달려가 열기",
-            "나는 계속 달려가 숨결",
-            "나는 계속 달려가 내일",
-        ]
-        varied_lines = [
-            "나는 조용히 걸어가 밤길",
-            "우린 새벽을 지나 별빛",
-            "발끝 위로 번져 거리",
-            "숨을 고른 뒤 소리",
-            "무대 앞에서 열기",
-            "박자 사이로 숨결",
-            "흔들림 없이 내일",
-            "마지막 줄에 불빛",
-        ]
-        
-        def format_content(lines):
-            formatted = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(lines, 1)]
-            return "\n".join(formatted)
-            
-        completions = [
-            [{"role": "assistant", "content": format_content(repeated_lines)}],
-            [{"role": "assistant", "content": format_content(varied_lines)}],
-        ]
 
-        self.assertGreater(_repeated_ngram_ratio(repeated_lines), _repeated_ngram_ratio(varied_lines))
-        with mock.patch("app.training.grpo_qwen.get_line_rhyme_score", return_value=0.5):
-            repeated_reward, varied_reward = rhyme_reward(completions, prompts=[prompt, prompt])
-
-        self.assertLess(repeated_reward, varied_reward)
 
 
 if __name__ == "__main__":

@@ -309,14 +309,14 @@ def prepare() -> tuple[list[dict], Counter]:
 
                 genre = "붐뱁" if bpm < 110 else "트랩"
                 
-                # 초엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위 내여야 함
+                # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]
                 if genre == "붐뱁":
-                    if not all(10 <= s <= 14 for s in syllables_list):
+                    if not all(9 <= s <= 15 for s in syllables_list):
                         stats["syllable_mismatch"] += 1
                         continue
                 else: # 트랩
-                    if not all(14 <= s <= 18 for s in syllables_list):
+                    if not all(13 <= s <= 19 for s in syllables_list):
                         stats["syllable_mismatch"] += 1
                         continue
 
