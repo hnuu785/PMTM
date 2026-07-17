@@ -156,9 +156,6 @@ def _detect_precision():
         return torch.bfloat16, True, False
     return torch.float16, False, True
 
-
-import random
-
 def build_prompts(df: pd.DataFrame) -> list[list[dict[str, str]]]:
     top = df.sort_values("rhyme_density", ascending=False).head(TOP_N)
     prompts = []
@@ -381,7 +378,7 @@ def _build_grpo_config(
         num_generations=4,
         max_completion_length=160,
         beta=0.04,
-        scale_rewards="none",
+        scale_rewards="std",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,
         temperature=1.0,
         top_p=0.95,
