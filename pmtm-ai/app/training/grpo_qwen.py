@@ -386,7 +386,7 @@ def _build_grpo_config(
     compute_dtype, use_bf16, use_fp16 = _detect_precision()
     return GRPOConfig(
         output_dir=output_dir,
-        learning_rate=1e-6,
+        learning_rate=1e-5,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
         max_steps=max_steps,
