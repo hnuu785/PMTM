@@ -78,8 +78,66 @@ class GrpoMessagesTests(unittest.TestCase):
 
         self.assertEqual(len(rewards), 1)
         self.assertIsInstance(rewards[0], float)
+        # 이 가사는 AAAA BBBB 형태이므로 높은 점수(>0.8)가 기대됨
+        self.assertGreater(rewards[0], 0.8)
 
+    def test_rhyme_reward_penalizes_abab_and_rewards_aa_and_aaaa(self):
+        # 1. AAAA BBBB 가사 (1~4행 -가 라임, 5~8행 -다 라임)
+        lines_aaaa_bbbb = [
+            "밤을 지나 나는 다시 올라가",
+            "맘을 비워도 박자는 돌아가",
+            "길 위의 불빛이 나를 불러가",
+            "진심을 눌러도 rhyme은 흘러가",
+            "차가운 빗줄기가 어깨에 내렸다",
+            "이 밤이 흐르기 전 모든 걸 바쳤다",
+            "과거의 기억들을 저 멀리 버렸다",
+            "내 앞을 막아선 저 쇠창살을 막았다",
+        ]
+        
+        # 2. AA BB CC DD 가사 (2줄 단위 라임)
+        lines_aabb_ccdd = [
+            "밤을 지나 나는 다시 올라가",
+            "맘을 비워도 박자는 돌아가",
+            "차가운 빗줄기가 어깨에 내렸지",
+            "이 밤이 흐르기 전 모든 걸 바쳤지",
+            "그 누구도 내 앞길을 막지 못해",
+            "끝까지 가겠어 난 절대 안 멈춰",  # 라임 안맞음 (못해/멈춰)
+            "새로운 세상을 향해서 가겠어",
+            "꿈을 향해 한 걸음 더 내딛겠어",  # 가겠어/내딛겠어 (라임 맞음 -어)
+        ]
 
+        # 3. ABAB CDCD 가사 (교차 라임)
+        lines_abab_cdcd = [
+            "밤을 지나 나는 다시 올라가",      # A
+            "차가운 빗줄기가 어깨에 내렸다",    # B
+            "맘을 비워도 박자는 돌아가",        # A
+            "이 밤이 흐르기 전 모든 걸 바쳤다",  # B
+            "그 누구도 내 앞길을 막지 못해",    # C
+            "새로운 세상을 향해서 가겠어",      # D
+            "이 모든 두려움을 뛰어 넘게",      # C
+            "꿈을 향해 한 걸음 더 내딛겠어",    # D
+        ]
+
+        def format_comp(lines):
+            formatted = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(lines, 1)]
+            return [[{"role": "assistant", "content": "\n".join(formatted)}]]
+
+        prompt = build_api_messages(bpm=90)
+        
+        reward_aaaa = rhyme_reward(format_comp(lines_aaaa_bbbb), prompts=[prompt])[0]
+        reward_aabb = rhyme_reward(format_comp(lines_aabb_ccdd), prompts=[prompt])[0]
+        reward_abab = rhyme_reward(format_comp(lines_abab_cdcd), prompts=[prompt])[0]
+
+        # 검증:
+        # AAAA BBBB는 0.8 이상의 높은 점수여야 함
+        self.assertGreater(reward_aaaa, 0.8)
+        # AA BB CC DD는 중간 정도의 점수여야 함 (보통 0.4 ~ 0.75)
+        self.assertTrue(0.4 <= reward_aabb <= 0.75)
+        # ABAB CDCD는 우연한 인접 부분 일치만 있으므로 상대적으로 낮아야 함 (< 0.45)
+        self.assertLess(reward_abab, 0.45)
+        # 서열 관계 검증: ABAB < AABB < AAAA
+        self.assertLess(reward_abab, reward_aabb)
+        self.assertLess(reward_aabb, reward_aaaa)
 
 
 if __name__ == "__main__":

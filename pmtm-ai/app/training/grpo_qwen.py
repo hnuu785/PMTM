@@ -281,7 +281,7 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """지정된 라임 스키마(AAAABBBB) 준수 여부를 패딩 왜곡 없이 동적으로 채점."""
+    """연속된 라임 블록(AA, AAA, AAAA)의 길이에 따라 차등 채점."""
     if prompts is None:
         prompts = [""] * len(completions)
     rewards = []
@@ -300,34 +300,54 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         # 1) 실제 줄들의 중복 비율 계산
         dup_ratio = (1.0 - len(set(actual_lines)) / actual_len) if actual_len > 0 else 0.0
         
-        # 2) A 파트(1~4행)와 B 파트(5~8행) 동적 분할
-        lines_a = actual_lines[0:4]
-        lines_b = actual_lines[4:8]
-        
-        part_scores = []
-        
-        # A 파트 채점 (2줄 이상일 때만 비교 가능)
-        if len(lines_a) > 1:
-            scores_a = [get_line_rhyme_score(lines_a[0], lines_a[i]) for i in range(1, len(lines_a))]
-            part_scores.append(sum(scores_a) / len(scores_a))
-        elif len(lines_a) == 1:
-            part_scores.append(0.0)  # 1줄만 있으면 라임 형성 불가로 0점
-            
-        # B 파트 채점 (2줄 이상일 때만 비교 가능)
-        if len(lines_b) > 1:
-            scores_b = [get_line_rhyme_score(lines_b[0], lines_b[i]) for i in range(1, len(lines_b))]
-            part_scores.append(sum(scores_b) / len(scores_b))
-        elif len(lines_b) == 1:
-            part_scores.append(0.0)  # B 파트가 시작은 되었으나 1줄이라 라임 형성 불가로 0점
-        # len(lines_b) == 0 인 경우는 계산에서 완전 제외
-        
-        # 3) 최종 라임 점수 계산 (유효한 파트 점수의 평균)
-        if part_scores:
-            rhyme_score = sum(part_scores) / len(part_scores)
+        # 2) 연속 라임 점수 계산 (AA: 0.6, AAA: 0.8, AAAA: 1.0, 그 외 0.0)
+        if actual_len > 1:
+            # 인접한 모든 쌍(i, i+1)의 라임 점수를 계산
+            adj_scores = []
+            for i in range(actual_len - 1):
+                score = get_line_rhyme_score(actual_lines[i], actual_lines[i+1])
+                adj_scores.append(score)
+                
+            line_scores = []
+            for i in range(actual_len):
+                # 2-1) AA 판정 (현재 줄 i가 인접한 줄과 라임하는지)
+                score_L1 = adj_scores[i-1] if i > 0 else 0.0
+                score_R1 = adj_scores[i] if i < actual_len - 1 else 0.0
+                adj_max = max(score_L1, score_R1)
+                
+                # 2-2) AAA 판정 (3개 연속 라임 그룹에 속하는지)
+                consec_3_cases = []
+                if i >= 2:
+                    consec_3_cases.append(min(adj_scores[i-2], adj_scores[i-1]))
+                if i >= 1 and i < actual_len - 1:
+                    consec_3_cases.append(min(adj_scores[i-1], adj_scores[i]))
+                if i < actual_len - 2:
+                    consec_3_cases.append(min(adj_scores[i], adj_scores[i+1]))
+                consec_3 = max(consec_3_cases) if consec_3_cases else 0.0
+                
+                # 2-3) AAAA 판정 (4개 연속 라임 그룹에 속하는지)
+                consec_4_cases = []
+                if i >= 3:
+                    consec_4_cases.append(min(adj_scores[i-3], adj_scores[i-2], adj_scores[i-1]))
+                if i >= 2 and i < actual_len - 1:
+                    consec_4_cases.append(min(adj_scores[i-2], adj_scores[i-1], adj_scores[i]))
+                if i >= 1 and i < actual_len - 2:
+                    consec_4_cases.append(min(adj_scores[i-1], adj_scores[i], adj_scores[i+1]))
+                if i < actual_len - 3:
+                    consec_4_cases.append(min(adj_scores[i], adj_scores[i+1], adj_scores[i+2]))
+                consec_4 = max(consec_4_cases) if consec_4_cases else 0.0
+                
+                # 가중치 결합 (AA: 0.6, AAA: 0.8, AAAA: 1.0)
+                # w_aa = 0.6, w_aaa = 0.2, w_aaaa = 0.2
+                w_aa, w_aaa, w_aaaa = 0.6, 0.2, 0.2
+                line_score = w_aa * adj_max + w_aaa * consec_3 + w_aaaa * consec_4
+                line_scores.append(line_score)
+                
+            rhyme_score = sum(line_scores) / actual_len
         else:
             rhyme_score = 0.0
             
-        # 4) 중복 리워드 해킹 방지
+        # 3) 중복 리워드 해킹 방지
         effective_rhyme = rhyme_score * (1.0 - dup_ratio)
         r = effective_rhyme
         
@@ -335,7 +355,7 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         if dup_ratio >= 0.3:
             r = min(r, -1.0)
             
-        # 5) 분량이 8마디 미만인 경우 비례 스케일링 (단일 분량 페널티)
+        # 4) 분량이 8마디 미만인 경우 비례 스케일링 (단일 분량 페널티)
         if actual_len < 8:
             r = r * (actual_len / 8.0)
             
