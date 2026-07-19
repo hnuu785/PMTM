@@ -184,9 +184,9 @@ def main():
         top_p=args.top_p,
     )
     
-    print("=== Raw Generated Output ===")
-    print(text)
-    print("\n=== Post-Processed Cleaned Lyrics ===")
+    import sys
+    print("=== Raw Generated Output ===", file=sys.stderr)
+    print(text, file=sys.stderr)
     print(post_process_lyrics(text))
 
 

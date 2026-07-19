@@ -4,6 +4,11 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from g2pk2 import G2p
+
+g2p = G2p()
+
+
 
 TARGET_BARS = 8
 MAX_SYLLABLES_PER_BAR = 24
@@ -141,7 +146,13 @@ def build_flow_plan(
     beat_map = build_beat_map(bpm, first_bar_start_sec)
     bars: list[FlowBar] = []
     for index, line in enumerate(lines):
-        syllables = _extract_hangul_syllables(line)
+        # Validate original line for unsupported characters
+        _extract_hangul_syllables(line)
+
+        # Convert line phonetically
+        g2p_line = g2p(line)
+
+        syllables = _extract_hangul_syllables(g2p_line)
         if not syllables:
             raise ValueError(f"{index + 1}마디에 합성 가능한 한글 음절이 없습니다.")
         if len(syllables) > MAX_SYLLABLES_PER_BAR:
@@ -161,7 +172,7 @@ def build_flow_plan(
         bars.append(
             FlowBar(
                 barIndex=index + 1,
-                text=line,
+                text=g2p_line,
                 startSec=start,
                 endSec=round(start + beat_map.barDurationSec, 6),
                 template=template,
@@ -263,6 +274,29 @@ def _syllable_to_phonemes(syllable: str) -> list[str]:
     return [phone for phone in (onset_phone, vowel_phone, coda_phone) if phone]
 
 
+# Rhythmic templates representing natural, groovy, and syncopated rap flows.
+# The numbers indicate relative syllable durations (weights) where:
+# - 3: dotted eighth note (swing/bounce)
+# - 2: eighth note (standard)
+# - 1.33: triplet sixteenth note (trap shuffle)
+# - 1: sixteenth note (fast/tight)
+# - 0.5: thirty-second note (double-time pickup)
+# - 4 or 6: extended hold (release/emphasis at the end of a phrase)
+RHYTHM_TEMPLATES = {
+    8: [3, 1, 2, 2, 3, 1, 2, 2],
+    9: [3, 1, 2, 1, 1, 2, 2, 1, 3],
+    10: [1.5, 0.5, 1, 1, 2, 1.5, 0.5, 1, 1, 6],
+    11: [1, 1, 1, 1, 2, 2, 1.5, 0.5, 1, 1, 4],
+    12: [1.33, 1.33, 1.33, 2, 1, 1, 1.33, 1.33, 1.33, 2, 1, 1],
+    13: [2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2],
+    14: [1, 1, 1, 1, 2, 1.5, 0.5, 1, 1, 1, 1, 2, 1, 1],
+    15: [2, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 2],
+    16: [1, 1, 1, 1, 1.5, 0.5, 1, 1, 1, 1, 1, 1, 1.5, 0.5, 1, 1],
+    17: [1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1.5, 0.5, 1, 1, 1],
+    18: [1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1],
+}
+
+
 def _allocate_phoneme_durations(
     phonemes: list[str],
     ph_num: list[int],
@@ -271,32 +305,36 @@ def _allocate_phoneme_durations(
     syllable_count: int,
 ) -> tuple[list[float], str]:
     if syllable_count <= 8:
-        template = "laid_back_eighths"
-        lead_ratio, tail_ratio = (0.10, 0.16) if bar_index % 2 == 0 else (0.16, 0.10)
+        lead_ratio, tail_ratio = 0.10, 0.12
     elif syllable_count <= 16:
-        template = "syncopated_sixteenths"
-        lead_ratio, tail_ratio = (0.06, 0.10) if bar_index % 2 == 0 else (0.10, 0.06)
+        lead_ratio, tail_ratio = 0.06, 0.08
     else:
-        template = "dense_thirty_seconds"
         lead_ratio, tail_ratio = 0.04, 0.05
 
     lead_duration = bar_duration_sec * lead_ratio
     tail_duration = bar_duration_sec * tail_ratio
     active_duration = bar_duration_sec - lead_duration - tail_duration
-    syllable_duration = active_duration / syllable_count
+
+    # Fetch template or fallback to uniform weights
+    weights = RHYTHM_TEMPLATES.get(syllable_count, [1.0] * syllable_count)
+    weight_sum = sum(weights)
+    syllable_durations = [active_duration * (w / weight_sum) for w in weights]
+
     durations = [lead_duration]
     cursor = 1
-    for phone_count in ph_num[1:-1]:
+    for i, phone_count in enumerate(ph_num[1:-1]):
         symbols = phonemes[cursor : cursor + phone_count]
-        weights = [_phoneme_weight(symbol) for symbol in symbols]
-        weight_sum = sum(weights)
-        durations.extend(syllable_duration * weight / weight_sum for weight in weights)
+        phone_weights = [_phoneme_weight(sym) for sym in symbols]
+        phone_weight_sum = sum(phone_weights)
+        
+        # Divide this syllable's allocated duration among its phonemes
+        durations.extend(syllable_durations[i] * pw / phone_weight_sum for pw in phone_weights)
         cursor += phone_count
     durations.append(tail_duration)
 
     rounded = [round(value, 6) for value in durations]
     rounded[-1] = round(rounded[-1] + (bar_duration_sec - sum(rounded)), 6)
-    return rounded, template
+    return rounded, f"template_{syllable_count}syl"
 
 
 def _phoneme_weight(symbol: str) -> float:
@@ -314,13 +352,46 @@ def _build_f0_curve(
     bar_index: int,
 ) -> list[float]:
     values: list[float] = []
+    
+    # 1. Frame-by-frame initial F0 generation (flat pitch for voiced segments)
     for symbol, duration in zip(symbols, durations):
         frame_count = max(1, round(duration / F0_TIMESTEP_SEC))
-        if symbol == "SP":
-            values.extend([0.0] * frame_count)
+        for _ in range(frame_count):
+            if symbol == "SP":
+                values.append(0.0)
+            else:
+                values.append(base_f0_hz)
+
+    # 2. Apply portamento/glide smoothing to voiced segments (prevents sharp pitch clicks at boundaries)
+    n_frames = len(values)
+    i = 0
+    while i < n_frames:
+        if values[i] == 0.0:
+            i += 1
             continue
-        accent = 1.0 + (0.025 if bar_index % 2 else -0.012)
-        values.extend([base_f0_hz * accent] * frame_count)
+            
+        start_idx = i
+        while i < n_frames and values[i] > 0.0:
+            i += 1
+        end_idx = i
+        
+        segment_len = end_idx - start_idx
+        if segment_len <= 1:
+            continue
+            
+        for j in range(segment_len):
+            idx = start_idx + j
+            
+            # Portamento/Glide smoothing at segment boundaries (prevents sharp pitch clicks)
+            glide_frames = min(4, segment_len // 2)
+            if j < glide_frames:
+                ramp = 0.96 + 0.04 * (j / glide_frames)
+                values[idx] *= ramp
+            elif j >= segment_len - glide_frames:
+                k = segment_len - 1 - j
+                ramp = 0.96 + 0.04 * (k / glide_frames)
+                values[idx] *= ramp
+                
     return values
 
 

@@ -77,6 +77,48 @@ def health_check() -> dict[str, str]:
     return {"status": "ok", "environment": settings.app_env}
 
 
+def _list_available_models() -> list[dict]:
+    models = [
+        {
+            "id": "qwen-local",
+            "name": "Qwen local",
+            "detail": "Qwen2.5-3B-Instruct",
+            "type": "local",
+        },
+        {
+            "id": "openai",
+            "name": "OpenAI",
+            "detail": settings.openai_model,
+            "type": "api",
+        },
+    ]
+
+    project_root = Path(__file__).resolve().parents[2]
+    models_dir = project_root / "pmtm-ai" / "models"
+
+    if models_dir.exists():
+        for p in models_dir.glob("**/adapter_config.json"):
+            adapter_dir = p.parent
+            rel_path = adapter_dir.relative_to(project_root / "pmtm-ai")
+            rel_path_str = rel_path.as_posix()
+            display_name = rel_path_str.replace("models/", "")
+            models.append({
+                "id": rel_path_str,
+                "name": display_name,
+                "detail": f"Qwen + {display_name}",
+                "type": "adapter",
+            })
+
+    base_models = models[:2]
+    adapters = sorted(models[2:], key=lambda x: x["name"])
+    return base_models + adapters
+
+
+@app.get("/api/v1/lyrics/models")
+def get_available_models() -> list[dict]:
+    return _list_available_models()
+
+
 @app.post("/api/v1/lyrics/generate", response_model=LyricGenerateResponse)
 def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
     bpm = payload.bpm
@@ -303,6 +345,18 @@ def _generate_verse_for_model(
             "exp-005 GRPO checkpoint-450 LoRA 어댑터 생성 결과입니다.",
             "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_qwen/checkpoint-450 어댑터를 적용했습니다.",
         ]
+    if llm.startswith("models/") or llm.startswith("outputs/"):
+        project_root = Path(__file__).resolve().parents[2]
+        ai_root = project_root / "pmtm-ai"
+        adapter_path = ai_root / llm
+        if not adapter_path.exists() or not (adapter_path / "adapter_config.json").exists():
+            raise HTTPException(status_code=400, detail=f"Model adapter config not found: {llm}")
+
+        display_name = llm.replace("models/", "").replace("outputs/", "")
+        return _generate_qwen_verse(bpm, llm, genre=genre, mood=mood, bars=bars), [
+            f"{display_name} LoRA 어댑터 생성 결과입니다.",
+            f"Qwen/Qwen2.5-3B-Instruct 베이스 모델에 {display_name} 어댑터를 적용했습니다.",
+        ]
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
         "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
@@ -321,8 +375,6 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     line_count = len(clean_lines)
     parents = list(range(line_count))
-    scores = [0.0] * line_count
-    best_match_indexes: list[int | None] = [None] * line_count
 
     def find(index: int) -> int:
         while parents[index] != index:
@@ -336,18 +388,16 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
         if left_root != right_root:
             parents[right_root] = left_root
 
-    get_line_rhyme_score, calculate_syllable_score, get_phonemes = _load_rhyme_analysis_funcs()
-    for left in range(line_count):
-        for right in range(left + 1, line_count):
-            score = get_line_rhyme_score(clean_lines[left], clean_lines[right])
-            if score > scores[left]:
-                scores[left] = score
-                best_match_indexes[left] = right
-            if score > scores[right]:
-                scores[right] = score
-                best_match_indexes[right] = left
-            if score >= RHYME_GROUP_THRESHOLD:
-                union(left, right)
+    get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
+    
+    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산
+    scores, best_match_indexes = calculate_line_scores(clean_lines)
+
+    # 2) 학습 기준(인접 라인 간 라임)으로 그룹 병합(union) 진행
+    for i in range(line_count - 1):
+        score = get_line_rhyme_score(clean_lines[i], clean_lines[i+1])
+        if score >= RHYME_GROUP_THRESHOLD:
+            union(i, i+1)
 
     root_counts: dict[int, int] = {}
     for index in range(line_count):
@@ -391,8 +441,8 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
 
 
 def _load_rhyme_score_func():
-    get_line_rhyme_score, _, _ = _load_rhyme_analysis_funcs()
-    return get_line_rhyme_score
+    funcs = _load_rhyme_analysis_funcs()
+    return funcs[0]
 
 
 def _load_rhyme_analysis_funcs():
@@ -402,9 +452,10 @@ def _load_rhyme_analysis_funcs():
         sys.path.insert(0, str(scoring_root))
 
     from phonetics_utils import get_phonemes
-    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score
+    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
 
-    return get_line_rhyme_score, calculate_syllable_score, get_phonemes
+    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
+
 
 
 def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:

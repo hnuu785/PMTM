@@ -66,12 +66,7 @@ type RhymeLineAnalysis = {
   highlightRanges?: Array<{ start: number; end: number }>;
 };
 
-type LyricModel =
-  | "qwen-local"
-  | "qwen-exp-005-sft"
-  | "qwen-exp-005-grpo"
-  | "qwen-exp-005-grpo-checkpoint-450"
-  | "openai";
+type LyricModel = string;
 
 type ApiErrorResponse = {
   detail?: unknown;
@@ -93,26 +88,11 @@ const RHYME_COLORS = [
   { background: "rgba(150, 124, 255, 0.28)", border: "rgba(150, 124, 255, 0.74)", color: "#ece7ff" },
   { background: "rgba(74, 222, 128, 0.24)", border: "rgba(74, 222, 128, 0.70)", color: "#dcfce7" },
 ];
-const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> = [
+const DEFAULT_LLM_OPTIONS: Array<{ value: string; label: string; detail: string }> = [
   {
     value: "qwen-local",
     label: "Qwen local",
     detail: "Qwen2.5-3B-Instruct",
-  },
-  {
-    value: "qwen-exp-005-sft",
-    label: "SFT exp-005",
-    detail: "Qwen + exp-005 SFT",
-  },
-  {
-    value: "qwen-exp-005-grpo",
-    label: "GRPO exp-005",
-    detail: "Qwen + exp-005 LoRA",
-  },
-  {
-    value: "qwen-exp-005-grpo-checkpoint-450",
-    label: "GRPO checkpoint-450",
-    detail: "Qwen + exp-005 step 450",
   },
   {
     value: "openai",
@@ -128,6 +108,9 @@ export default function Home() {
   const [firstBarStartSec, setFirstBarStartSec] = useState("0");
   const [bpm, setBpm] = useState("90");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
+  const [llmOptions, setLlmOptions] = useState<Array<{ value: string; label: string; detail: string }>>(
+    DEFAULT_LLM_OPTIONS,
+  );
   const [voicebank, setVoicebank] = useState("potg");
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
     DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
@@ -161,6 +144,32 @@ export default function Home() {
         );
       })
       .catch(() => undefined);
+    return () => controller.abort();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/v1/lyrics/models`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("models lookup failed"))))
+      .then((items: Array<{ id: string; name: string; detail: string; type: string }>) => {
+        const options = items.map((item) => ({
+          value: item.id,
+          label: item.name,
+          detail: item.detail,
+        }));
+        setLlmOptions(options);
+        setLlm((current) => {
+          const hasCurrent = options.some((opt) => opt.value === current);
+          if (!hasCurrent && options.length > 0) {
+            const defaultOpt = options.find((opt) => opt.value === "qwen-local") || options[0];
+            return defaultOpt.value;
+          }
+          return current;
+        });
+      })
+      .catch(() => {
+        setLlmOptions(DEFAULT_LLM_OPTIONS);
+      });
     return () => controller.abort();
   }, [apiBaseUrl]);
 
@@ -459,6 +468,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/flow-test"
+              className="border border-[#52d4c8]/55 px-3 py-2 text-xs font-bold tracking-[0.08em] text-[#d7fffb] transition hover:border-[#72ebd8] hover:bg-[#0b2023]"
+            >
+              플로우 테스트
+            </Link>
+            <Link
               href="/beat-analysis"
               className="border border-[#f5b950]/55 px-3 py-2 text-xs font-bold tracking-[0.08em] text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
             >
@@ -580,7 +595,7 @@ export default function Home() {
                 <fieldset className="space-y-2">
                   <legend className="text-sm font-semibold text-[#d8b993]">LLM</legend>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {LLM_OPTIONS.map((option) => (
+                    {llmOptions.map((option) => (
                       <label
                         key={option.value}
                         className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${

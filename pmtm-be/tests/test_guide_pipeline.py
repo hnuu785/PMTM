@@ -37,6 +37,18 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertEqual(_syllable_to_phonemes("워"), ["w", "o"])
         self.assertEqual(_syllable_to_phonemes("의"), ["ui"])
 
+    def test_korean_liaison_g2p_rules(self):
+        plan = build_flow_plan(
+            "\n".join(["접어"] * 8),
+            120,
+            0.0,
+            "potg",
+            base_f0_hz=190.0,
+        )
+        self.assertEqual(plan.bars[0].text, "저버")
+        symbols = [p.symbol for p in plan.bars[0].phonemes]
+        self.assertEqual(symbols, ["SP", "jh", "eo", "b", "eo", "SP"])
+
     def test_flow_plan_is_exactly_eight_aligned_bars(self):
         plan = build_flow_plan(EIGHT_BARS, 120, 1.25, "potg", base_f0_hz=190.0)
 
@@ -88,6 +100,35 @@ class FlowAdapterTests(unittest.TestCase):
             len(sections[0]["f0_seq"].split()),
             len(sections[0]["energy"].split()),
         )
+
+    def test_f0_curve_is_flat(self):
+        from app.flow_adapter import _build_f0_curve
+        symbols = ["SP", "g", "a", "kcl", "SP"]
+        durations = [0.1, 0.2, 0.3, 0.2, 0.1]
+        base_f0 = 190.0
+        f0_curve = _build_f0_curve(symbols, durations, base_f0, 1)
+        
+        # Total duration = 0.9s, timestep = 0.01s => 90 frames
+        self.assertEqual(len(f0_curve), 90)
+        
+        # SP frames (0.1s => 10 frames) should be 0.0
+        for val in f0_curve[:10]:
+            self.assertEqual(val, 0.0)
+            
+        for val in f0_curve[-10:]:
+            self.assertEqual(val, 0.0)
+            
+        # Voiced frames (g, a, kcl) should be > 0.0 and <= base_f0
+        voiced_f0s = f0_curve[10:-10]
+        self.assertTrue(all(val > 0.0 for val in voiced_f0s))
+        self.assertAlmostEqual(max(voiced_f0s), base_f0)
+        
+        # Check if F0 is indeed flat (most values equal base_f0, except near boundary ramps)
+        # 70 frames of voiced segment. Glide frames = min(4, 70 // 2) = 4 frames on each side.
+        # So frames 14 to 76 (relative index 4 to 66) should be exactly base_f0.
+        for idx, val in enumerate(voiced_f0s):
+            if 4 <= idx < len(voiced_f0s) - 4:
+                self.assertAlmostEqual(val, base_f0)
 
 
 class GuideDemoApiTests(unittest.TestCase):
