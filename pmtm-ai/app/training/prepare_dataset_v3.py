@@ -189,7 +189,7 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
 
 def build_user_prompt(genre: str) -> str:
     bpm = 90.0 if genre == "붐뱁" else 140.0
-    return build_api_user_prompt(bpm=bpm, bars=TARGET_BARS)
+    return "랩을 작성해 주세요. " + build_api_user_prompt(bpm=bpm, bars=TARGET_BARS)
 
 
 def build_record(lines: list[str], genre: str) -> dict:
