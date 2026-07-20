@@ -114,12 +114,12 @@ def prepare_dataset():
     print("=" * 60)
     print("[B1] SFT 데이터셋 준비")
     print("=" * 60)
-    out = DATA_DIR / "prepared_dataset_v2.jsonl"
+    out = DATA_DIR / "prepared_dataset_v3.jsonl"
     if out.exists():
         n = sum(1 for _ in out.open(encoding="utf-8"))
         print(f"이미 존재: {out} ({n} samples)")
     else:
-        from app.training.prepare_dataset_v2 import main as prep_main
+        from app.training.prepare_dataset_v3 import main as prep_main
 
         prep_main()
     assert out.exists(), "SFT 데이터 생성 실패"
@@ -148,6 +148,11 @@ def reward_sanity_check():
 
     - std < 0.05  → reward shaping이 약함, GRPO 학습 신호 부족 우려
     - mean < 0    → format/dup 페널티 과도, 가중치 조정 권장
+
+    결과 해석 기준:
+        std >= 0.05  AND  mean >= 0   → PASS  (GRPO 진행 권장)
+        std <  0.05                   → WARNING: 보상 분산 부족, 학습 신호 약함
+        mean < 0                      → WARNING: 음수 편향, format/dup 페널티 과도
     """
     print("=" * 60)
     print("[C2] Reward sanity check")
@@ -206,9 +211,43 @@ def reward_sanity_check():
     completions = [tok.decode(o[prompt_lens:], skip_special_tokens=True) for o in out]
 
     rewards = rhyme_reward(completions, prompts=prompts)
-    print(f"reward mean   : {statistics.mean(rewards):+.4f}")
-    print(f"reward stdev  : {statistics.stdev(rewards):.4f}")
-    print(f"reward min/max: {min(rewards):+.4f} / {max(rewards):+.4f}")
+    r_mean = statistics.mean(rewards)
+    r_std  = statistics.stdev(rewards)
+    r_min  = min(rewards)
+    r_max  = max(rewards)
+
+    print(f"reward mean   : {r_mean:+.4f}")
+    print(f"reward stdev  : {r_std:.4f}")
+    print(f"reward min/max: {r_min:+.4f} / {r_max:+.4f}")
+
+    # ── 분포 진단 ──────────────────────────────────────────────
+    warnings: list[str] = []
+
+    if r_std < 0.05:
+        warnings.append(
+            f"[WARNING] reward std={r_std:.4f} < 0.05\n"
+            "  → 보상 분산 부족: 모든 샘플이 비슷한 점수를 받아 GRPO 학습 신호가 약합니다.\n"
+            "  조치: 보상 함수 가중치 재조정 또는 rhyme/syllable 항목 강화를 검토하세요."
+        )
+
+    if r_mean < 0:
+        warnings.append(
+            f"[WARNING] reward mean={r_mean:+.4f} < 0\n"
+            "  → 음수 편향: format/dup 페널티가 과도하게 작동 중입니다.\n"
+            "  조치: format_penalty / dup_penalty 가중치를 낮추거나\n"
+            "        grpo_qwen.py의 scale_rewards 설정을 확인하세요."
+        )
+
+    if warnings:
+        print()
+        for w in warnings:
+            print(w)
+        print()
+        print("[SANITY] FAIL — GRPO 진행 전 위 경고를 해결하는 것을 권장합니다.")
+    else:
+        print()
+        print(f"[SANITY] PASS — std={r_std:.4f} >= 0.05, mean={r_mean:+.4f} >= 0 (GRPO 진행 가능)")
+
     print("\n--- sample prompt + completion ---")
     print(prompt_texts[0])
     print(completions[0][:600])

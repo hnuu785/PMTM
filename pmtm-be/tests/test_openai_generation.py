@@ -538,6 +538,20 @@ class OpenAIGenerationTests(unittest.TestCase):
         )
         self.assertIn("exp-005 GRPO", notes[0])
 
+    def test_exp_005_grpo_checkpoint_450_model_uses_adapter(self):
+        with mock.patch.object(main, "_generate_qwen_verse", return_value="[Verse]\none") as generate:
+            lyrics, notes = main._generate_verse_for_model(90, "qwen-exp-005-grpo-checkpoint-450")
+
+        self.assertEqual(lyrics, "[Verse]\none")
+        generate.assert_called_once_with(
+            90,
+            main.EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
+            genre="Korean hip-hop",
+            mood="confident",
+            bars=8,
+        )
+        self.assertIn("checkpoint-450", notes[0])
+
     def test_openai_payload_limits_gpt5_reasoning(self):
         original_model = main.settings.openai_model
         main.settings.openai_model = "gpt-5-mini"

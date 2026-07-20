@@ -8,11 +8,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from app.lyric_prompts import TARGET_BARS, build_api_user_prompt
+from app.lyric_prompts import TARGET_BARS, build_api_messages
 from app.paths import DATA_DIR
+from app.rhyme_scoring.phonetics_utils import get_phonemes
+from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
-OUTPUT_PATH = DATA_DIR / "prepared_dataset_v2.jsonl"
+OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
 MIN_RHYME_SCORE = 0.22
 MIN_KOREAN_RATIO = 0.35
@@ -24,29 +27,7 @@ MAX_ENDING_WORD_COUNT = 2
 MAX_REPEATED_BIGRAMS = 5
 MAX_REPEATED_TRIGRAMS = 1
 
-VOWELS = [
-    "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ",
-    "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ",
-]
-CODAS = [
-    None, "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ",
-    "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ",
-    "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
-]
-VOWEL_GROUPS = {
-    "ㅐ": "ㅔ", "ㅔ": "ㅐ", "ㅖ": "ㅔ", "ㅒ": "ㅐ",
-    "ㅗ": "ㅜ", "ㅜ": "ㅗ",
-    "ㅡ": "ㅣ", "ㅣ": "ㅡ",
-    "ㅏ": "ㅑ", "ㅑ": "ㅏ",
-    "ㅓ": "ㅕ", "ㅕ": "ㅓ",
-    "ㅙ": "ㅐ", "ㅚ": "ㅔ", "ㅞ": "ㅔ",
-}
-CODA_GROUPS = {
-    "ㄴ": "nasal", "ㅁ": "nasal", "ㅇ": "nasal",
-    "ㄱ": "stop", "ㅂ": "stop", "ㄷ": "stop", "ㅅ": "stop",
-    "ㅋ": "stop", "ㅌ": "stop", "ㅍ": "stop",
-    "ㄹ": "liquid",
-}
+
 
 
 def clean_lines(lyrics: str) -> list[str]:
@@ -83,8 +64,63 @@ def ending_word(line: str) -> str:
     return line_tokens[-1] if line_tokens else ""
 
 
+def int_to_korean(n: int) -> str:
+    if n == 0:
+        return "영"
+    units = ["", "십", "백", "천"]
+    big_units = ["", "만", "억", "조"]
+    digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+    
+    num_str = str(n)
+    parts = []
+    rev_str = num_str[::-1]
+    for i in range(0, len(rev_str), 4):
+        chunk = rev_str[i:i+4]
+        chunk_val = ""
+        for j, digit in enumerate(chunk):
+            d = int(digit)
+            if d > 0:
+                if d == 1 and j > 0:
+                    digit_name = ""
+                else:
+                    digit_name = digits[d]
+                chunk_val = digit_name + units[j] + chunk_val
+        if chunk_val:
+            parts.append(chunk_val + big_units[i // 4])
+    
+    return "".join(reversed(parts))
+
+
+def count_syllables(line: str) -> int:
+    tokens = re.findall(r"[가-힣]+|[A-Za-z]+|\d+", line)
+    total_syllables = 0
+    for tok in tokens:
+        if "가" <= tok[0] <= "힣":
+            total_syllables += len(tok)
+        elif tok.lower() in ENGLISH_RHYME_STOPWORDS:
+            total_syllables += 1
+        elif tok.isdigit():
+            try:
+                korean_num = int_to_korean(int(tok))
+                total_syllables += len(korean_num)
+            except Exception:
+                total_syllables += len(tok)
+        else:
+            try:
+                phonemes = get_phonemes(tok)
+                if phonemes:
+                    total_syllables += len(phonemes)
+                else:
+                    vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                    total_syllables += max(1, len(vowels))
+            except Exception:
+                vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                total_syllables += max(1, len(vowels))
+    return total_syllables
+
+
 def line_length(line: str) -> int:
-    return len(re.findall(r"[가-힣A-Za-z0-9]", line))
+    return count_syllables(line)
 
 
 def korean_ratio(lines: list[str]) -> float:
@@ -95,53 +131,7 @@ def korean_ratio(lines: list[str]) -> float:
     return len(re.findall(r"[가-힣]", text)) / len(letters)
 
 
-def hangul_phonemes(text: str) -> list[tuple[str, str | None]]:
-    phonemes = []
-    for ch in text:
-        code = ord(ch)
-        if not 0xAC00 <= code <= 0xD7A3:
-            continue
-        idx = code - 0xAC00
-        vowel = VOWELS[(idx % 588) // 28]
-        coda = CODAS[idx % 28]
-        phonemes.append((vowel, coda))
-    return phonemes
 
-
-def syllable_rhyme_score(a: tuple[str, str | None], b: tuple[str, str | None]) -> float:
-    v1, c1 = a
-    v2, c2 = b
-    if v1 == v2:
-        vowel_score = 1.0
-    elif VOWEL_GROUPS.get(v1) == v2:
-        vowel_score = 0.8
-    else:
-        vowel_score = 0.0
-
-    if c1 == c2:
-        coda_score = 1.0
-    elif c1 and c2 and CODA_GROUPS.get(c1) == CODA_GROUPS.get(c2):
-        coda_score = 0.7
-    elif not c1 and not c2:
-        coda_score = 1.0
-    else:
-        coda_score = 0.0
-
-    return vowel_score * 0.8 + coda_score * 0.2
-
-
-def line_rhyme_score(line1: str, line2: str) -> float:
-    p1 = hangul_phonemes(line1)
-    p2 = hangul_phonemes(line2)
-    if not p1 or not p2:
-        return 0.0
-
-    weights = [1.0, 0.5, 0.3]
-    count = min(len(p1), len(p2), len(weights))
-    total = 0.0
-    for i in range(1, count + 1):
-        total += syllable_rhyme_score(p1[-i], p2[-i]) * weights[i - 1]
-    return total / sum(weights[:count])
 
 
 def repeated_ngram_count(lines: list[str], n: int) -> int:
@@ -161,7 +151,7 @@ def chunk_features(lines: list[str]) -> dict[str, float | int]:
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_scores = [line_rhyme_score(lines[i], lines[i + 1]) for i in range(len(lines) - 1)]
+    rhyme_scores = [get_line_rhyme_score(lines[i], lines[i + 1]) for i in range(len(lines) - 1)]
     return {
         "rhyme_score": sum(rhyme_scores) / len(rhyme_scores),
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
@@ -197,16 +187,20 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
     return None
 
 
-def build_user_prompt(bpm: float) -> str:
-    return build_api_user_prompt(bpm=bpm, bars=TARGET_BARS)
+def build_record(lines: list[str], genre: str) -> dict:
+    formatted_lines = []
+    for i, line in enumerate(lines, 1):
+        formatted_lines.append(f"{i}. {line}")
 
+    assistant_content = "\n".join(formatted_lines)
+    bpm = 90.0 if genre == "붐뱁" else 140.0
 
-def build_record(lines: list[str], bpm: float) -> dict:
     return {
-        "messages": [
-            {"role": "user", "content": build_user_prompt(bpm)},
-            {"role": "assistant", "content": "\n".join(lines) + "\n[End]"},
-        ]
+        "messages": build_api_messages(
+            bpm=bpm,
+            bars=TARGET_BARS,
+            assistant=assistant_content
+        )
     }
 
 
@@ -241,7 +235,21 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                records.append(build_record(chunk, bpm))
+                judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+                genre = "붐뱁" if judgment_bpm < 110 else "트랩"
+                
+                # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
+                syllables_list = [count_syllables(line) for line in chunk]
+                if genre == "붐뱁":
+                    if not all(9 <= s <= 15 for s in syllables_list):
+                        stats["syllable_mismatch"] += 1
+                        continue
+                else: # 트랩
+                    if not all(13 <= s <= 19 for s in syllables_list):
+                        stats["syllable_mismatch"] += 1
+                        continue
+
+                records.append(build_record(chunk, genre))
 
     stats["kept"] = len(records)
     return records, stats

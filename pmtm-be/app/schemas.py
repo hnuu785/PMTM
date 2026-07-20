@@ -1,13 +1,7 @@
 from typing import Literal
-
 from pydantic import BaseModel, Field
 
-LyricModel = Literal[
-    "qwen-local",
-    "qwen-exp-005-sft",
-    "qwen-exp-005-grpo",
-    "openai",
-]
+LyricModel = str
 
 
 class LyricGenerateRequest(BaseModel):
@@ -76,7 +70,9 @@ DemoStatus = Literal[
     "queued",
     "analyzing",
     "writing",
+    "planning",
     "voicing",
+    "rendering",
     "mixing",
     "succeeded",
     "failed",
@@ -99,3 +95,12 @@ class DemoStatusResponse(BaseModel):
     notes: list[str] = Field(default_factory=list)
     error: str | None = None
     audioUrl: str | None = None
+    vocalUrl: str | None = None
+    flowPlanUrl: str | None = None
+    voicebank: str | None = None
+
+
+class VoicebankResponse(BaseModel):
+    id: str
+    label: str
+    available: bool

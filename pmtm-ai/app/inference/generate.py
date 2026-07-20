@@ -162,6 +162,27 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
     return tokenizer.decode(generated, skip_special_tokens=True).strip()
 
 
+import re
+
+def post_process_lyrics(raw_text: str) -> str:
+    """
+    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수 태그((X음절))를 
+    완벽히 제거하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
+    """
+    lines = []
+    for line in raw_text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        line = re.sub(r"^\d+\.\s*", "", line)
+        line = re.sub(r"^\(\d+음절\)\s*", "", line)
+        line = re.sub(r"\(\d+음절\)\s*$", "", line)
+        line = line.strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def main():
     args = parse_args()
     if args.adapter.lower() == "none":
@@ -175,15 +196,13 @@ def main():
     raw_prompt = build_prompt(args)
     messages = build_messages(args)
 
-    if args.print_prompt:
-        if should_use_chat_template(base_model, args.prompt_format):
-            print(json.dumps(messages, ensure_ascii=False, indent=2))
-        else:
-            print(raw_prompt)
-        print("-" * 60)
-
     tokenizer, model = build_model(base_model, adapter_path)
     prompt = build_model_input_text(tokenizer, base_model, args.prompt_format, raw_prompt, messages)
+
+    if args.print_prompt:
+        print(prompt)
+        print("-" * 60)
+
     text = generate_text(
         tokenizer,
         model,
@@ -192,7 +211,11 @@ def main():
         temperature=args.temperature,
         top_p=args.top_p,
     )
+    
+    print("=== Raw Generated Output ===")
     print(text)
+    print("\n=== Post-Processed Cleaned Lyrics ===")
+    print(post_process_lyrics(text))
 
 
 if __name__ == "__main__":

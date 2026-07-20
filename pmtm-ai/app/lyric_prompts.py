@@ -1,35 +1,47 @@
 TARGET_BARS = 8
-DEFAULT_GENRE = "Korean hip-hop"
-DEFAULT_MOOD = "confident"
 
 
 def build_api_user_prompt(
     *,
     bpm: float | None = None,
-    genre: str = DEFAULT_GENRE,
-    mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,
+    rhyme_scheme: str | None = None,
 ) -> str:
-    bpm_prompt = f"BPM {bpm:.0f}. " if bpm is not None else ""
-    return (
-        f"{bpm_prompt}Write exactly {bars} lines of Korean rap verse. "
-        "Use natural rhymes and consistent line breathing. "
-        "Avoid repeating the same words, phrases, or ending words."
+    if bpm is not None:
+        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+        g_name = "붐뱁" if judgment_bpm < 110 else "트랩"
+    else:
+        g_name = "트랩"
+
+    target_syllables = "10~14" if g_name == "붐뱁" else "14~18"
+    base_prompt = (
+        f"랩을 작성해주세요. 한 줄당 한 마디 규칙을 지켜 {bars}마디로 구성해야 하며, 마디의 시작마다 번호를 부여해주세요. "
+        f"마디 당 음절 수는 {target_syllables} 범위 내로 조절해주세요. "
+        f"각 마디 끝 단어 끼리는 라임이 있게 해주세요."
     )
+
+    if rhyme_scheme:
+        return f"{base_prompt} 추가로, 끝단어의 라임은 반드시 {rhyme_scheme} 스키마를 준수해 주세요."
+    return base_prompt
 
 
 def build_api_messages(
     *,
     bpm: float | None = None,
-    genre: str = DEFAULT_GENRE,
-    mood: str = DEFAULT_MOOD,
     bars: int = TARGET_BARS,
+    rhyme_scheme: str | None = None,
     assistant: str | None = None,
 ) -> list[dict[str, str]]:
     messages = [
         {
+            "role": "system",
+            "content": "You are a professional Korean rap lyricist. Your task is to write rap lyrics based on the user's constraints.",
+        },
+        {
             "role": "user",
-            "content": build_api_user_prompt(bpm=bpm, genre=genre, mood=mood, bars=bars),
+            "content": build_api_user_prompt(
+                bpm=bpm, bars=bars, rhyme_scheme=rhyme_scheme
+            ),
         },
     ]
     if assistant is not None:

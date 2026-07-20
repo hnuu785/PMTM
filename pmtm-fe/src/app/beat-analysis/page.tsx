@@ -91,9 +91,14 @@ export default function BeatAnalysisPage() {
               <h1 className="mt-1 text-2xl font-black text-[#fff3ca] sm:text-3xl">비트 분석 리포트</h1>
             </div>
           </div>
-          <Link href="/" className="border border-[#f5b950]/55 px-4 py-2 text-sm font-bold transition hover:border-[#ffb23f] hover:bg-[#23100b]">
-            ← 가사 생성으로
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/flow-test" className="border border-[#52d4c8]/55 px-4 py-2 text-sm font-bold text-[#d7fffb] transition hover:border-[#72ebd8] hover:bg-[#0b2023]">
+              플로우 테스트
+            </Link>
+            <Link href="/" className="border border-[#f5b950]/55 px-4 py-2 text-sm font-bold transition hover:border-[#ffb23f] hover:bg-[#23100b]">
+              ← 가사 생성으로
+            </Link>
+          </div>
         </header>
 
         <form onSubmit={handleSubmit} className="pmtm-panel mt-5 grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-end sm:p-5">

@@ -18,7 +18,9 @@ type DemoStatus =
   | "queued"
   | "analyzing"
   | "writing"
+  | "planning"
   | "voicing"
+  | "rendering"
   | "mixing"
   | "succeeded"
   | "failed";
@@ -39,6 +41,20 @@ type DemoStatusResponse = {
   notes: string[];
   error: string | null;
   audioUrl: string | null;
+  vocalUrl: string | null;
+  flowPlanUrl: string | null;
+  voicebank: string | null;
+};
+
+type BeatAnalysis = {
+  tempo: number;
+  firstBarStartSec: number;
+};
+
+type VoicebankInfo = {
+  id: string;
+  label: string;
+  available: boolean;
 };
 
 type RhymeLineAnalysis = {
@@ -50,22 +66,21 @@ type RhymeLineAnalysis = {
   highlightRanges?: Array<{ start: number; end: number }>;
 };
 
-type LyricModel =
-  | "qwen-local"
-  | "qwen-exp-005-sft"
-  | "qwen-exp-005-grpo"
-  | "openai";
+type LyricModel = string;
 
 type ApiErrorResponse = {
   detail?: unknown;
 };
 
 type GenerateMode = "beat" | "manual";
-type OutputMode = "lyrics" | "demo";
 
 const BPM_PRESETS = [80, 90, 120, 140];
-const DEMO_VOICES = ["verse", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer"];
-const VOCAL_START_BAR_OPTIONS = [0, 2, 4, 8] as const;
+const DIFFSINGER_VOICEBANKS = [
+  { value: "potg", label: "POTG" },
+  { value: "kitane", label: "KITANE" },
+  { value: "rang", label: "RANG" },
+  { value: "lunar", label: "LUNAR" },
+];
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
   { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
@@ -73,21 +88,11 @@ const RHYME_COLORS = [
   { background: "rgba(150, 124, 255, 0.28)", border: "rgba(150, 124, 255, 0.74)", color: "#ece7ff" },
   { background: "rgba(74, 222, 128, 0.24)", border: "rgba(74, 222, 128, 0.70)", color: "#dcfce7" },
 ];
-const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> = [
+const DEFAULT_LLM_OPTIONS: Array<{ value: string; label: string; detail: string }> = [
   {
     value: "qwen-local",
     label: "Qwen local",
     detail: "Qwen2.5-3B-Instruct",
-  },
-  {
-    value: "qwen-exp-005-sft",
-    label: "SFT exp-005",
-    detail: "Qwen + exp-005 SFT",
-  },
-  {
-    value: "qwen-exp-005-grpo",
-    label: "GRPO exp-005",
-    detail: "Qwen + exp-005 LoRA",
   },
   {
     value: "openai",
@@ -98,13 +103,18 @@ const LLM_OPTIONS: Array<{ value: LyricModel; label: string; detail: string }> =
 
 export default function Home() {
   const [mode, setMode] = useState<GenerateMode>("beat");
-  const [outputMode, setOutputMode] = useState<OutputMode>("lyrics");
   const [beatFile, setBeatFile] = useState<File | null>(null);
+  const [beatAnalysis, setBeatAnalysis] = useState<BeatAnalysis | null>(null);
+  const [firstBarStartSec, setFirstBarStartSec] = useState("0");
   const [bpm, setBpm] = useState("90");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
-  const [demoLengthSec, setDemoLengthSec] = useState<30 | 60>(30);
-  const [voice, setVoice] = useState("verse");
-  const [vocalStartBars, setVocalStartBars] = useState<0 | 2 | 4 | 8>(4);
+  const [llmOptions, setLlmOptions] = useState<Array<{ value: string; label: string; detail: string }>>(
+    DEFAULT_LLM_OPTIONS,
+  );
+  const [voicebank, setVoicebank] = useState("potg");
+  const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
+    DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
+  );
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
   const [lyricLines, setLyricLines] = useState<string[]>([]);
@@ -112,11 +122,56 @@ export default function Home() {
   const [error, setError] = useState("");
   const [rhymeError, setRhymeError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzingBeat, setIsAnalyzingBeat] = useState(false);
+  const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
   const [isAnalyzingRhyme, setIsAnalyzingRhyme] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/v1/guide-demos/voicebanks`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("voicebank lookup failed"))))
+      .then((items: VoicebankInfo[]) => {
+        setVoicebankOptions(items);
+        const firstAvailable = items.find((item) => item.available);
+        setVoicebank((current) =>
+          firstAvailable && !items.some((item) => item.id === current && item.available)
+            ? firstAvailable.id
+            : current,
+        );
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/v1/lyrics/models`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("models lookup failed"))))
+      .then((items: Array<{ id: string; name: string; detail: string; type: string }>) => {
+        const options = items.map((item) => ({
+          value: item.id,
+          label: item.name,
+          detail: item.detail,
+        }));
+        setLlmOptions(options);
+        setLlm((current) => {
+          const hasCurrent = options.some((opt) => opt.value === current);
+          if (!hasCurrent && options.length > 0) {
+            const defaultOpt = options.find((opt) => opt.value === "qwen-local") || options[0];
+            return defaultOpt.value;
+          }
+          return current;
+        });
+      })
+      .catch(() => {
+        setLlmOptions(DEFAULT_LLM_OPTIONS);
+      });
+    return () => controller.abort();
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     if (
@@ -142,32 +197,20 @@ export default function Home() {
 
         const data = (await response.json()) as DemoStatusResponse;
         setDemoJob(data);
-        if (data.lyrics) {
-          setLyricLines(parseLyricLines(data.lyrics));
-        }
         if (data.status === "queued" && data.workerAvailable === false) {
-          setIsLoading(false);
+          setIsGeneratingDemo(false);
         }
         if (data.status === "succeeded") {
-          setResult({
-            title: `${data.bpm ?? "--"} BPM Demo`,
-            bpm: data.bpm ?? 0,
-            llm,
-            lyrics: data.lyrics ?? "",
-            notes: data.notes,
-            rhymeAnalysis: [],
-          });
-          setRhymeAnalysis([]);
-          setIsLoading(false);
+          setIsGeneratingDemo(false);
         }
         if (data.status === "failed") {
           setError(data.error || "데모 생성에 실패했습니다.");
-          setIsLoading(false);
+          setIsGeneratingDemo(false);
         }
       } catch (err) {
         if (!controller.signal.aborted) {
           setError(err instanceof Error ? err.message : "데모 상태 조회 중 오류가 발생했습니다.");
-          setIsLoading(false);
+          setIsGeneratingDemo(false);
         }
       }
     }, 1500);
@@ -176,7 +219,7 @@ export default function Home() {
       controller.abort();
       window.clearInterval(intervalId);
     };
-  }, [apiBaseUrl, demoJob, llm]);
+  }, [apiBaseUrl, demoJob]);
 
   useEffect(() => {
     if (!result || lyricLines.length === 0) {
@@ -225,13 +268,13 @@ export default function Home() {
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if ((mode === "beat" || outputMode === "demo") && !beatFile) {
+    if (mode === "beat" && !beatFile) {
       setError("비트 파일을 선택해주세요.");
       return;
     }
 
     const parsedBpm = Number(bpm);
-    if (mode === "manual" && outputMode === "lyrics" && (!Number.isInteger(parsedBpm) || parsedBpm < 40 || parsedBpm > 220)) {
+    if (mode === "manual" && (!Number.isInteger(parsedBpm) || parsedBpm < 40 || parsedBpm > 220)) {
       setError("BPM은 40부터 220 사이의 정수로 입력해주세요.");
       return;
     }
@@ -243,32 +286,6 @@ export default function Home() {
     setEditingLineIndex(null);
 
     try {
-      if (outputMode === "demo") {
-        const response = await requestDemoGeneration();
-        if (!response.ok) {
-          const message = await readErrorMessage(response);
-          throw new Error(message || "데모 생성 요청에 실패했습니다.");
-        }
-
-        const data = (await response.json()) as DemoGenerateResponse;
-        setResult(null);
-        setLyricLines([]);
-        setRhymeAnalysis([]);
-        setDemoJob({
-          jobId: data.jobId,
-          status: data.status,
-          progress: 0,
-          workerAvailable: true,
-          workerCount: 0,
-          bpm: null,
-          lyrics: null,
-          notes: ["데모 생성 작업이 대기열에 등록되었습니다."],
-          error: null,
-          audioUrl: null,
-        });
-        return;
-      }
-
       const response =
         mode === "beat"
           ? await requestBeatGeneration()
@@ -305,6 +322,39 @@ export default function Home() {
     setEditingLineIndex(null);
   }
 
+  async function handleBeatFileChange(file: File | null) {
+    setBeatFile(file);
+    setBeatAnalysis(null);
+    setResult(null);
+    setDemoJob(null);
+    setLyricLines([]);
+    setRhymeAnalysis([]);
+    setError("");
+    setRhymeError("");
+    setEditingLineIndex(null);
+    if (!file) {
+      return;
+    }
+
+    setIsAnalyzingBeat(true);
+    const body = new FormData();
+    body.append("beat", file);
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/beats/analyze`, { method: "POST", body });
+      if (!response.ok) {
+        throw new Error((await readErrorMessage(response)) || "비트 분석에 실패했습니다.");
+      }
+      const analysis = (await response.json()) as BeatAnalysis;
+      setBeatAnalysis(analysis);
+      setBpm(String(Math.round(analysis.tempo)));
+      setFirstBarStartSec(String(analysis.firstBarStartSec));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "비트 분석 중 오류가 발생했습니다.");
+    } finally {
+      setIsAnalyzingBeat(false);
+    }
+  }
+
   async function requestBeatGeneration() {
     const body = new FormData();
     body.append("beat", beatFile as File);
@@ -316,18 +366,52 @@ export default function Home() {
     });
   }
 
-  async function requestDemoGeneration() {
+  async function handleGuideDemo() {
+    if (!beatFile || !result || lyricLines.length !== 8 || lyricLines.some((line) => !line.trim())) {
+      setError("비트와 비어 있지 않은 8줄 가사가 필요합니다.");
+      return;
+    }
+    const parsedStart = Number(firstBarStartSec);
+    if (!Number.isFinite(parsedStart) || parsedStart < 0) {
+      setError("첫 마디 시작 시각을 0 이상의 초 단위 값으로 입력해주세요.");
+      return;
+    }
+
     const body = new FormData();
     body.append("beat", beatFile as File);
-    body.append("llm", llm);
-    body.append("demoLengthSec", String(demoLengthSec));
-    body.append("voice", voice);
-    body.append("vocalStartBars", String(vocalStartBars));
+    body.append("lyrics", ["[Verse]", ...lyricLines].join("\n"));
+    body.append("bpm", String(result.bpm));
+    body.append("firstBarStartSec", String(parsedStart));
+    body.append("voicebank", voicebank);
 
-    return fetch(`${apiBaseUrl}/api/v1/demos/generate-from-beat`, {
-      method: "POST",
-      body,
-    });
+    setError("");
+    setIsGeneratingDemo(true);
+    setDemoJob(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/guide-demos`, { method: "POST", body });
+      if (!response.ok) {
+        throw new Error((await readErrorMessage(response)) || "8마디 가이드 랩 생성 요청에 실패했습니다.");
+      }
+      const data = (await response.json()) as DemoGenerateResponse;
+      setDemoJob({
+        jobId: data.jobId,
+        status: data.status,
+        progress: 0,
+        workerAvailable: true,
+        workerCount: 0,
+        bpm: result.bpm,
+        lyrics: ["[Verse]", ...lyricLines].join("\n"),
+        notes: ["8마디 SVS 작업이 대기열에 등록되었습니다."],
+        error: null,
+        audioUrl: null,
+        vocalUrl: null,
+        flowPlanUrl: null,
+        voicebank,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "가이드 랩 생성 중 오류가 발생했습니다.");
+      setIsGeneratingDemo(false);
+    }
   }
 
   async function requestManualGeneration(parsedBpm: number) {
@@ -384,6 +468,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/flow-test"
+              className="border border-[#52d4c8]/55 px-3 py-2 text-xs font-bold tracking-[0.08em] text-[#d7fffb] transition hover:border-[#72ebd8] hover:bg-[#0b2023]"
+            >
+              플로우 테스트
+            </Link>
+            <Link
               href="/beat-analysis"
               className="border border-[#f5b950]/55 px-3 py-2 text-xs font-bold tracking-[0.08em] text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
             >
@@ -410,42 +500,6 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-2 rounded-sm border border-[#f5b950]/25 bg-black/25 p-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setOutputMode("lyrics");
-                      setDemoJob(null);
-                      setError("");
-                    }}
-                    className={`h-10 border text-sm font-bold transition ${
-                      outputMode === "lyrics"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                    }`}
-                  >
-                    가사만
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOutputMode("demo");
-                      setMode("beat");
-                      setResult(null);
-                      setLyricLines([]);
-                      setRhymeAnalysis([]);
-                      setError("");
-                    }}
-                    className={`h-10 border text-sm font-bold transition ${
-                      outputMode === "demo"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                    }`}
-                  >
-                    데모까지
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 rounded-sm border border-[#f5b950]/25 bg-black/25 p-1">
-                  <button
-                    type="button"
                     onClick={() => handleModeChange("beat")}
                     className={`h-10 border text-sm font-bold transition ${
                       mode === "beat"
@@ -458,7 +512,6 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleModeChange("manual")}
-                    disabled={outputMode === "demo"}
                     className={`h-10 border text-sm font-bold transition ${
                       mode === "manual"
                         ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
@@ -477,21 +530,17 @@ export default function Home() {
                         key="beat-file-input"
                         type="file"
                         accept="audio/*"
-                        onChange={(event) => {
-                          setBeatFile(event.target.files?.[0] ?? null);
-                          setResult(null);
-                          setLyricLines([]);
-                          setRhymeAnalysis([]);
-                          setError("");
-                          setRhymeError("");
-                          setEditingLineIndex(null);
-                        }}
+                        onChange={(event) => void handleBeatFileChange(event.target.files?.[0] ?? null)}
                         className="mt-2 block w-full border border-[#f5b950]/45 bg-[#130806]/88 px-3 py-3 text-sm font-semibold text-[#fff3ca] outline-none transition file:mr-4 file:border-0 file:bg-[#f5b950] file:px-3 file:py-2 file:text-sm file:font-black file:text-[#170906] hover:border-[#f5b950]/70 focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.18)]"
                         aria-label="Beat file"
                       />
                     </label>
                     <p className="min-h-5 text-xs font-semibold text-[#b9865f]">
-                      {beatFile ? beatFile.name : "MP3, WAV, M4A, AAC, FLAC"}
+                      {isAnalyzingBeat
+                        ? "BPM과 첫 마디 시작점을 분석하는 중..."
+                        : beatAnalysis
+                          ? `${beatFile?.name} · ${beatAnalysis.tempo.toFixed(1)} BPM · 첫 마디 ${beatAnalysis.firstBarStartSec.toFixed(3)}s`
+                          : beatFile?.name ?? "MP3, WAV, M4A, AAC, FLAC"}
                     </p>
                   </>
                 ) : (
@@ -543,64 +592,10 @@ export default function Home() {
                   </>
                 )}
 
-                {outputMode === "demo" ? (
-                  <div className="space-y-3 border border-[#f5b950]/25 bg-black/20 p-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      {[30, 60].map((seconds) => (
-                        <button
-                          key={seconds}
-                          type="button"
-                          onClick={() => setDemoLengthSec(seconds as 30 | 60)}
-                          className={`h-10 border text-sm font-bold transition ${
-                            demoLengthSec === seconds
-                              ? "border-[#ffb23f] bg-[#ff5a1f] text-white"
-                              : "border-[#f5b950]/22 bg-[#130806]/82 text-[#d8b993] hover:border-[#f5b950]/60"
-                          }`}
-                        >
-                          {seconds}s
-                        </button>
-                      ))}
-                    </div>
-                    <label className="block">
-                      <span className="text-sm font-semibold text-[#d8b993]">Voice</span>
-                      <select
-                        value={voice}
-                        onChange={(event) => setVoice(event.target.value)}
-                        className="mt-2 h-10 w-full border border-[#f5b950]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none transition focus:border-[#ffb23f]"
-                      >
-                        {DEMO_VOICES.map((demoVoice) => (
-                          <option key={demoVoice} value={demoVoice}>
-                            {demoVoice}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div>
-                      <span className="text-sm font-semibold text-[#d8b993]">Rap start</span>
-                      <div className="mt-2 grid grid-cols-4 gap-2">
-                        {VOCAL_START_BAR_OPTIONS.map((bars) => (
-                          <button
-                            key={bars}
-                            type="button"
-                            onClick={() => setVocalStartBars(bars)}
-                            className={`h-10 border text-sm font-bold transition ${
-                              vocalStartBars === bars
-                                ? "border-[#ffb23f] bg-[#ff5a1f] text-white"
-                                : "border-[#f5b950]/22 bg-[#130806]/82 text-[#d8b993] hover:border-[#f5b950]/60"
-                            }`}
-                          >
-                            {bars} bars
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
                 <fieldset className="space-y-2">
                   <legend className="text-sm font-semibold text-[#d8b993]">LLM</legend>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {LLM_OPTIONS.map((option) => (
+                    {llmOptions.map((option) => (
                       <label
                         key={option.value}
                         className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${
@@ -634,10 +629,10 @@ export default function Home() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || ((mode === "beat" || outputMode === "demo") && !beatFile)}
+                  disabled={isLoading || isAnalyzingBeat || (mode === "beat" && !beatFile)}
                   className="h-12 w-full border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-sm font-black tracking-[0.08em] text-white uppercase shadow-[0_14px_34px_rgba(255,90,31,0.28)] transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:border-[#6d4530] disabled:bg-[#6d4530] disabled:text-[#c39a75] disabled:shadow-none"
                 >
-                  {isLoading ? "Generating" : outputMode === "demo" ? "Generate Demo" : "Generate"}
+                  {isLoading ? "Generating" : "Generate 8 Bars"}
                 </button>
               </form>
             </div>
@@ -676,29 +671,13 @@ export default function Home() {
 
             <div className="lyric-paper mt-5 flex-1 border border-[#f5b950]/35">
               <div className="min-h-[420px] px-5 py-5 sm:px-7 sm:py-6">
-                {demoJob?.status === "queued" && demoJob.workerAvailable === false ? (
-                  <p className="font-mono text-sm leading-8 text-[#ffb6a2]">
-                    데모 생성 워커가 실행 중이 아닙니다.
-                  </p>
-                ) : isLoading ? (
+                {isLoading ? (
                   <div className="space-y-3 font-mono text-sm leading-8 text-[#fff6df]">
                     <p>
-                      {outputMode === "demo" && demoJob?.status === "queued" && demoJob.workerAvailable === false
-                        ? "데모 생성 워커가 실행 중이 아닙니다."
-                        : outputMode === "demo"
-                        ? `데모 생성 중: ${formatDemoStatus(demoJob?.status)}`
-                        : mode === "beat"
-                          ? "비트를 분석하고 벌스를 구성하는 중..."
-                          : "입력 조건에 맞춰 벌스를 구성하는 중..."}
+                      {mode === "beat"
+                        ? "비트를 분석하고 8마디 벌스를 구성하는 중..."
+                        : "입력 조건에 맞춰 8마디 벌스를 구성하는 중..."}
                     </p>
-                    {demoJob ? (
-                      <div className="h-2 w-full border border-[#f5b950]/25 bg-black/30">
-                        <div
-                          className="h-full bg-[#52d4c8] transition-all"
-                          style={{ width: `${Math.round((demoJob.progress ?? 0) * 100)}%` }}
-                        />
-                      </div>
-                    ) : null}
                   </div>
                 ) : lyricLines.length > 0 ? (
                   <div className="space-y-3">
@@ -754,17 +733,108 @@ export default function Home() {
               </div>
             </div>
 
+            {result && mode === "beat" ? (
+              <div className="mt-4 space-y-3 border border-[#52d4c8]/35 bg-[#071b1a]/70 p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="min-w-40 flex-1">
+                    <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
+                      DiffSinger voicebank
+                    </span>
+                    <select
+                      value={voicebank}
+                      onChange={(event) => setVoicebank(event.target.value)}
+                      className="mt-2 h-10 w-full border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none focus:border-[#52d4c8]"
+                    >
+                      {voicebankOptions.map((option) => (
+                        <option key={option.id} value={option.id} disabled={!option.available}>
+                          {option.label}{option.available ? "" : " (not installed)"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="w-44">
+                    <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
+                      First bar (sec)
+                    </span>
+                    <input
+                      value={firstBarStartSec}
+                      onChange={(event) => setFirstBarStartSec(event.target.value)}
+                      inputMode="decimal"
+                      className="mt-2 h-10 w-full border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none focus:border-[#52d4c8]"
+                      aria-label="First bar start seconds"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void handleGuideDemo()}
+                    disabled={
+                      isGeneratingDemo ||
+                      !beatAnalysis ||
+                      !voicebankOptions.some((option) => option.id === voicebank && option.available) ||
+                      lyricLines.length !== 8 ||
+                      lyricLines.some((line) => !line.trim())
+                    }
+                    className="h-10 border border-[#8af5eb]/55 bg-[#169c91] px-4 text-xs font-black tracking-[0.08em] text-white uppercase transition hover:bg-[#20b9ac] disabled:cursor-not-allowed disabled:border-[#315c58] disabled:bg-[#315c58] disabled:text-[#9abdb9]"
+                  >
+                    {isGeneratingDemo ? "Rendering 8 Bars" : "Make Guide Rap"}
+                  </button>
+                </div>
+                <p className="text-xs leading-5 text-[#8fcac4]">
+                  편집된 8줄만 사용합니다. 각 줄은 한 마디로 고정되고, 첫 마디 시작점을 직접 보정할 수 있습니다.
+                </p>
+                {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-[#b9eee9]">
+                      {formatDemoStatus(demoJob.status)} · {Math.round((demoJob.progress ?? 0) * 100)}%
+                    </p>
+                    <div className="h-2 w-full border border-[#52d4c8]/25 bg-black/30">
+                      <div
+                        className="h-full bg-[#52d4c8] transition-all"
+                        style={{ width: `${Math.round((demoJob.progress ?? 0) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {demoJob?.status === "succeeded" && demoJob.audioUrl ? (
               <div className="mt-4 border border-[#f5b950]/35 bg-[#130806]/78 p-3 shadow-[0_16px_36px_rgba(0,0,0,0.26)]">
+                <p className="mb-2 text-xs font-bold tracking-[0.1em] text-[#f5b950] uppercase">Mixed demo</p>
                 <audio controls src={toAbsoluteApiUrl(apiBaseUrl, demoJob.audioUrl)} className="w-full" />
-                <a
-                  href={toAbsoluteApiUrl(apiBaseUrl, demoJob.audioUrl)}
-                  download
-                  className="mt-3 inline-flex h-10 items-center border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-xs font-black tracking-[0.08em] uppercase shadow-[0_10px_26px_rgba(255,90,31,0.22)] transition hover:border-[#ffdf9d] hover:bg-[#ff7a28]"
-                  style={{ color: "#ffffff" }}
-                >
-                  Download demo
-                </a>
+                {demoJob.vocalUrl ? (
+                  <>
+                    <p className="mt-4 mb-2 text-xs font-bold tracking-[0.1em] text-[#52d4c8] uppercase">Dry vocal</p>
+                    <audio controls src={toAbsoluteApiUrl(apiBaseUrl, demoJob.vocalUrl)} className="w-full" />
+                  </>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={toAbsoluteApiUrl(apiBaseUrl, demoJob.audioUrl)}
+                    download
+                    className="inline-flex h-10 items-center border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-xs font-black tracking-[0.08em] text-white uppercase transition hover:bg-[#ff7a28]"
+                  >
+                    Download mix
+                  </a>
+                  {demoJob.vocalUrl ? (
+                    <a
+                      href={toAbsoluteApiUrl(apiBaseUrl, demoJob.vocalUrl)}
+                      download
+                      className="inline-flex h-10 items-center border border-[#52d4c8]/55 bg-[#126c65] px-4 text-xs font-black tracking-[0.08em] text-white uppercase transition hover:bg-[#18877e]"
+                    >
+                      Download vocal
+                    </a>
+                  ) : null}
+                  {demoJob.flowPlanUrl ? (
+                    <a
+                      href={toAbsoluteApiUrl(apiBaseUrl, demoJob.flowPlanUrl)}
+                      download
+                      className="inline-flex h-10 items-center border border-[#f5b950]/45 px-4 text-xs font-black tracking-[0.08em] text-[#fff3ca] uppercase transition hover:bg-[#23100b]"
+                    >
+                      FlowPlan JSON
+                    </a>
+                  ) : null}
+                </div>
               </div>
             ) : null}
 
@@ -811,10 +881,15 @@ async function readErrorMessage(response: Response) {
 }
 
 function parseLyricLines(lyrics: string) {
-  return lyrics
+  const lines = lyrics
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !line.toLowerCase().startsWith("[verse"));
+    .filter((line) => line && !line.toLowerCase().startsWith("[verse"))
+    .slice(0, 8);
+  while (lines.length < 8) {
+    lines.push("");
+  }
+  return lines;
 }
 
 function renderHighlightedLine(line: string, analysis?: RhymeLineAnalysis) {
@@ -901,8 +976,12 @@ function formatDemoStatus(status?: DemoStatus) {
       return "비트 분석";
     case "writing":
       return "가사 생성";
+    case "planning":
+      return "FlowPlan 생성";
     case "voicing":
       return "보컬 생성";
+    case "rendering":
+      return "DiffSinger 렌더링";
     case "mixing":
       return "믹싱";
     case "succeeded":

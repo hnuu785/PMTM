@@ -26,17 +26,25 @@ from app.demo_pipeline import sanitize_prompt_field
 from app.demo_pipeline import validate_demo_length
 from app.demo_pipeline import validate_vocal_start_bars
 from app.demo_pipeline import validate_voice
+from app.guide_pipeline import enqueue_guide_demo
+from app.guide_pipeline import list_voicebanks
+from app.guide_pipeline import validate_bpm as validate_guide_bpm
+from app.guide_pipeline import validate_first_bar_start
+from app.guide_pipeline import validate_guide_flow
+from app.guide_pipeline import validate_voicebank
 from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
+from app.schemas import VoicebankResponse
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
 RHYME_GROUP_THRESHOLD = 0.50
 RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
 TARGET_LYRIC_BARS = 8
-EXP_005_SFT_ADAPTER = "exp-005/sft_rap_qwen"
-EXP_005_GRPO_ADAPTER = "exp-005/grpo_rap_qwen"
+EXP_005_SFT_ADAPTER = "models/exp-005/sft_rap_qwen"
+EXP_005_GRPO_ADAPTER = "models/exp-005/grpo_rap_qwen"
+EXP_005_GRPO_CHECKPOINT_450_ADAPTER = "outputs/exp-005/grpo_qwen/checkpoint-450"
 DEMO_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage" / "demos"
 SUPPORTED_BEAT_CONTENT_TYPES = {
     "audio/aac",
@@ -67,6 +75,48 @@ app.add_middleware(
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok", "environment": settings.app_env}
+
+
+def _list_available_models() -> list[dict]:
+    models = [
+        {
+            "id": "qwen-local",
+            "name": "Qwen local",
+            "detail": "Qwen2.5-3B-Instruct",
+            "type": "local",
+        },
+        {
+            "id": "openai",
+            "name": "OpenAI",
+            "detail": settings.openai_model,
+            "type": "api",
+        },
+    ]
+
+    project_root = Path(__file__).resolve().parents[2]
+    models_dir = project_root / "pmtm-ai" / "models"
+
+    if models_dir.exists():
+        for p in models_dir.glob("**/adapter_config.json"):
+            adapter_dir = p.parent
+            rel_path = adapter_dir.relative_to(project_root / "pmtm-ai")
+            rel_path_str = rel_path.as_posix()
+            display_name = rel_path_str.replace("models/", "")
+            models.append({
+                "id": rel_path_str,
+                "name": display_name,
+                "detail": f"Qwen + {display_name}",
+                "type": "adapter",
+            })
+
+    base_models = models[:2]
+    adapters = sorted(models[2:], key=lambda x: x["name"])
+    return base_models + adapters
+
+
+@app.get("/api/v1/lyrics/models")
+def get_available_models() -> list[dict]:
+    return _list_available_models()
 
 
 @app.post("/api/v1/lyrics/generate", response_model=LyricGenerateResponse)
@@ -168,6 +218,47 @@ async def generate_demo_from_beat(
     return DemoGenerateResponse(jobId=job_id, status="queued")
 
 
+@app.get("/api/v1/guide-demos/voicebanks", response_model=list[VoicebankResponse])
+def get_guide_voicebanks() -> list[VoicebankResponse]:
+    return [VoicebankResponse(**item) for item in list_voicebanks()]
+
+
+@app.post("/api/v1/guide-demos", response_model=DemoGenerateResponse)
+async def generate_guide_demo(
+    lyrics: str = Form(...),
+    bpm: int = Form(...),
+    firstBarStartSec: float = Form(...),
+    voicebank: str = Form("potg"),
+    beat: UploadFile = File(...),
+) -> DemoGenerateResponse:
+    try:
+        bpm_value = validate_guide_bpm(bpm)
+        first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
+        voicebank_id = validate_voicebank(voicebank)
+        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    job_id = uuid.uuid4().hex
+    work_dir = DEMO_STORAGE_ROOT / job_id
+    work_dir.mkdir(parents=True, exist_ok=False)
+    beat_path = await _save_uploaded_beat(beat, target_dir=work_dir, filename_prefix="input")
+    try:
+        enqueue_guide_demo(
+            _get_redis_client(),
+            job_id,
+            beat_path,
+            str(work_dir),
+            lyrics,
+            bpm_value,
+            first_bar_start_sec,
+            voicebank_id,
+        )
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
+    return DemoGenerateResponse(jobId=job_id, status="queued")
+
+
 @app.get("/api/v1/demos/{job_id}", response_model=DemoStatusResponse)
 def get_demo_status(job_id: str) -> DemoStatusResponse:
     redis_client = _get_redis_client()
@@ -199,6 +290,26 @@ def get_demo_audio(job_id: str) -> FileResponse:
     raise HTTPException(status_code=404, detail="데모 오디오 파일을 찾을 수 없습니다.")
 
 
+@app.get("/api/v1/demos/{job_id}/vocal")
+def get_demo_vocal(job_id: str) -> FileResponse:
+    vocal_path = DEMO_STORAGE_ROOT / job_id / "vocal.wav"
+    if vocal_path.exists():
+        return FileResponse(vocal_path, media_type="audio/wav", filename=f"pmtm-vocal-{job_id}.wav")
+    raise HTTPException(status_code=404, detail="드라이 보컬 파일을 찾을 수 없습니다.")
+
+
+@app.get("/api/v1/demos/{job_id}/flow-plan")
+def get_demo_flow_plan(job_id: str) -> FileResponse:
+    flow_plan_path = DEMO_STORAGE_ROOT / job_id / "flow-plan.json"
+    if flow_plan_path.exists():
+        return FileResponse(
+            flow_plan_path,
+            media_type="application/json",
+            filename=f"pmtm-flow-plan-{job_id}.json",
+        )
+    raise HTTPException(status_code=404, detail="FlowPlan 파일을 찾을 수 없습니다.")
+
+
 def _generate_verse_for_model(
     bpm: int,
     llm: LyricModel,
@@ -223,6 +334,29 @@ def _generate_verse_for_model(
             "exp-005 GRPO LoRA 어댑터 생성 결과입니다.",
             "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_rap_qwen 어댑터를 적용했습니다.",
         ]
+    if llm == "qwen-exp-005-grpo-checkpoint-450":
+        return _generate_qwen_verse(
+            bpm,
+            EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
+            genre=genre,
+            mood=mood,
+            bars=bars,
+        ), [
+            "exp-005 GRPO checkpoint-450 LoRA 어댑터 생성 결과입니다.",
+            "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_qwen/checkpoint-450 어댑터를 적용했습니다.",
+        ]
+    if llm.startswith("models/") or llm.startswith("outputs/"):
+        project_root = Path(__file__).resolve().parents[2]
+        ai_root = project_root / "pmtm-ai"
+        adapter_path = ai_root / llm
+        if not adapter_path.exists() or not (adapter_path / "adapter_config.json").exists():
+            raise HTTPException(status_code=400, detail=f"Model adapter config not found: {llm}")
+
+        display_name = llm.replace("models/", "").replace("outputs/", "")
+        return _generate_qwen_verse(bpm, llm, genre=genre, mood=mood, bars=bars), [
+            f"{display_name} LoRA 어댑터 생성 결과입니다.",
+            f"Qwen/Qwen2.5-3B-Instruct 베이스 모델에 {display_name} 어댑터를 적용했습니다.",
+        ]
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
         "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
@@ -241,8 +375,6 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     line_count = len(clean_lines)
     parents = list(range(line_count))
-    scores = [0.0] * line_count
-    best_match_indexes: list[int | None] = [None] * line_count
 
     def find(index: int) -> int:
         while parents[index] != index:
@@ -256,18 +388,16 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
         if left_root != right_root:
             parents[right_root] = left_root
 
-    get_line_rhyme_score, calculate_syllable_score, get_phonemes = _load_rhyme_analysis_funcs()
-    for left in range(line_count):
-        for right in range(left + 1, line_count):
-            score = get_line_rhyme_score(clean_lines[left], clean_lines[right])
-            if score > scores[left]:
-                scores[left] = score
-                best_match_indexes[left] = right
-            if score > scores[right]:
-                scores[right] = score
-                best_match_indexes[right] = left
-            if score >= RHYME_GROUP_THRESHOLD:
-                union(left, right)
+    get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
+    
+    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산
+    scores, best_match_indexes = calculate_line_scores(clean_lines)
+
+    # 2) 학습 기준(인접 라인 간 라임)으로 그룹 병합(union) 진행
+    for i in range(line_count - 1):
+        score = get_line_rhyme_score(clean_lines[i], clean_lines[i+1])
+        if score >= RHYME_GROUP_THRESHOLD:
+            union(i, i+1)
 
     root_counts: dict[int, int] = {}
     for index in range(line_count):
@@ -311,8 +441,8 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
 
 
 def _load_rhyme_score_func():
-    get_line_rhyme_score, _, _ = _load_rhyme_analysis_funcs()
-    return get_line_rhyme_score
+    funcs = _load_rhyme_analysis_funcs()
+    return funcs[0]
 
 
 def _load_rhyme_analysis_funcs():
@@ -322,9 +452,10 @@ def _load_rhyme_analysis_funcs():
         sys.path.insert(0, str(scoring_root))
 
     from phonetics_utils import get_phonemes
-    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score
+    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
 
-    return get_line_rhyme_score, calculate_syllable_score, get_phonemes
+    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
+
 
 
 def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:
@@ -756,7 +887,7 @@ def _generate_qwen_verse(
                 "0.92",
         ]
         if adapter:
-            adapter_path = ai_root / "models" / adapter
+            adapter_path = ai_root / adapter
             if not adapter_path.exists():
                 raise HTTPException(
                     status_code=503,
@@ -827,7 +958,7 @@ def _build_openai_payload(
         "model": settings.openai_model,
         "instructions": (
             f"You write Korean rap lyrics. Return only a {bars}-line verse in Korean. "
-            "Use natural Korean hip-hop phrasing, with English words only as occasional ad-libs. "
+            "Use natural Korean hip-hop phrasing and Hangul lyrics only; do not use Latin letters or numbers. "
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (

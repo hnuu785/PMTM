@@ -114,19 +114,32 @@ s = calculate_syllable_score(gang, bang)
 check("강↔방 (둘다 ㅏ+ㅇ) = 1.0", approx(s, 1.0), f"got {s}")
 
 s = calculate_syllable_score(gang, san)
-# v=1 (ㅏ=ㅏ), c=0.7 (ㅇ,ㄴ 둘 다 비음) -> 0.8 + 0.14 = 0.94
-check("강↔산 (모음 동일, 종성 유사 비음) ~= 0.94",
-      approx(s, 0.94, 0.01), f"got {s}")
+# v=1 (ㅏ=ㅏ) -> 1.0
+check("강↔산 (모음 동일, 종성 무시) = 1.0",
+      approx(s, 1.0), f"got {s}")
 
 s = calculate_syllable_score(gang, ga)
-# v=1 (ㅏ=ㅏ), c=0 (ㅇ vs None -> 한쪽만 있음) -> 0.8 + 0 = 0.8
-check("강↔가 (종성 유무 불일치) ~= 0.8",
-      approx(s, 0.8, 0.01), f"got {s}")
+# v=1 (ㅏ=ㅏ) -> 1.0
+check("강↔가 (모음 동일, 종성 무시) = 1.0",
+      approx(s, 1.0), f"got {s}")
 
 s = calculate_syllable_score(gang, bom)
-# v=0 (ㅏ↔ㅗ 그룹 아님), c=0.7 (ㅇ,ㅁ 비음) -> 0 + 0.14 = 0.14
-check("강↔봄 (모음 다름, 종성 유사) ~= 0.14",
-      approx(s, 0.14, 0.01), f"got {s}")
+# v=0 (ㅏ↔ㅗ 그룹 아님) -> 0.0
+check("강↔봄 (모음 다름, 종성 무시) = 0.0",
+      approx(s, 0.0), f"got {s}")
+
+# ─── 4.5 유사 모음 군집 대칭성 테스트 (예 ↔ 에 ↔ 얘) ───
+ye = get_phonemes("예")[0]   # {ㅖ, None}
+yae = get_phonemes("얘")[0]  # {ㅒ, None}
+e = get_phonemes("에")[0]    # {ㅔ, None}
+
+s_ye_e = calculate_syllable_score(ye, e)     # ㅖ ↔ ㅔ
+s_e_ye = calculate_syllable_score(e, ye)     # ㅔ ↔ ㅖ
+s_ye_yae = calculate_syllable_score(ye, yae) # ㅖ ↔ ㅒ
+
+check("예↔에 (대칭성) = 0.8", approx(s_ye_e, 0.8), f"got {s_ye_e}")
+check("에↔예 (역방향) = 0.8", approx(s_e_ye, 0.8), f"got {s_e_ye}")
+check("예↔얘 (교차 군집) = 0.8", approx(s_ye_yae, 0.8), f"got {s_ye_yae}")
 
 
 # ─── 5. 줄 단위 라임 점수 ─────────────────────────────────
@@ -136,8 +149,17 @@ s = get_line_rhyme_score("강", "방")
 check("'강'↔'방' = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "방물")
-# 끝 2음절 모두 동일 -> 1.0
+# 끝 2음절 모두 동일하며, 서로 다른 단어이므로 1.0
 check("'강물'↔'방물' = 1.0", approx(s, 1.0), f"got {s}")
+
+s = get_line_rhyme_score("강물", "강물")
+check("'강물'↔'강물' (동일 단어 반복 감점) = 0.0", s == 0.0, f"got {s}")
+
+s = get_line_rhyme_score("오늘 밤 너를 사랑해!", "내일도 너를 사랑해")
+check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.0", s == 0.0, f"got {s}")
+
+s = get_line_rhyme_score("너의 smile", "나의 Smile")
+check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.0", s == 0.0, f"got {s}")
 
 s = get_line_rhyme_score("바다", "마차")
 # 바(ㅏ,_)다(ㅏ,_) vs 마(ㅏ,_)차(ㅏ,_) -> 모든 끝 음절 일치 -> 1.0
