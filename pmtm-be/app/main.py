@@ -26,15 +26,25 @@ from app.demo_pipeline import sanitize_prompt_field
 from app.demo_pipeline import validate_demo_length
 from app.demo_pipeline import validate_vocal_start_bars
 from app.demo_pipeline import validate_voice
-from app.schemas import DemoGenerateResponse, DemoStatusResponse
+from app.guide_pipeline import enqueue_guide_demo
+from app.guide_pipeline import list_voicebanks
+from app.guide_pipeline import validate_bpm as validate_guide_bpm
+from app.guide_pipeline import validate_first_bar_start
+from app.guide_pipeline import validate_guide_flow
+from app.guide_pipeline import validate_voicebank
+from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
+from app.schemas import VoicebankResponse
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
 RHYME_GROUP_THRESHOLD = 0.50
 RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
 TARGET_LYRIC_BARS = 8
+EXP_005_SFT_ADAPTER = "models/exp-005/sft_rap_qwen"
+EXP_005_GRPO_ADAPTER = "models/exp-005/grpo_rap_qwen"
+EXP_005_GRPO_CHECKPOINT_450_ADAPTER = "outputs/exp-005/grpo_qwen/checkpoint-450"
 DEMO_STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage" / "demos"
 SUPPORTED_BEAT_CONTENT_TYPES = {
     "audio/aac",
@@ -65,6 +75,48 @@ app.add_middleware(
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok", "environment": settings.app_env}
+
+
+def _list_available_models() -> list[dict]:
+    models = [
+        {
+            "id": "qwen-local",
+            "name": "Qwen local",
+            "detail": "Qwen2.5-3B-Instruct",
+            "type": "local",
+        },
+        {
+            "id": "openai",
+            "name": "OpenAI",
+            "detail": settings.openai_model,
+            "type": "api",
+        },
+    ]
+
+    project_root = Path(__file__).resolve().parents[2]
+    models_dir = project_root / "pmtm-ai" / "models"
+
+    if models_dir.exists():
+        for p in models_dir.glob("**/adapter_config.json"):
+            adapter_dir = p.parent
+            rel_path = adapter_dir.relative_to(project_root / "pmtm-ai")
+            rel_path_str = rel_path.as_posix()
+            display_name = rel_path_str.replace("models/", "")
+            models.append({
+                "id": rel_path_str,
+                "name": display_name,
+                "detail": f"Qwen + {display_name}",
+                "type": "adapter",
+            })
+
+    base_models = models[:2]
+    adapters = sorted(models[2:], key=lambda x: x["name"])
+    return base_models + adapters
+
+
+@app.get("/api/v1/lyrics/models")
+def get_available_models() -> list[dict]:
+    return _list_available_models()
 
 
 @app.post("/api/v1/lyrics/generate", response_model=LyricGenerateResponse)
@@ -111,6 +163,19 @@ async def generate_lyrics_from_beat(
     )
 
 
+@app.post("/api/v1/beats/analyze", response_model=BeatAnalysisResponse)
+async def analyze_beat(beat: UploadFile = File(...)) -> BeatAnalysisResponse:
+    file_name = beat.filename or "beat"
+    beat_path = await _save_uploaded_beat(beat)
+    try:
+        return _analyze_beat(beat_path, file_name)
+    finally:
+        try:
+            os.unlink(beat_path)
+        except FileNotFoundError:
+            pass
+
+
 @app.post("/api/v1/lyrics/analyze-rhyme", response_model=list[RhymeLineAnalysis])
 def analyze_rhyme(payload: RhymeAnalyzeRequest) -> list[RhymeLineAnalysis]:
     return _analyze_rhyme_lines(payload.lines)
@@ -153,6 +218,47 @@ async def generate_demo_from_beat(
     return DemoGenerateResponse(jobId=job_id, status="queued")
 
 
+@app.get("/api/v1/guide-demos/voicebanks", response_model=list[VoicebankResponse])
+def get_guide_voicebanks() -> list[VoicebankResponse]:
+    return [VoicebankResponse(**item) for item in list_voicebanks()]
+
+
+@app.post("/api/v1/guide-demos", response_model=DemoGenerateResponse)
+async def generate_guide_demo(
+    lyrics: str = Form(...),
+    bpm: int = Form(...),
+    firstBarStartSec: float = Form(...),
+    voicebank: str = Form("potg"),
+    beat: UploadFile = File(...),
+) -> DemoGenerateResponse:
+    try:
+        bpm_value = validate_guide_bpm(bpm)
+        first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
+        voicebank_id = validate_voicebank(voicebank)
+        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    job_id = uuid.uuid4().hex
+    work_dir = DEMO_STORAGE_ROOT / job_id
+    work_dir.mkdir(parents=True, exist_ok=False)
+    beat_path = await _save_uploaded_beat(beat, target_dir=work_dir, filename_prefix="input")
+    try:
+        enqueue_guide_demo(
+            _get_redis_client(),
+            job_id,
+            beat_path,
+            str(work_dir),
+            lyrics,
+            bpm_value,
+            first_bar_start_sec,
+            voicebank_id,
+        )
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
+    return DemoGenerateResponse(jobId=job_id, status="queued")
+
+
 @app.get("/api/v1/demos/{job_id}", response_model=DemoStatusResponse)
 def get_demo_status(job_id: str) -> DemoStatusResponse:
     redis_client = _get_redis_client()
@@ -184,6 +290,26 @@ def get_demo_audio(job_id: str) -> FileResponse:
     raise HTTPException(status_code=404, detail="데모 오디오 파일을 찾을 수 없습니다.")
 
 
+@app.get("/api/v1/demos/{job_id}/vocal")
+def get_demo_vocal(job_id: str) -> FileResponse:
+    vocal_path = DEMO_STORAGE_ROOT / job_id / "vocal.wav"
+    if vocal_path.exists():
+        return FileResponse(vocal_path, media_type="audio/wav", filename=f"pmtm-vocal-{job_id}.wav")
+    raise HTTPException(status_code=404, detail="드라이 보컬 파일을 찾을 수 없습니다.")
+
+
+@app.get("/api/v1/demos/{job_id}/flow-plan")
+def get_demo_flow_plan(job_id: str) -> FileResponse:
+    flow_plan_path = DEMO_STORAGE_ROOT / job_id / "flow-plan.json"
+    if flow_plan_path.exists():
+        return FileResponse(
+            flow_plan_path,
+            media_type="application/json",
+            filename=f"pmtm-flow-plan-{job_id}.json",
+        )
+    raise HTTPException(status_code=404, detail="FlowPlan 파일을 찾을 수 없습니다.")
+
+
 def _generate_verse_for_model(
     bpm: int,
     llm: LyricModel,
@@ -197,6 +323,39 @@ def _generate_verse_for_model(
         return _generate_openai_verse(bpm, genre=genre, mood=mood, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",
             "OpenAI Responses API를 사용했습니다.",
+        ]
+    if llm == "qwen-exp-005-sft":
+        return _generate_qwen_verse(bpm, EXP_005_SFT_ADAPTER, genre=genre, mood=mood, bars=bars), [
+            "exp-005 SFT LoRA 어댑터 생성 결과입니다.",
+            "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/sft_rap_qwen 어댑터를 적용했습니다.",
+        ]
+    if llm == "qwen-exp-005-grpo":
+        return _generate_qwen_verse(bpm, EXP_005_GRPO_ADAPTER, genre=genre, mood=mood, bars=bars), [
+            "exp-005 GRPO LoRA 어댑터 생성 결과입니다.",
+            "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_rap_qwen 어댑터를 적용했습니다.",
+        ]
+    if llm == "qwen-exp-005-grpo-checkpoint-450":
+        return _generate_qwen_verse(
+            bpm,
+            EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
+            genre=genre,
+            mood=mood,
+            bars=bars,
+        ), [
+            "exp-005 GRPO checkpoint-450 LoRA 어댑터 생성 결과입니다.",
+            "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_qwen/checkpoint-450 어댑터를 적용했습니다.",
+        ]
+    if llm.startswith("models/") or llm.startswith("outputs/"):
+        project_root = Path(__file__).resolve().parents[2]
+        ai_root = project_root / "pmtm-ai"
+        adapter_path = ai_root / llm
+        if not adapter_path.exists() or not (adapter_path / "adapter_config.json").exists():
+            raise HTTPException(status_code=400, detail=f"Model adapter config not found: {llm}")
+
+        display_name = llm.replace("models/", "").replace("outputs/", "")
+        return _generate_qwen_verse(bpm, llm, genre=genre, mood=mood, bars=bars), [
+            f"{display_name} LoRA 어댑터 생성 결과입니다.",
+            f"Qwen/Qwen2.5-3B-Instruct 베이스 모델에 {display_name} 어댑터를 적용했습니다.",
         ]
     return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
@@ -216,8 +375,6 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     line_count = len(clean_lines)
     parents = list(range(line_count))
-    scores = [0.0] * line_count
-    best_match_indexes: list[int | None] = [None] * line_count
 
     def find(index: int) -> int:
         while parents[index] != index:
@@ -231,18 +388,16 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
         if left_root != right_root:
             parents[right_root] = left_root
 
-    get_line_rhyme_score, calculate_syllable_score, get_phonemes = _load_rhyme_analysis_funcs()
-    for left in range(line_count):
-        for right in range(left + 1, line_count):
-            score = get_line_rhyme_score(clean_lines[left], clean_lines[right])
-            if score > scores[left]:
-                scores[left] = score
-                best_match_indexes[left] = right
-            if score > scores[right]:
-                scores[right] = score
-                best_match_indexes[right] = left
-            if score >= RHYME_GROUP_THRESHOLD:
-                union(left, right)
+    get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
+    
+    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산
+    scores, best_match_indexes = calculate_line_scores(clean_lines)
+
+    # 2) 학습 기준(인접 라인 간 라임)으로 그룹 병합(union) 진행
+    for i in range(line_count - 1):
+        score = get_line_rhyme_score(clean_lines[i], clean_lines[i+1])
+        if score >= RHYME_GROUP_THRESHOLD:
+            union(i, i+1)
 
     root_counts: dict[int, int] = {}
     for index in range(line_count):
@@ -286,8 +441,8 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
 
 
 def _load_rhyme_score_func():
-    get_line_rhyme_score, _, _ = _load_rhyme_analysis_funcs()
-    return get_line_rhyme_score
+    funcs = _load_rhyme_analysis_funcs()
+    return funcs[0]
 
 
 def _load_rhyme_analysis_funcs():
@@ -297,9 +452,10 @@ def _load_rhyme_analysis_funcs():
         sys.path.insert(0, str(scoring_root))
 
     from phonetics_utils import get_phonemes
-    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score
+    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
 
-    return get_line_rhyme_score, calculate_syllable_score, get_phonemes
+    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
+
 
 
 def _find_rhyme_highlight(line: str) -> tuple[int | None, int | None]:
@@ -521,6 +677,174 @@ def _analyze_beat_bpm(file_path: str) -> int:
     return bpm
 
 
+def _analyze_beat(file_path: str, file_name: str) -> BeatAnalysisResponse:
+    try:
+        import librosa
+        import numpy as np
+
+        y, sr = librosa.load(file_path, sr=None, mono=True, duration=60)
+        if len(y) == 0:
+            raise ValueError("empty audio")
+
+        hop_length = 512
+        onset_envelope = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
+        tempo, beat_frames = librosa.beat.beat_track(
+            y=y,
+            sr=sr,
+            onset_envelope=onset_envelope,
+            hop_length=hop_length,
+        )
+        tempo_value = float(np.asarray(tempo).reshape(-1)[0])
+        if not math.isfinite(tempo_value):
+            raise ValueError("invalid tempo")
+
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_length)
+        _, percussive = librosa.effects.hpss(y)
+        percussive_onset_envelope = librosa.onset.onset_strength(
+            y=percussive,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        percussive_onset_frames = librosa.onset.onset_detect(
+            onset_envelope=percussive_onset_envelope,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        drum_entry_frame = _select_sustained_onset(
+            percussive_onset_frames,
+            percussive_onset_envelope[percussive_onset_frames],
+            round(2 * sr / hop_length),
+        )
+        drum_entry_sec = (
+            float(librosa.frames_to_time(drum_entry_frame, sr=sr, hop_length=hop_length))
+            if drum_entry_frame is not None
+            else 0.0
+        )
+        first_beat_sec = (
+            min((float(value) for value in beat_times), key=lambda value: abs(value - drum_entry_sec))
+            if len(beat_times) > 0
+            else drum_entry_sec
+        )
+        first_bar_beat_times, first_bar_end_sec = _build_first_bar(
+            beat_times,
+            first_beat_sec,
+            tempo_value,
+        )
+
+        onset_frames = librosa.onset.onset_detect(
+            onset_envelope=onset_envelope,
+            sr=sr,
+            hop_length=hop_length,
+        )
+        rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+        zero_crossing_rate = librosa.feature.zero_crossing_rate(y, hop_length=hop_length)[0]
+        centroid = librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop_length)[0]
+        bandwidth = librosa.feature.spectral_bandwidth(y=y, sr=sr, hop_length=hop_length)[0]
+        rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr, hop_length=hop_length)[0]
+        chroma = librosa.feature.chroma_stft(y=y, sr=sr, hop_length=hop_length)
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, hop_length=hop_length)
+
+        frame_times = librosa.frames_to_time(
+            np.arange(len(onset_envelope)),
+            sr=sr,
+            hop_length=hop_length,
+        )
+        rms_times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
+        waveform_times = np.arange(len(y), dtype=float) / sr
+
+        return BeatAnalysisResponse(
+            fileName=file_name,
+            durationSec=round(float(librosa.get_duration(y=y, sr=sr)), 3),
+            sampleRate=int(sr),
+            sampleCount=int(len(y)),
+            tempo=round(tempo_value, 2),
+            timeSignature="4/4",
+            timeSignatureSource="assumed",
+            introStartSec=0.0,
+            introEndSec=round(first_beat_sec, 4),
+            drumEntrySec=round(drum_entry_sec, 4),
+            firstBeatSec=round(first_beat_sec, 4),
+            firstBarStartSec=round(first_beat_sec, 4),
+            firstBarEndSec=round(first_bar_end_sec, 4),
+            firstBarBeatTimes=_rounded_list(first_bar_beat_times),
+            beatTimes=_rounded_list(beat_times),
+            onsetTimes=_rounded_list(librosa.frames_to_time(onset_frames, sr=sr, hop_length=hop_length)),
+            waveform=_downsample_series(waveform_times, y, 700),
+            rms=_downsample_series(rms_times, rms, 400),
+            onsetStrength=_downsample_series(frame_times, onset_envelope, 400),
+            spectral={
+                "rmsMean": round(float(np.mean(rms)), 6),
+                "rmsMax": round(float(np.max(rms)), 6),
+                "zeroCrossingRateMean": round(float(np.mean(zero_crossing_rate)), 6),
+                "centroidMeanHz": round(float(np.mean(centroid)), 2),
+                "bandwidthMeanHz": round(float(np.mean(bandwidth)), 2),
+                "rolloffMeanHz": round(float(np.mean(rolloff)), 2),
+            },
+            chroma=[round(float(value), 6) for value in np.mean(chroma, axis=1)],
+            mfcc=[round(float(value), 4) for value in np.mean(mfcc, axis=1)],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="비트 분석 실패") from exc
+
+
+def _rounded_list(values) -> list[float]:
+    return [round(float(value), 4) for value in values]
+
+
+def _select_sustained_onset(onset_frames, strengths, horizon_frames: int) -> int | None:
+    if len(onset_frames) == 0:
+        return None
+
+    strength_values = [float(value) for value in strengths]
+    threshold = max(strength_values) * 0.25
+    frame_values = [int(value) for value in onset_frames]
+    for index, frame in enumerate(frame_values):
+        if strength_values[index] < threshold:
+            continue
+        following_count = sum(frame <= candidate <= frame + horizon_frames for candidate in frame_values)
+        if following_count >= 3:
+            return frame
+
+    return frame_values[0]
+
+
+def _build_first_bar(beat_times, first_beat_sec: float, tempo: float) -> tuple[list[float], float]:
+    values = [float(value) for value in beat_times]
+    beat_interval = 60 / tempo if tempo > 0 else 0.0
+    first_index = (
+        min(range(len(values)), key=lambda index: abs(values[index] - first_beat_sec))
+        if values
+        else 0
+    )
+    bar_beats = [
+        values[first_index + offset]
+        if first_index + offset < len(values)
+        else first_beat_sec + beat_interval * offset
+        for offset in range(4)
+    ]
+    bar_end = (
+        values[first_index + 4]
+        if first_index + 4 < len(values)
+        else first_beat_sec + beat_interval * 4
+    )
+    return bar_beats, bar_end
+
+
+def _downsample_series(times, values, max_points: int) -> list[dict[str, float]]:
+    import numpy as np
+
+    value_count = min(len(times), len(values))
+    if value_count == 0:
+        return []
+    indexes = np.linspace(0, value_count - 1, min(value_count, max_points), dtype=int)
+    return [
+        {"time": round(float(times[index]), 4), "value": round(float(values[index]), 6)}
+        for index in indexes
+    ]
+
+
 def _generate_qwen_verse(
     bpm: int,
     adapter: str | None = None,
@@ -563,7 +887,7 @@ def _generate_qwen_verse(
                 "0.92",
         ]
         if adapter:
-            adapter_path = ai_root / "models" / adapter
+            adapter_path = ai_root / adapter
             if not adapter_path.exists():
                 raise HTTPException(
                     status_code=503,
@@ -634,7 +958,7 @@ def _build_openai_payload(
         "model": settings.openai_model,
         "instructions": (
             f"You write Korean rap lyrics. Return only a {bars}-line verse in Korean. "
-            "Use natural Korean hip-hop phrasing, with English words only as occasional ad-libs. "
+            "Use natural Korean hip-hop phrasing and Hangul lyrics only; do not use Latin letters or numbers. "
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (

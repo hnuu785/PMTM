@@ -4,25 +4,180 @@ os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 import glob
 import re
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 
-import pandas as pd
 import torch
 from datasets import Dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import TrainerCallback
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_api_messages
-from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
+from app.paths import MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
 from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
 sys.path.append(str(PROJECT_ROOT))
 
 SFT_PATH = str(MODELS_DIR / "sft_rap_qwen")
-DATA_PATH = str(DATA_DIR / "merged_final_dataset_analyzed.csv")
 OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
-TOP_N = 200
+SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
+# 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
+GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(10~14음절), 트랩(14~18음절)
+
+
+@dataclass
+class FiniteSummary:
+    total: int
+    nonfinite: int
+    max_abs: float
+    examples: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return self.nonfinite == 0
+
+
+def _summarize_tensors(named_tensors, *, max_examples: int = 5) -> FiniteSummary:
+    total = 0
+    nonfinite = 0
+    max_abs = 0.0
+    examples: list[str] = []
+
+    for name, tensor in named_tensors:
+        if tensor is None:
+            continue
+        data = tensor.detach().float()
+        total += data.numel()
+        finite_mask = torch.isfinite(data)
+        bad_count = data.numel() - int(finite_mask.sum().item())
+        nonfinite += bad_count
+        if bad_count and len(examples) < max_examples:
+            examples.append(name)
+        if finite_mask.any():
+            max_abs = max(max_abs, float(data[finite_mask].abs().max().item()))
+
+    return FiniteSummary(
+        total=total,
+        nonfinite=nonfinite,
+        max_abs=max_abs,
+        examples=examples,
+    )
+
+
+def _format_finite_summary(label: str, summary: FiniteSummary) -> str:
+    status = "OK" if summary.ok else "BAD"
+    return (
+        f"[finite:{label}] {status} "
+        f"total={summary.total} nonfinite={summary.nonfinite} "
+        f"max_abs={summary.max_abs:.6g} examples={summary.examples}"
+    )
+
+
+def _trainable_parameter_summary(model) -> FiniteSummary:
+    return _summarize_tensors(
+        (name, param.data)
+        for name, param in model.named_parameters()
+        if param.requires_grad
+    )
+
+
+def _gradient_summary(model) -> FiniteSummary:
+    return _summarize_tensors(
+        (name, param.grad)
+        for name, param in model.named_parameters()
+        if param.requires_grad and param.grad is not None
+    )
+
+
+def _assert_finite(label: str, summary: FiniteSummary) -> None:
+    print(_format_finite_summary(label, summary))
+    if not summary.ok:
+        raise RuntimeError(f"Non-finite tensor detected during {label}: {summary.examples}")
+
+
+def _model_device(model):
+    return next(model.parameters()).device
+
+
+def _forward_logits_summary(model, tokenizer, prompt: list[dict[str, str]]) -> FiniteSummary:
+    prompt_text = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(prompt_text, return_tensors="pt").to(_model_device(model))
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        outputs = model(**inputs)
+    if was_training:
+        model.train()
+    return _summarize_tensors([("logits", outputs.logits)])
+
+
+class GrpoFiniteTraceCallback(TrainerCallback):
+    def on_train_begin(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite("train_begin.weights", _trainable_parameter_summary(model))
+
+    def on_pre_optimizer_step(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite(f"step_{state.global_step}.before_optimizer.gradients", _gradient_summary(model))
+
+    def on_optimizer_step(self, args, state, control, **kwargs):
+        model = kwargs.get("model")
+        if model is not None:
+            _assert_finite(f"step_{state.global_step}.after_optimizer.weights", _trainable_parameter_summary(model))
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        bad = {
+            key: value
+            for key, value in logs.items()
+            if isinstance(value, float) and not torch.isfinite(torch.tensor(value))
+        }
+        if bad:
+            raise RuntimeError(f"Non-finite trainer log at step {state.global_step}: {bad}")
+
+
+class GrpoRewardStdEarlyStoppingCallback(TrainerCallback):
+    """reward_std가 threshold 이하로 patience step 연속 유지되면
+    체크포인트를 저장하고 학습을 조기 종료한다.
+
+    프롬프트 종류가 고정된 환경에서 모델이 수렴하면 그룹 내 reward 분산이
+    0에 가까워져 scale_rewards='group' 정규화가 불안정해지므로, 해당 시점에
+    학습을 멈추는 것이 안전하다.
+    """
+
+    def __init__(self, threshold: float = 0.05, patience: int = 3):
+        self.threshold = threshold
+        self.patience = patience
+        self._count = 0
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        reward_std = logs.get("reward_std")
+        if reward_std is None:
+            return
+        if reward_std < self.threshold:
+            self._count += 1
+            print(
+                f"[early_stop] step={state.global_step} "
+                f"reward_std={reward_std:.4f} < {self.threshold} "
+                f"({self._count}/{self.patience})"
+            )
+            if self._count >= self.patience:
+                print(
+                    f"[early_stop] reward_std converged — "
+                    f"saving checkpoint and stopping training."
+                )
+                control.should_save = True
+                control.should_training_stop = True
+        else:
+            self._count = 0
 
 
 def _latest_checkpoint(output_dir: str) -> str | None:
@@ -38,30 +193,19 @@ def _detect_precision():
         return torch.bfloat16, True, False
     return torch.float16, False, True
 
-
-def build_prompts(df: pd.DataFrame) -> list[list[dict[str, str]]]:
-    top = df.sort_values("rhyme_density", ascending=False).head(TOP_N)
-    prompts = []
-    for _, row in top.iterrows():
-        prompts.append(
-            build_api_messages(
-                bpm=float(row["bpm"]),
-                bars=TARGET_BARS,
-            )
-        )
-    return prompts
+def build_prompts(df=None) -> list[list[dict[str, str]]]:
+    """GRPO_BPMS의 대표 BPM으로 프롬프트를 생성한다.
+    학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
+    """
+    return [
+        build_api_messages(bpm=bpm, bars=TARGET_BARS)
+        for bpm in GRPO_BPMS
+    ]
 
 
 _END_RE = re.compile(r"\[End\]")
 _BARS_RE = re.compile(r"\[Verse\s+(\d+)\s*마디\]")
 _LINES_RE = re.compile(r"exactly\s+(\d+)\s+lines", re.IGNORECASE)
-_TOKEN_RE = re.compile(r"[가-힣A-Za-z0-9]+")
-_TEXT_CHAR_RE = re.compile(r"[가-힣A-Za-z0-9]")
-NGRAM_REPEAT_PENALTY_WEIGHT = 0.8
-SEVERE_NGRAM_REPEAT_RATIO = 0.25
-SHORT_LINE_MAX_CHARS = 3
-SHORT_LINE_PENALTY_WEIGHT = 0.8
-SEVERE_SHORT_LINE_RATIO = 0.25
 
 
 def _message_content(value) -> str:
@@ -86,8 +230,28 @@ def _message_content(value) -> str:
 
 
 def _extract_verse(completion) -> list[str]:
-    body = _END_RE.split(_message_content(completion), 1)[0]
-    return [ln.strip() for ln in body.split("\n") if ln.strip()]
+    text = _message_content(completion)
+    if "[수정된 지침에 따른 가사]" in text:
+        parts = text.split("[수정된 지침에 따른 가사]")
+        body = parts[1] if len(parts) > 1 else text
+    else:
+        body = text
+    body = _END_RE.split(body, 1)[0]
+    
+    lines = []
+    for ln in body.split("\n"):
+        ln = ln.strip()
+        if not ln:
+            continue
+        if not re.match(r"^\d+\.", ln):
+            continue
+        ln = re.sub(r"^\d+\.\s*", "", ln)  # 마디 번호 제거
+        ln = re.sub(r"^\(\d+음절\)\s*", "", ln)  # 음절 표시 제거 (앞단어)
+        ln = re.sub(r"\(\d+음절\)\s*$", "", ln)  # 음절 표시 제거 (뒷단어)
+        ln = ln.strip()
+        if ln:
+            lines.append(ln)
+    return lines
 
 
 def _parse_target_bars(prompt, default: int = TARGET_BARS) -> int:
@@ -114,85 +278,55 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
     return max_run
 
 
-def _repeated_ngram_ratio(lines: list[str], min_n: int = 2, max_n: int = 4) -> float:
-    counts: dict[tuple[str, ...], int] = {}
-    total = 0
-    for line in lines:
-        words = _TOKEN_RE.findall(line.lower())
-        for n in range(min_n, max_n + 1):
-            if len(words) < n:
-                continue
-            for i in range(len(words) - n + 1):
-                ngram = tuple(words[i:i + n])
-                counts[ngram] = counts.get(ngram, 0) + 1
-                total += 1
-
-    if total == 0:
-        return 0.0
-
-    repeated = sum(count - 1 for count in counts.values() if count > 1)
-    return repeated / total
-
-
-def _line_char_length(line: str) -> int:
-    return len(_TEXT_CHAR_RE.findall(line))
-
-
-def _short_line_ratio(lines: list[str], target_bars: int) -> float:
-    if not lines or target_bars <= 0:
-        return 1.0
-    short_lines = sum(1 for line in lines if _line_char_length(line) <= SHORT_LINE_MAX_CHARS)
-    return short_lines / target_bars
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """반복 가사가 라임 점수를 부풀리지 못하도록 보상 계산."""
+    """연속된 라임 블록(AA, AAA, AAAA)의 길이에 따라 차등 채점."""
+    try:
+        from app.rhyme_scoring.rhyme_engine import calculate_line_scores
+    except ImportError:
+        from rhyme_engine import calculate_line_scores
+
     if prompts is None:
         prompts = [""] * len(completions)
     rewards = []
+    
     for prompt, comp in zip(prompts, completions):
-        completion_text = _message_content(comp)
         lines = _extract_verse(comp)
-        n_target = _parse_target_bars(prompt)
-
-        if len(lines) < 2:
-            rhyme = 0.0
+        
+        # 아예 한 줄도 생성하지 못한 극단적인 경우 0점 처리
+        if not lines:
+            rewards.append(0.0)
+            continue
+            
+        actual_lines = lines[:8]
+        actual_len = len(actual_lines)
+        
+        # 1) 실제 줄들의 중복 비율 계산
+        dup_ratio = (1.0 - len(set(actual_lines)) / actual_len) if actual_len > 0 else 0.0
+        
+        # 2) 연속 라임 점수 계산 (AA: 0.6, AAA: 0.8, AAAA: 1.0, 그 외 0.0)
+        if actual_len > 1:
+            line_scores, _ = calculate_line_scores(actual_lines)
+            rhyme_score = sum(line_scores) / actual_len
         else:
-            scores = [get_line_rhyme_score(lines[i], lines[i + 1])
-                      for i in range(len(lines) - 1)]
-            rhyme = sum(scores) / len(scores)
+            rhyme_score = 0.0
 
-        format_ok = 1.0 if "[End]" in completion_text else 0.0
-        length_score = max(0.0, 1.0 - abs(len(lines) - n_target) / n_target)
-        dup_ratio = 1.0 - len(set(lines)) / len(lines) if lines else 1.0
-        max_run = _max_consecutive_duplicate_run(lines)
-        run_penalty = max(0.0, (max_run - 1) / max(1, len(lines) - 1)) if lines else 1.0
-        ngram_repeat_ratio = _repeated_ngram_ratio(lines)
-        short_line_ratio = _short_line_ratio(lines, n_target)
-
-        # 반복이 많을수록 라임 보상 자체를 줄여서 "반복 = 고득점"을 차단한다.
-        repetition_pressure = max(dup_ratio, ngram_repeat_ratio)
-        effective_rhyme = rhyme * (1.0 - repetition_pressure)
-        r = (
-            0.5 * effective_rhyme
-            + 0.2 * length_score
-            + 0.2 * format_ok
-            - 1.0 * dup_ratio
-            - 1.0 * run_penalty
-            - NGRAM_REPEAT_PENALTY_WEIGHT * ngram_repeat_ratio
-            - SHORT_LINE_PENALTY_WEIGHT * short_line_ratio
-        )
-
-        # 중복이 심하거나 연속 중복이 발생한 completion은 최종 보상 상한을 강제로 크게 낮춘다.
-        if (
-            dup_ratio >= 0.3
-            or max_run >= 2
-            or ngram_repeat_ratio >= SEVERE_NGRAM_REPEAT_RATIO
-            or short_line_ratio >= SEVERE_SHORT_LINE_RATIO
-        ):
-            r = min(r, -1.5)
-
+            
+        # 3) 중복 리워드 해킹 방지
+        effective_rhyme = rhyme_score * (1.0 - dup_ratio)
+        r = effective_rhyme
+        
+        # 중복이 극단적으로 심하면 강한 감점
+        if dup_ratio >= 0.3:
+            r = min(r, -1.0)
+            
+        # 4) 분량이 8마디 미만인 경우 비례 스케일링 (단일 분량 페널티)
+        if actual_len < 8:
+            r = r * (actual_len / 8.0)
+            
         rewards.append(float(r))
+        
     return rewards
 
 
@@ -227,31 +361,25 @@ def load_model(compute_dtype):
     return model
 
 
-def train_grpo():
+def _build_grpo_config(
+    *,
+    output_dir: str,
+    max_steps: int = -1,
+    save_strategy: str = "steps",
+    save_steps: int = 50,
+    save_total_limit: int | None = 3,
+) -> GRPOConfig:
     compute_dtype, use_bf16, use_fp16 = _detect_precision()
-    print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
-
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    df = pd.read_csv(DATA_PATH)
-    prompts = build_prompts(df)
-    dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
-    print(f"prompts: {len(prompts)}")
-
-    model = load_model(compute_dtype)
-
-    cfg = GRPOConfig(
-        output_dir=OUTPUT_DIR,
-        learning_rate=1e-6,
+    return GRPOConfig(
+        output_dir=output_dir,
+        learning_rate=1e-5,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
-        num_train_epochs=6,
-        num_generations=4,
-        max_completion_length=160,
+        max_steps=max_steps,
+        num_generations=8,
+        max_completion_length=300,
         beta=0.04,
-        scale_rewards="none",
+        scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,
         temperature=1.0,
         top_p=0.95,
@@ -259,14 +387,47 @@ def train_grpo():
             "remove_invalid_values": True,
             "renormalize_logits": True,
         },
-        save_strategy="steps",
-        save_steps=50,
-        save_total_limit=3,
+        save_strategy=save_strategy,
+        save_steps=save_steps,
+        save_total_limit=save_total_limit,
         logging_steps=5,
         bf16=use_bf16,
         fp16=use_fp16,
         report_to="none",
         seed=42,
+    )
+
+
+def _build_grpo_trainer(
+    *,
+    output_dir: str,
+    max_steps: int = -1,
+    callbacks: list[TrainerCallback] | None = None,
+    save_strategy: str = "steps",
+    save_steps: int = 50,
+    save_total_limit: int | None = 3,
+) -> tuple[GRPOTrainer, list[list[dict[str, str]]]]:
+    compute_dtype, use_bf16, use_fp16 = _detect_precision()
+    print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    prompts = build_prompts()
+    dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
+    print(f"prompts: {len(prompts)} (bpms={GRPO_BPMS})")
+
+    model = load_model(compute_dtype)
+    _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
+    _assert_finite("loaded_sft.forward_logits", _forward_logits_summary(model, tokenizer, prompts[0]))
+
+    cfg = _build_grpo_config(
+        output_dir=output_dir,
+        max_steps=max_steps,
+        save_strategy=save_strategy,
+        save_steps=save_steps,
+        save_total_limit=save_total_limit,
     )
 
     trainer = GRPOTrainer(
@@ -275,15 +436,46 @@ def train_grpo():
         args=cfg,
         train_dataset=dataset,
         processing_class=tokenizer,
+        callbacks=callbacks,
     )
+    return trainer, prompts
+
+
+def train_grpo(*, trace_finite: bool = False, max_steps: int = 200):
+    callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback()]
+    if trace_finite:
+        callbacks.append(GrpoFiniteTraceCallback())
+    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks, max_steps=max_steps)
 
     resume = _latest_checkpoint(OUTPUT_DIR)
     print(f"Starting GRPO ({MODEL_ID})...")
+    if trace_finite:
+        print("[trace] finite checks enabled for full GRPO training")
     if resume:
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(SAVE_DIR)
     print(f"GRPO done -> {SAVE_DIR}")
+
+
+def run_grpo_smoke_test(max_steps: int = 10) -> None:
+    if max_steps < 1 or max_steps > 50:
+        raise ValueError("GRPO smoke test supports 1 to 50 steps.")
+
+    output_dir = Path(SMOKE_OUTPUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    trainer, _prompts = _build_grpo_trainer(
+        output_dir=str(output_dir),
+        max_steps=max_steps,
+        callbacks=[GrpoFiniteTraceCallback()],
+        save_strategy="no",
+        save_total_limit=None,
+    )
+
+    print(f"Starting GRPO smoke test ({max_steps} steps, output_dir={output_dir})...")
+    trainer.train(resume_from_checkpoint=None)
+    _assert_finite("smoke_end.weights", _trainable_parameter_summary(trainer.model))
+    print("GRPO smoke test completed without non-finite tensors.")
 
 
 if __name__ == "__main__":

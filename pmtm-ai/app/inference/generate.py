@@ -17,12 +17,12 @@ def parse_args():
         default=str(DEFAULT_ADAPTER),
         help="LoRA adapter directory path (default: models/grpo_rap_qwen). Set to 'none' to run the base model only.",
     )
-    p.add_argument("--artist", required=True, help="Artist style name")
-    p.add_argument("--bpm", type=float, required=True, help="Track BPM")
-    p.add_argument("--energy", type=float, required=True, help="Energy score (0-1)")
-    p.add_argument("--danceability", type=float, required=True, help="Danceability score (0-1)")
-    p.add_argument("--loudness", type=float, required=True, help="Loudness in dB")
-    p.add_argument("--valence", type=float, required=True, help="Valence score (0-1)")
+    p.add_argument("--artist", help="Artist style name")
+    p.add_argument("--bpm", type=float, help="Track BPM")
+    p.add_argument("--energy", type=float, help="Energy score (0-1)")
+    p.add_argument("--danceability", type=float, help="Danceability score (0-1)")
+    p.add_argument("--loudness", type=float, help="Loudness in dB")
+    p.add_argument("--valence", type=float, help="Valence score (0-1)")
     p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=220, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.9, help="Sampling temperature")
@@ -155,10 +155,32 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
             do_sample=True,
             temperature=temperature,
             top_p=top_p,
+            remove_invalid_values=True,
             pad_token_id=tokenizer.eos_token_id,
         )
     generated = output[0][inputs["input_ids"].shape[1]:]
     return tokenizer.decode(generated, skip_special_tokens=True).strip()
+
+
+import re
+
+def post_process_lyrics(raw_text: str) -> str:
+    """
+    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수 태그((X음절))를 
+    완벽히 제거하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
+    """
+    lines = []
+    for line in raw_text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        line = re.sub(r"^\d+\.\s*", "", line)
+        line = re.sub(r"^\(\d+음절\)\s*", "", line)
+        line = re.sub(r"\(\d+음절\)\s*$", "", line)
+        line = line.strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def main():
@@ -174,15 +196,13 @@ def main():
     raw_prompt = build_prompt(args)
     messages = build_messages(args)
 
-    if args.print_prompt:
-        if should_use_chat_template(base_model, args.prompt_format):
-            print(json.dumps(messages, ensure_ascii=False, indent=2))
-        else:
-            print(raw_prompt)
-        print("-" * 60)
-
     tokenizer, model = build_model(base_model, adapter_path)
     prompt = build_model_input_text(tokenizer, base_model, args.prompt_format, raw_prompt, messages)
+
+    if args.print_prompt:
+        print(prompt)
+        print("-" * 60)
+
     text = generate_text(
         tokenizer,
         model,
@@ -191,7 +211,11 @@ def main():
         temperature=args.temperature,
         top_p=args.top_p,
     )
+    
+    print("=== Raw Generated Output ===")
     print(text)
+    print("\n=== Post-Processed Cleaned Lyrics ===")
+    print(post_process_lyrics(text))
 
 
 if __name__ == "__main__":

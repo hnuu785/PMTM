@@ -111,9 +111,8 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate_for_api.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("exactly 8 lines", messages[0]["content"])
-        self.assertNotIn("genre", messages[0]["content"])
-        self.assertNotIn("mood", messages[0]["content"])
+        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_use_training_prompt_shape(self):
         args = SimpleNamespace(
@@ -128,9 +127,15 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("BPM 90", messages[0]["content"])
-        self.assertIn("exactly 8 lines", messages[0]["content"])
-        self.assertNotIn("Tablo", messages[0]["content"])
+        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
+
+    def test_local_cli_messages_omit_bpm_when_unspecified(self):
+        args = SimpleNamespace(bpm=None, bars=8)
+        messages = generate.build_messages(args)
+
+        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
+        self.assertIn("14~18 범위 내로", messages[0]["content"])
 
 
 if __name__ == "__main__":

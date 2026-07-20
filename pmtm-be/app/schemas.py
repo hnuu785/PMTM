@@ -1,11 +1,7 @@
 from typing import Literal
-
 from pydantic import BaseModel, Field
 
-LyricModel = Literal[
-    "qwen-local",
-    "openai",
-]
+LyricModel = str
 
 
 class LyricGenerateRequest(BaseModel):
@@ -40,11 +36,43 @@ class LyricGenerateResponse(BaseModel):
     rhymeAnalysis: list[RhymeLineAnalysis] = Field(default_factory=list)
 
 
+class TimedValue(BaseModel):
+    time: float
+    value: float
+
+
+class BeatAnalysisResponse(BaseModel):
+    fileName: str
+    durationSec: float
+    sampleRate: int
+    sampleCount: int
+    tempo: float
+    timeSignature: str
+    timeSignatureSource: str
+    introStartSec: float
+    introEndSec: float
+    drumEntrySec: float
+    firstBeatSec: float
+    firstBarStartSec: float
+    firstBarEndSec: float
+    firstBarBeatTimes: list[float]
+    beatTimes: list[float]
+    onsetTimes: list[float]
+    waveform: list[TimedValue]
+    rms: list[TimedValue]
+    onsetStrength: list[TimedValue]
+    spectral: dict[str, float]
+    chroma: list[float]
+    mfcc: list[float]
+
+
 DemoStatus = Literal[
     "queued",
     "analyzing",
     "writing",
+    "planning",
     "voicing",
+    "rendering",
     "mixing",
     "succeeded",
     "failed",
@@ -67,3 +95,12 @@ class DemoStatusResponse(BaseModel):
     notes: list[str] = Field(default_factory=list)
     error: str | None = None
     audioUrl: str | None = None
+    vocalUrl: str | None = None
+    flowPlanUrl: str | None = None
+    voicebank: str | None = None
+
+
+class VoicebankResponse(BaseModel):
+    id: str
+    label: str
+    available: bool

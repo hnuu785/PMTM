@@ -114,12 +114,12 @@ def prepare_dataset():
     print("=" * 60)
     print("[B1] SFT 데이터셋 준비")
     print("=" * 60)
-    out = DATA_DIR / "prepared_dataset_v2.jsonl"
+    out = DATA_DIR / "prepared_dataset_v3.jsonl"
     if out.exists():
         n = sum(1 for _ in out.open(encoding="utf-8"))
         print(f"이미 존재: {out} ({n} samples)")
     else:
-        from app.training.prepare_dataset_v2 import main as prep_main
+        from app.training.prepare_dataset_v3 import main as prep_main
 
         prep_main()
     assert out.exists(), "SFT 데이터 생성 실패"
@@ -148,6 +148,11 @@ def reward_sanity_check():
 
     - std < 0.05  → reward shaping이 약함, GRPO 학습 신호 부족 우려
     - mean < 0    → format/dup 페널티 과도, 가중치 조정 권장
+
+    결과 해석 기준:
+        std >= 0.05  AND  mean >= 0   → PASS  (GRPO 진행 권장)
+        std <  0.05                   → WARNING: 보상 분산 부족, 학습 신호 약함
+        mean < 0                      → WARNING: 음수 편향, format/dup 페널티 과도
     """
     print("=" * 60)
     print("[C2] Reward sanity check")
@@ -206,9 +211,43 @@ def reward_sanity_check():
     completions = [tok.decode(o[prompt_lens:], skip_special_tokens=True) for o in out]
 
     rewards = rhyme_reward(completions, prompts=prompts)
-    print(f"reward mean   : {statistics.mean(rewards):+.4f}")
-    print(f"reward stdev  : {statistics.stdev(rewards):.4f}")
-    print(f"reward min/max: {min(rewards):+.4f} / {max(rewards):+.4f}")
+    r_mean = statistics.mean(rewards)
+    r_std  = statistics.stdev(rewards)
+    r_min  = min(rewards)
+    r_max  = max(rewards)
+
+    print(f"reward mean   : {r_mean:+.4f}")
+    print(f"reward stdev  : {r_std:.4f}")
+    print(f"reward min/max: {r_min:+.4f} / {r_max:+.4f}")
+
+    # ── 분포 진단 ──────────────────────────────────────────────
+    warnings: list[str] = []
+
+    if r_std < 0.05:
+        warnings.append(
+            f"[WARNING] reward std={r_std:.4f} < 0.05\n"
+            "  → 보상 분산 부족: 모든 샘플이 비슷한 점수를 받아 GRPO 학습 신호가 약합니다.\n"
+            "  조치: 보상 함수 가중치 재조정 또는 rhyme/syllable 항목 강화를 검토하세요."
+        )
+
+    if r_mean < 0:
+        warnings.append(
+            f"[WARNING] reward mean={r_mean:+.4f} < 0\n"
+            "  → 음수 편향: format/dup 페널티가 과도하게 작동 중입니다.\n"
+            "  조치: format_penalty / dup_penalty 가중치를 낮추거나\n"
+            "        grpo_qwen.py의 scale_rewards 설정을 확인하세요."
+        )
+
+    if warnings:
+        print()
+        for w in warnings:
+            print(w)
+        print()
+        print("[SANITY] FAIL — GRPO 진행 전 위 경고를 해결하는 것을 권장합니다.")
+    else:
+        print()
+        print(f"[SANITY] PASS — std={r_std:.4f} >= 0.05, mean={r_mean:+.4f} >= 0 (GRPO 진행 가능)")
+
     print("\n--- sample prompt + completion ---")
     print(prompt_texts[0])
     print(completions[0][:600])
@@ -218,7 +257,7 @@ def reward_sanity_check():
     torch.cuda.empty_cache()
 
 
-def run_grpo():
+def run_grpo(trace_finite: bool = False):
     print("=" * 60)
     print("[C3] GRPO 학습")
     print("=" * 60)
@@ -227,7 +266,20 @@ def run_grpo():
     )
     from app.training.grpo_qwen import train_grpo
 
-    train_grpo()
+    train_grpo(trace_finite=trace_finite)
+    print()
+
+
+def run_grpo_smoke(steps: int):
+    print("=" * 60)
+    print(f"[C3-smoke] GRPO finite smoke test ({steps} steps)")
+    print("=" * 60)
+    assert (MODELS_DIR / "sft_rap_qwen").exists(), (
+        "SFT 어댑터 없음 — 먼저 --stage sft 로 SFT를 실행하세요"
+    )
+    from app.training.grpo_qwen import run_grpo_smoke_test
+
+    run_grpo_smoke_test(max_steps=steps)
     print()
 
 
@@ -303,7 +355,7 @@ def parse_args():
     )
     p.add_argument(
         "--stage",
-        choices=["all", "sft", "sanity", "grpo", "eval"],
+        choices=["all", "sft", "sanity", "grpo-smoke", "grpo", "eval"],
         default="all",
         help="실행 단계 선택 (기본 all = 전체)",
     )
@@ -311,6 +363,8 @@ def parse_args():
     p.add_argument("--skip-phonetics", action="store_true", help="phonetics 회귀 테스트 스킵")
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
+    p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~50)")
+    p.add_argument("--trace-finite", action="store_true", help="본 GRPO 학습 중 gradient/weight finite check 활성화")
     return p.parse_args()
 
 
@@ -333,8 +387,12 @@ def main():
         return
 
     if args.stage == "grpo":
-        run_grpo()
+        run_grpo(trace_finite=args.trace_finite)
         save_loss_plots_if_possible()
+        return
+
+    if args.stage == "grpo-smoke":
+        run_grpo_smoke(args.smoke_steps)
         return
 
     if args.stage == "eval":
@@ -349,7 +407,7 @@ def main():
     save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check()
-    run_grpo()
+    run_grpo(trace_finite=args.trace_finite)
     save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval()

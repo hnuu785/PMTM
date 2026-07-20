@@ -8,12 +8,16 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3100"
     database_url: str = "postgresql://pmtm:pmtm@localhost:5433/pmtm"
     redis_url: str = "redis://localhost:6380/0"
-    qwen_python_path: str = "../pmtm-ai/venv/bin/python"
+    qwen_python_path: str = "../pmtm-ai/.venv/bin/python"
     qwen_timeout_seconds: int = 120
     openai_api_key: str = ""
     openai_model: str = "gpt-5-mini"
     openai_tts_model: str = "gpt-4o-mini-tts"
     openai_timeout_seconds: int = 60
+    diffsinger_python_path: str = "../pmtm-svs/.venv/bin/python"
+    diffsinger_voicebank_root: str = "../pmtm-svs/voicebanks"
+    diffsinger_device: str = "auto"
+    diffsinger_timeout_seconds: int = 900
 
     model_config = SettingsConfigDict(
         env_file=".env",
