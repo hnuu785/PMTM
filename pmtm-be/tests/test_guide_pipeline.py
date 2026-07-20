@@ -55,7 +55,9 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertEqual(plan.beatMap.barCount, 8)
         self.assertEqual(len(plan.bars), 8)
         self.assertEqual(plan.bars[0].startSec, 1.25)
-        self.assertEqual(plan.bars[-1].startSec, 15.25)
+        # 120 BPM is scaled to 60 BPM (half-time), so bar duration is 4.0s.
+        # Last bar (index 7) startSec = 1.25 + 7 * 4.0 = 29.25
+        self.assertEqual(plan.bars[-1].startSec, 29.25)
         for bar in plan.bars:
             self.assertAlmostEqual(
                 sum(phoneme.durationSec for phoneme in bar.phonemes),

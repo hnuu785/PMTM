@@ -196,15 +196,13 @@ def main():
     raw_prompt = build_prompt(args)
     messages = build_messages(args)
 
-    if args.print_prompt:
-        if should_use_chat_template(base_model, args.prompt_format):
-            print(json.dumps(messages, ensure_ascii=False, indent=2))
-        else:
-            print(raw_prompt)
-        print("-" * 60)
-
     tokenizer, model = build_model(base_model, adapter_path)
     prompt = build_model_input_text(tokenizer, base_model, args.prompt_format, raw_prompt, messages)
+
+    if args.print_prompt:
+        print(prompt)
+        print("-" * 60)
+
     text = generate_text(
         tokenizer,
         model,

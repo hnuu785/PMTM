@@ -193,12 +193,9 @@ def build_user_prompt(genre: str) -> str:
 
 
 def build_record(lines: list[str], genre: str) -> dict:
-    target_syllables = "10~14음절" if genre == "붐뱁" else "14~18음절"
-
     formatted_lines = []
     for i, line in enumerate(lines, 1):
-        syllables = count_syllables(line)
-        formatted_lines.append(f"{i}. ({syllables}음절) {line}")
+        formatted_lines.append(f"{i}. {line}")
 
     assistant_content = "\n".join(formatted_lines)
 

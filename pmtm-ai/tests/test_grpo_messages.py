@@ -64,7 +64,7 @@ class GrpoMessagesTests(unittest.TestCase):
             "과거의 기억들을 저 멀리 버렸지",
             "내 앞을 막아선 저 쇠창살을 막았지",
         ]
-        formatted_lines = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(raw_lines, 1)]
+        formatted_lines = [f"{i}. {ln}" for i, ln in enumerate(raw_lines, 1)]
         content = "\n".join(formatted_lines)
         
         completion = [[
@@ -119,7 +119,7 @@ class GrpoMessagesTests(unittest.TestCase):
         ]
 
         def format_comp(lines):
-            formatted = [f"{i}. {ln} ({len(ln)}음절)" for i, ln in enumerate(lines, 1)]
+            formatted = [f"{i}. {ln}" for i, ln in enumerate(lines, 1)]
             return [[{"role": "assistant", "content": "\n".join(formatted)}]]
 
         prompt = build_api_messages(bpm=90)
