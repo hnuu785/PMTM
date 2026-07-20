@@ -376,8 +376,8 @@ def _build_grpo_config(
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
         max_steps=max_steps,
-        num_generations=4,
-        max_completion_length=160,
+        num_generations=8,
+        max_completion_length=300,
         beta=0.04,
         scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,

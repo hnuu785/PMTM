@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from app.lyric_prompts import TARGET_BARS, build_api_user_prompt
+from app.lyric_prompts import TARGET_BARS, build_api_messages
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes
 from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
@@ -187,23 +187,20 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
     return None
 
 
-def build_user_prompt(genre: str) -> str:
-    bpm = 90.0 if genre == "붐뱁" else 140.0
-    return "랩을 작성해 주세요. " + build_api_user_prompt(bpm=bpm, bars=TARGET_BARS)
-
-
 def build_record(lines: list[str], genre: str) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
         formatted_lines.append(f"{i}. {line}")
 
     assistant_content = "\n".join(formatted_lines)
+    bpm = 90.0 if genre == "붐뱁" else 140.0
 
     return {
-        "messages": [
-            {"role": "user", "content": build_user_prompt(genre)},
-            {"role": "assistant", "content": assistant_content},
-        ]
+        "messages": build_api_messages(
+            bpm=bpm,
+            bars=TARGET_BARS,
+            assistant=assistant_content
+        )
     }
 
 
