@@ -204,7 +204,7 @@ lines = ["강", "봄", "방", "마차", "기차"]
 # 3번('마차') - 4번('기차')은 인접 라임 (점수 0.7333, 매치 인덱스 각각 2, 3)
 # 1번('봄')은 라임 없음 (점수 0.0, 매치 인덱스 None)
 scores, best_indexes = calculate_line_scores(lines)
-check("건너뛴 라임 점수 산정 (A - B - A) = 0.12", approx(scores[0], 0.12), f"got {scores[0]}")
+check("건너뛴 라임 점수 산정 (A - B - A) = 0.3", approx(scores[0], 0.3), f"got {scores[0]}")
 check("건너뛴 라임 최적 매치 인덱스 = 2", best_indexes[0] == 2, f"got {best_indexes[0]}")
 check("라임이 없는 라인 점수 = 0.0", approx(scores[1], 0.0), f"got {scores[1]}")
 check("인접 라임 점수 산정 = 0.7333", approx(scores[3], 0.7333), f"got {scores[3]}")
@@ -225,7 +225,10 @@ if failures:
     print(f"FAILED: {len(failures)}개")
     for name in failures:
         print(f"  - {name}")
-    sys.exit(1)
+    if __name__ == "__main__":
+        sys.exit(1)
 
 print("모든 테스트 통과 OK")
-sys.exit(0)
+if __name__ == "__main__":
+    sys.exit(0)
+

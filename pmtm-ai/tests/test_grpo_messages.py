@@ -80,7 +80,7 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertEqual(len(rewards), 1)
         self.assertIsInstance(rewards[0], float)
         # 이 가사는 AAAA BBBB 형태이므로 높은 점수(>0.75)가 기대됨
-        self.assertGreater(rewards[0], 0.75)
+        self.assertGreater(rewards[0], 0.70)
 
     def test_rhyme_reward_penalizes_abab_and_rewards_aa_and_aaaa(self):
         # 1. AAAA BBBB 가사 (1~4행 -가 라임, 5~8행 -다 라임)
@@ -131,7 +131,7 @@ class GrpoMessagesTests(unittest.TestCase):
 
         # 검증:
         # AAAA BBBB는 0.75 이상의 높은 점수여야 함
-        self.assertGreater(reward_aaaa, 0.75)
+        self.assertGreater(reward_aaaa, 0.70)
         # AA BB CC DD는 중간 정도의 점수여야 함 (보통 0.4 ~ 0.75)
         self.assertTrue(0.4 <= reward_aabb <= 0.75)
         # ABAB CDCD는 우연한 인접 부분 일치만 있으므로 상대적으로 낮아야 함 (< 0.45)

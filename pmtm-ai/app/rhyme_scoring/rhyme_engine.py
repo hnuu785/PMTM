@@ -85,8 +85,8 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
         score_R2 = skip_scores[i] if i < actual_len - 2 else 0.0
         skip_max = max(score_L2, score_R2)
 
-        # 인접 라인은 1.0 가중치, 건너뛴 라임은 0.2 가중치 적용하여 최댓값 선택
-        adj_max = max(score_L1, score_R1, 0.2 * skip_max)
+        # 인접 라인은 1.0 가중치, 건너뛴 라임은 0.5 가중치 적용하여 최댓값 선택
+        adj_max = max(score_L1, score_R1, 0.5 * skip_max)
 
         # best_match_index 결정 (인접 라인 우선, 없으면 건너뛴 라인)
         if adj_max > 0.0:
@@ -130,3 +130,11 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
 
     return line_scores, best_match_indexes
 
+
+def calculate_rhyme_density(lines: list[str]) -> float:
+    """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다."""
+    actual_len = len(lines)
+    if actual_len <= 1:
+        return 0.0
+    line_scores, _ = calculate_line_scores(lines)
+    return sum(line_scores) / actual_len

@@ -17,7 +17,7 @@ from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_messages
 from app.paths import MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
-from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
+from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
 sys.path.append(str(PROJECT_ROOT))
 
@@ -279,9 +279,9 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
 def rhyme_reward(completions, prompts=None, **kwargs):
     """연속된 라임 블록(AA, AAA, AAAA)의 길이에 따라 차등 채점."""
     try:
-        from app.rhyme_scoring.rhyme_engine import calculate_line_scores
+        from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
     except ImportError:
-        from rhyme_engine import calculate_line_scores
+        from rhyme_engine import calculate_rhyme_density
 
     if prompts is None:
         prompts = [""] * len(completions)
@@ -302,11 +302,7 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         dup_ratio = (1.0 - len(set(actual_lines)) / actual_len) if actual_len > 0 else 0.0
         
         # 2) 연속 라임 점수 계산 (AA: 0.6, AAA: 0.8, AAAA: 1.0, 그 외 0.0)
-        if actual_len > 1:
-            line_scores, _ = calculate_line_scores(actual_lines)
-            rhyme_score = sum(line_scores) / actual_len
-        else:
-            rhyme_score = 0.0
+        rhyme_score = calculate_rhyme_density(actual_lines)
 
             
         # 3) 중복 리워드 해킹 방지
