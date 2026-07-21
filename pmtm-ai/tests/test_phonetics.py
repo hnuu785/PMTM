@@ -137,9 +137,9 @@ s_ye_e = calculate_syllable_score(ye, e)     # ㅖ ↔ ㅔ
 s_e_ye = calculate_syllable_score(e, ye)     # ㅔ ↔ ㅖ
 s_ye_yae = calculate_syllable_score(ye, yae) # ㅖ ↔ ㅒ
 
-check("예↔에 (대칭성) = 0.8", approx(s_ye_e, 0.8), f"got {s_ye_e}")
-check("에↔예 (역방향) = 0.8", approx(s_e_ye, 0.8), f"got {s_e_ye}")
-check("예↔얘 (교차 군집) = 0.8", approx(s_ye_yae, 0.8), f"got {s_ye_yae}")
+check("예↔에 (대칭성) = 1.0", approx(s_ye_e, 1.0), f"got {s_ye_e}")
+check("에↔예 (역방향) = 1.0", approx(s_e_ye, 1.0), f"got {s_e_ye}")
+check("예↔얘 (교차 군집) = 1.0", approx(s_ye_yae, 1.0), f"got {s_ye_yae}")
 
 
 # ─── 5. 줄 단위 라임 점수 ─────────────────────────────────
@@ -153,13 +153,13 @@ s = get_line_rhyme_score("강물", "방물")
 check("'강물'↔'방물' = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "강물")
-check("'강물'↔'강물' (동일 단어 반복 감점) = 0.0", s == 0.0, f"got {s}")
+check("'강물'↔'강물' (동일 단어 반복 감점) = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("오늘 밤 너를 사랑해!", "내일도 너를 사랑해")
-check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.0", s == 0.0, f"got {s}")
+check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("너의 smile", "나의 Smile")
-check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.0", s == 0.0, f"got {s}")
+check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("바다", "마차")
 # 바(ㅏ,_)다(ㅏ,_) vs 마(ㅏ,_)차(ㅏ,_) -> 모든 끝 음절 일치 -> 1.0

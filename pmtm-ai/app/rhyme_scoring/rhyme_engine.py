@@ -11,7 +11,7 @@ def calculate_syllable_score(s1, s2):
     if s1['v'] == s2['v']:
         v_score = 1.0
     elif any(s1['v'] in g and s2['v'] in g for g in VOWEL_GROUPS):
-        v_score = 0.8  # 유사 모음 점수
+        v_score = 1.0  # 유사 모음 점수 (1.0으로 통일)
         
     return v_score
 
@@ -26,7 +26,7 @@ def get_line_rhyme_score(line1, line2):
     w2_clean = re.sub(r"[^\w]", "", w2).lower()
     
     if w1_clean == w2_clean and w1_clean != "":
-        return 0.0
+        return 0.2  # 동일 단어 단순 반복 시 낮은 점수(0.2) 부여
 
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
