@@ -7,10 +7,7 @@ try:
 except ImportError:
     from .loanword_overrides import MANUAL_LOANWORD_OVERRIDES
 
-try:
-    from loanword_stopwords import ENGLISH_RHYME_STOPWORDS
-except ImportError:
-    from .loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+
 
 try:
     from g2pk import G2p
@@ -260,8 +257,6 @@ def _english_fallback(word: str) -> list[dict]:
 
 
 def _english_word_to_phonemes(word: str) -> list[dict]:
-    if word.lower() in ENGLISH_RHYME_STOPWORDS:
-        return []
 
     override = _LOANWORD_OVERRIDES.get(word.lower())
     if override is not None:

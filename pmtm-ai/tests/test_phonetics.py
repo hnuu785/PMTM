@@ -83,7 +83,7 @@ check("'flow'가 플로우 계열로 분해됨",
       len(p) >= 2 and [s["v"] for s in p[-2:]] == ["ㅗ", "ㅜ"], f"got {p}")
 
 p = get_phonemes("yeah")
-check("'yeah' 같은 추임새는 라임 계산에서 제외됨", p == [], f"got {p}")
+check("'yeah' 같은 추임새도 발음 분석이 수행됨", p != [], f"got {p}")
 
 # 한영 혼합
 p = get_phonemes("hello 강")
