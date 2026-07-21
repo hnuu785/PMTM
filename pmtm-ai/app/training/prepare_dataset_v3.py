@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from app.lyric_prompts import TARGET_BARS, build_api_messages
+from app.genre_rules import get_genre_and_syllable_range
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes
 from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
@@ -235,19 +236,13 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-                genre = "붐뱁" if judgment_bpm < 110 else "트랩"
+                genre, min_s, max_s = get_genre_and_syllable_range(bpm)
                 
                 # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]
-                if genre == "붐뱁":
-                    if not all(9 <= s <= 15 for s in syllables_list):
-                        stats["syllable_mismatch"] += 1
-                        continue
-                else: # 트랩
-                    if not all(13 <= s <= 19 for s in syllables_list):
-                        stats["syllable_mismatch"] += 1
-                        continue
+                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
+                    stats["syllable_mismatch"] += 1
+                    continue
 
                 records.append(build_record(chunk, genre))
 

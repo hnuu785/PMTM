@@ -22,7 +22,7 @@ A6000(48GB) 같은 단일 GPU 서버에서 그대로 실행 가능.
 필수 패키지 (친구 서버에서 미리 설치):
     pip install "transformers>=4.45" "accelerate>=0.34" "peft>=0.13" \
                 "trl>=0.12" "bitsandbytes>=0.43" "datasets>=2.20" \
-                jamo pronouncing tqdm pandas
+                pronouncing tqdm pandas
     pip install g2pk  # 실패해도 자모 분해 폴백 동작
 """
 

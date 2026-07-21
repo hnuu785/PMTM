@@ -1,6 +1,6 @@
 import re
 from functools import lru_cache
-from jamo import hangul_to_jamo, j2hcj
+# Use mathematical index decomposition to avoid jamo package dependency.
 
 try:
     from loanword_overrides import MANUAL_LOANWORD_OVERRIDES
@@ -279,15 +279,27 @@ def _english_word_to_phonemes(word: str) -> list[dict]:
     return _english_fallback(word)
 
 
+JUNGSEONG = (
+    "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ",
+    "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ",
+)
+JONGSEONG = (
+    "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ",
+    "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ",
+    "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+)
+
+
 def _hangul_to_phonemes(text: str) -> list[dict]:
     out = []
     for ch in text:
         if not ('가' <= ch <= '힣'):
             continue
         try:
-            jamo_str = j2hcj(hangul_to_jamo(ch))
-            v = jamo_str[1]
-            c = jamo_str[2] if len(jamo_str) > 2 else None
+            code = ord(ch) - 0xAC00
+            v = JUNGSEONG[(code % 588) // 28]
+            coda = JONGSEONG[code % 28]
+            c = coda if coda else None
             out.append({'v': v, 'c': c})
         except Exception:
             continue

@@ -6,7 +6,6 @@ bitsandbytes>=0.43
 datasets>=2.20
 pandas
 tqdm
-jamo
 pronouncing
 matplotlib
 fastapi>=0.115,<1.0

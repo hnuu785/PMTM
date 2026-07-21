@@ -1,3 +1,5 @@
+from app.genre_rules import get_genre_and_syllable_range
+
 TARGET_BARS = 8
 
 
@@ -7,13 +9,8 @@ def build_api_user_prompt(
     bars: int = TARGET_BARS,
     rhyme_scheme: str | None = None,
 ) -> str:
-    if bpm is not None:
-        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-        g_name = "붐뱁" if judgment_bpm < 110 else "트랩"
-    else:
-        g_name = "트랩"
-
-    target_syllables = "10~14" if g_name == "붐뱁" else "14~18"
+    g_name, min_s, max_s = get_genre_and_syllable_range(bpm)
+    target_syllables = f"{min_s}~{max_s}"
     base_prompt = (
         f"랩을 작성해주세요. 한 줄당 한 마디 규칙을 지켜 {bars}마디로 구성해야 하며, 마디의 시작마다 번호를 부여해주세요. "
         f"마디 당 음절 수는 {target_syllables} 범위 내로 조절해주세요. "

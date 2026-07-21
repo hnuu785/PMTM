@@ -10,8 +10,9 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM
 from transformers import TrainerCallback
+from app.training.train_utils import setup_training_env
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_api_messages
@@ -188,11 +189,6 @@ def _latest_checkpoint(output_dir: str) -> str | None:
     return ckpts[-1] if ckpts else None
 
 
-def _detect_precision():
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
-        return torch.bfloat16, True, False
-    return torch.float16, False, True
-
 def build_prompts(df=None) -> list[list[dict[str, str]]]:
     """GRPO_BPMS의 대표 BPM으로 프롬프트를 생성한다.
     학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
@@ -330,13 +326,7 @@ def rhyme_reward(completions, prompts=None, **kwargs):
     return rewards
 
 
-def load_model(compute_dtype):
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=compute_dtype,
-        bnb_4bit_use_double_quant=True,
-    )
+def load_model(bnb_config):
     base = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config,
@@ -364,12 +354,13 @@ def load_model(compute_dtype):
 def _build_grpo_config(
     *,
     output_dir: str,
+    use_bf16: bool,
+    use_fp16: bool,
     max_steps: int = -1,
     save_strategy: str = "steps",
     save_steps: int = 50,
     save_total_limit: int | None = 3,
 ) -> GRPOConfig:
-    compute_dtype, use_bf16, use_fp16 = _detect_precision()
     return GRPOConfig(
         output_dir=output_dir,
         learning_rate=1e-5,
@@ -407,23 +398,21 @@ def _build_grpo_trainer(
     save_steps: int = 50,
     save_total_limit: int | None = 3,
 ) -> tuple[GRPOTrainer, list[list[dict[str, str]]]]:
-    compute_dtype, use_bf16, use_fp16 = _detect_precision()
+    tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(MODEL_ID)
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
-
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
 
     prompts = build_prompts()
     dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
     print(f"prompts: {len(prompts)} (bpms={GRPO_BPMS})")
 
-    model = load_model(compute_dtype)
+    model = load_model(bnb_config)
     _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
     _assert_finite("loaded_sft.forward_logits", _forward_logits_summary(model, tokenizer, prompts[0]))
 
     cfg = _build_grpo_config(
         output_dir=output_dir,
+        use_bf16=use_bf16,
+        use_fp16=use_fp16,
         max_steps=max_steps,
         save_strategy=save_strategy,
         save_steps=save_steps,
