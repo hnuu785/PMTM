@@ -10,6 +10,7 @@ except ImportError:
 
 
 try:
+    # pyrefly: ignore [missing-import]
     from g2pk import G2p
     _g2p_kr_inst = G2p()
 
@@ -20,6 +21,7 @@ except Exception:
     _g2p_kr = None
 
 try:
+    # pyrefly: ignore [missing-import]
     import pronouncing
 except ImportError:
     pronouncing = None
