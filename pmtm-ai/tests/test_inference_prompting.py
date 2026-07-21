@@ -136,7 +136,7 @@ class InferencePromptingTests(unittest.TestCase):
 
         self.assertEqual([message["role"] for message in messages], ["user"])
         self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("14~18 범위 내로", messages[0]["content"])
+        self.assertIn("14~24 범위 내로", messages[0]["content"])
 
     def test_bpm_threshold_distinction(self):
         # 114 BPM should be Boombap (7~14 syllables)
@@ -144,10 +144,10 @@ class InferencePromptingTests(unittest.TestCase):
         messages_114 = generate.build_messages(args_114)
         self.assertIn("7~14 범위 내로", messages_114[0]["content"])
 
-        # 115 BPM should be Trap (14~18 syllables)
+        # 115 BPM should be Trap (14~24 syllables)
         args_115 = SimpleNamespace(bpm=115, bars=8)
         messages_115 = generate.build_messages(args_115)
-        self.assertIn("14~18 범위 내로", messages_115[0]["content"])
+        self.assertIn("14~24 범위 내로", messages_115[0]["content"])
 
 
 if __name__ == "__main__":
