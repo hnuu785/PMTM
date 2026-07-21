@@ -110,9 +110,9 @@ class InferencePromptingTests(unittest.TestCase):
         args = SimpleNamespace(bpm=90, genre="Korean hip-hop", mood="confident", bars=8)
         messages = generate_for_api.build_messages(args)
 
-        self.assertEqual([message["role"] for message in messages], ["system", "user"])
-        self.assertIn("랩을 작성해주세요", messages[1]["content"])
-        self.assertIn("10~14 범위 내로", messages[1]["content"])
+        self.assertEqual([message["role"] for message in messages], ["user"])
+        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_use_training_prompt_shape(self):
         args = SimpleNamespace(
@@ -126,17 +126,17 @@ class InferencePromptingTests(unittest.TestCase):
         )
         messages = generate.build_messages(args)
 
-        self.assertEqual([message["role"] for message in messages], ["system", "user"])
-        self.assertIn("랩을 작성해주세요", messages[1]["content"])
-        self.assertIn("10~14 범위 내로", messages[1]["content"])
+        self.assertEqual([message["role"] for message in messages], ["user"])
+        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("10~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_omit_bpm_when_unspecified(self):
         args = SimpleNamespace(bpm=None, bars=8)
         messages = generate.build_messages(args)
 
-        self.assertEqual([message["role"] for message in messages], ["system", "user"])
-        self.assertIn("랩을 작성해주세요", messages[1]["content"])
-        self.assertIn("14~18 범위 내로", messages[1]["content"])
+        self.assertEqual([message["role"] for message in messages], ["user"])
+        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("14~18 범위 내로", messages[0]["content"])
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from app.inference.device import model_device, move_model_to_device, select_inference_device
-from app.lyric_prompts import TARGET_BARS, build_api_messages, build_api_user_prompt
+from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
 from app.paths import MODEL_ID
 
 PROMPT_FORMATS = ("auto", "chat", "raw")
@@ -39,11 +39,11 @@ def parse_args():
 
 
 def build_prompt(args) -> str:
-    return build_api_user_prompt(bpm=args.bpm, bars=args.bars)
+    return build_lyric_user_prompt(bpm=args.bpm, bars=args.bars)
 
 
 def build_messages(args) -> list[dict[str, str]]:
-    return build_api_messages(bpm=args.bpm, bars=args.bars)
+    return build_lyric_messages(bpm=args.bpm, bars=args.bars)
 
 
 def should_use_chat_template(base_model: str, prompt_format: str) -> bool:

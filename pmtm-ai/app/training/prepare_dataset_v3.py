@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from app.lyric_prompts import TARGET_BARS, build_api_messages
+from app.lyric_prompts import TARGET_BARS, build_messages
 from app.genre_rules import get_genre_and_syllable_range
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes
@@ -198,7 +198,7 @@ def build_record(lines: list[str], genre: str) -> dict:
     bpm = 90.0 if genre == "붐뱁" else 140.0
 
     return {
-        "messages": build_api_messages(
+        "messages": build_messages(
             bpm=bpm,
             bars=TARGET_BARS,
             assistant=assistant_content

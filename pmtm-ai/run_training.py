@@ -49,7 +49,7 @@ def _bootstrap_experiment_name(argv: list[str]) -> None:
 _bootstrap_experiment_name(sys.argv[1:])
 
 from app.paths import DATA_DIR, EXPERIMENT_NAME, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
-from app.lyric_prompts import build_api_messages
+from app.lyric_prompts import build_messages
 
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
@@ -323,8 +323,8 @@ def run_eval():
     model.eval()
 
     test_prompts = [
-        build_api_messages(bpm=90),
-        build_api_messages(bpm=95),
+        build_messages(bpm=90),
+        build_messages(bpm=95),
     ]
 
     for messages in test_prompts:

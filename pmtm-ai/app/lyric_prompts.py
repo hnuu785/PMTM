@@ -3,7 +3,7 @@ from app.genre_rules import get_genre_and_syllable_range
 TARGET_BARS = 8
 
 
-def build_api_user_prompt(
+def build_user_prompt(
     *,
     bpm: float | None = None,
     bars: int = TARGET_BARS,
@@ -22,7 +22,7 @@ def build_api_user_prompt(
     return base_prompt
 
 
-def build_api_messages(
+def build_messages(
     *,
     bpm: float | None = None,
     bars: int = TARGET_BARS,
@@ -31,12 +31,8 @@ def build_api_messages(
 ) -> list[dict[str, str]]:
     messages = [
         {
-            "role": "system",
-            "content": "You are a professional Korean rap lyricist. Your task is to write rap lyrics based on the user's constraints.",
-        },
-        {
             "role": "user",
-            "content": build_api_user_prompt(
+            "content": build_user_prompt(
                 bpm=bpm, bars=bars, rhyme_scheme=rhyme_scheme
             ),
         },

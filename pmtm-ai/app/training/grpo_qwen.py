@@ -15,7 +15,7 @@ from transformers import TrainerCallback
 from app.training.train_utils import setup_training_env
 from trl import GRPOConfig, GRPOTrainer
 
-from app.lyric_prompts import TARGET_BARS, build_api_messages
+from app.lyric_prompts import TARGET_BARS, build_messages
 from app.paths import MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
 from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
@@ -194,7 +194,7 @@ def build_prompts(df=None) -> list[list[dict[str, str]]]:
     학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
     """
     return [
-        build_api_messages(bpm=bpm, bars=TARGET_BARS)
+        build_messages(bpm=bpm, bars=TARGET_BARS)
         for bpm in GRPO_BPMS
     ]
 
