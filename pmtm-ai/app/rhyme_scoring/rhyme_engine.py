@@ -67,21 +67,39 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
         score = get_line_rhyme_score(actual_lines[i], actual_lines[i+1])
         adj_scores.append(score)
 
+    # 한 줄 건너뛴 쌍(i, i+2)의 라임 점수를 계산
+    skip_scores = []
+    for i in range(actual_len - 2):
+        score = get_line_rhyme_score(actual_lines[i], actual_lines[i+2])
+        skip_scores.append(score)
+
     line_scores = []
     best_match_indexes = [None] * actual_len
 
     for i in range(actual_len):
-        # 2-1) AA 판정
+        # 2-1) AA 판정 (인접 및 한 줄 건너뛴 라임 결합)
         score_L1 = adj_scores[i-1] if i > 0 else 0.0
         score_R1 = adj_scores[i] if i < actual_len - 1 else 0.0
-        adj_max = max(score_L1, score_R1)
 
-        # best_match_index 결정 (인접 라인 중 라임이 더 큰 쪽)
+        score_L2 = skip_scores[i-2] if i > 1 else 0.0
+        score_R2 = skip_scores[i] if i < actual_len - 2 else 0.0
+        skip_max = max(score_L2, score_R2)
+
+        # 인접 라인은 1.0 가중치, 건너뛴 라임은 0.2 가중치 적용하여 최댓값 선택
+        adj_max = max(score_L1, score_R1, 0.2 * skip_max)
+
+        # best_match_index 결정 (인접 라인 우선, 없으면 건너뛴 라인)
         if adj_max > 0.0:
-            if score_L1 >= score_R1 and i > 0:
-                best_match_indexes[i] = i - 1
-            elif score_R1 > score_L1 and i < actual_len - 1:
-                best_match_indexes[i] = i + 1
+            if score_L1 > 0.0 or score_R1 > 0.0:
+                if score_L1 >= score_R1 and i > 0:
+                    best_match_indexes[i] = i - 1
+                elif score_R1 > score_L1 and i < actual_len - 1:
+                    best_match_indexes[i] = i + 1
+            elif skip_max > 0.0:
+                if score_L2 >= score_R2 and i > 1:
+                    best_match_indexes[i] = i - 2
+                elif score_R2 > score_L2 and i < actual_len - 2:
+                    best_match_indexes[i] = i + 2
 
         # 2-2) AAA 판정
         consec_3_cases = []

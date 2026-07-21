@@ -11,8 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from app.lyric_prompts import TARGET_BARS, build_messages
 from app.genre_rules import get_genre_and_syllable_range
 from app.paths import DATA_DIR
-from app.rhyme_scoring.phonetics_utils import get_phonemes
-from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
 from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
@@ -65,59 +64,7 @@ def ending_word(line: str) -> str:
     return line_tokens[-1] if line_tokens else ""
 
 
-def int_to_korean(n: int) -> str:
-    if n == 0:
-        return "영"
-    units = ["", "십", "백", "천"]
-    big_units = ["", "만", "억", "조"]
-    digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
-    
-    num_str = str(n)
-    parts = []
-    rev_str = num_str[::-1]
-    for i in range(0, len(rev_str), 4):
-        chunk = rev_str[i:i+4]
-        chunk_val = ""
-        for j, digit in enumerate(chunk):
-            d = int(digit)
-            if d > 0:
-                if d == 1 and j > 0:
-                    digit_name = ""
-                else:
-                    digit_name = digits[d]
-                chunk_val = digit_name + units[j] + chunk_val
-        if chunk_val:
-            parts.append(chunk_val + big_units[i // 4])
-    
-    return "".join(reversed(parts))
 
-
-def count_syllables(line: str) -> int:
-    tokens = re.findall(r"[가-힣]+|[A-Za-z]+|\d+", line)
-    total_syllables = 0
-    for tok in tokens:
-        if "가" <= tok[0] <= "힣":
-            total_syllables += len(tok)
-        elif tok.lower() in ENGLISH_RHYME_STOPWORDS:
-            total_syllables += 1
-        elif tok.isdigit():
-            try:
-                korean_num = int_to_korean(int(tok))
-                total_syllables += len(korean_num)
-            except Exception:
-                total_syllables += len(tok)
-        else:
-            try:
-                phonemes = get_phonemes(tok)
-                if phonemes:
-                    total_syllables += len(phonemes)
-                else:
-                    vowels = re.findall(r"[aeiouyAEIOUY]", tok)
-                    total_syllables += max(1, len(vowels))
-            except Exception:
-                vowels = re.findall(r"[aeiouyAEIOUY]", tok)
-                total_syllables += max(1, len(vowels))
-    return total_syllables
 
 
 def line_length(line: str) -> int:

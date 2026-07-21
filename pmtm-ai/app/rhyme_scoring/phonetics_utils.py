@@ -319,3 +319,56 @@ def normalize_pronunciation(text: str) -> list[dict]:
 def get_phonemes(text: str) -> list[dict]:
     """기존 인터페이스 유지 — rhyme_engine에서 import."""
     return normalize_pronunciation(text)
+
+
+def int_to_korean(n: int) -> str:
+    if n == 0:
+        return "영"
+    units = ["", "십", "백", "천"]
+    big_units = ["", "만", "억", "조"]
+    digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+    
+    num_str = str(n)
+    parts = []
+    rev_str = num_str[::-1]
+    for i in range(0, len(rev_str), 4):
+        chunk = rev_str[i:i+4]
+        chunk_val = ""
+        for j, digit in enumerate(chunk):
+            d = int(digit)
+            if d > 0:
+                if d == 1 and j > 0:
+                    digit_name = ""
+                else:
+                    digit_name = digits[d]
+                chunk_val = digit_name + units[j] + chunk_val
+        if chunk_val:
+            parts.append(chunk_val + big_units[i // 4])
+    
+    return "".join(reversed(parts))
+
+
+def count_syllables(line: str) -> int:
+    tokens = re.findall(r"[가-힣]+|[A-Za-z]+|\d+", line)
+    total_syllables = 0
+    for tok in tokens:
+        if "가" <= tok[0] <= "힣":
+            total_syllables += len(tok)
+        elif tok.isdigit():
+            try:
+                korean_num = int_to_korean(int(tok))
+                total_syllables += len(korean_num)
+            except Exception:
+                total_syllables += len(tok)
+        else:
+            try:
+                phonemes = get_phonemes(tok)
+                if phonemes:
+                    total_syllables += len(phonemes)
+                else:
+                    vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                    total_syllables += max(1, len(vowels))
+            except Exception:
+                vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                total_syllables += max(1, len(vowels))
+    return total_syllables

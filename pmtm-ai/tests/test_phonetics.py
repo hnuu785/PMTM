@@ -19,8 +19,17 @@ else:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.rhyme_scoring.phonetics_utils import CODA_GROUPS, VOWEL_GROUPS, get_phonemes
-from app.rhyme_scoring.rhyme_engine import calculate_syllable_score, get_line_rhyme_score
+from app.rhyme_scoring.phonetics_utils import (
+    CODA_GROUPS,
+    VOWEL_GROUPS,
+    get_phonemes,
+    count_syllables,
+)
+from app.rhyme_scoring.rhyme_engine import (
+    calculate_syllable_score,
+    get_line_rhyme_score,
+    calculate_line_scores,
+)
 
 
 failures: list[str] = []
@@ -98,7 +107,16 @@ check("숫자만 -> []", get_phonemes("12345") == [])
 check("특수문자만 -> []", get_phonemes("!@#$%") == [])
 
 
-# ─── 4. 음절 라임 점수 (가중치 0.8*v + 0.2*c) ─────────────
+# ─── 3.5 음절 수 계산 (count_syllables) ──────────────────────
+print("\n=== 음절 수 계산 ===")
+check("count_syllables('바다') = 2", count_syllables("바다") == 2, f"got {count_syllables('바다')}")
+check("count_syllables('123') = 4 (백이십삼)", count_syllables("123") == 4, f"got {count_syllables('123')}")
+check("count_syllables('go') = 1 (영어 발음 분석)", count_syllables("go") == 1, f"got {count_syllables('go')}")
+check("count_syllables('apple') = 2 (영어 일반)", count_syllables("apple") == 2, f"got {count_syllables('apple')}")
+check("count_syllables('hello, world!') = 4", count_syllables("hello, world!") == 4, f"got {count_syllables('hello, world!')}")
+
+
+# ─── 4. 음절 라임 점수 (Vowel 100%) ─────────────
 print("\n=== 음절 라임 점수 ===")
 
 gang = get_phonemes("강")[0]   # {ㅏ, ㅇ}
@@ -177,6 +195,20 @@ for a, b in [("내일 가자", "오늘 가자"),
              ("hello", "world")]:
     s = get_line_rhyme_score(a, b)
     check(f"'{a}' ↔ '{b}' in [0,1]", 0.0 <= s <= 1.0, f"got {s}")
+
+
+# ─── 5.5 벌스 단위 라인 점수 (건너뛴 라임 포함) ───────────────
+print("\n=== 벌스 단위 라인 점수 ===")
+lines = ["강", "봄", "방", "마차", "기차"]
+# 0번('강') - 2번('방')은 한 줄 건너뛰어 라임 (점수 0.12, 매치 인덱스 각각 2, 0)
+# 3번('마차') - 4번('기차')은 인접 라임 (점수 0.7333, 매치 인덱스 각각 2, 3)
+# 1번('봄')은 라임 없음 (점수 0.0, 매치 인덱스 None)
+scores, best_indexes = calculate_line_scores(lines)
+check("건너뛴 라임 점수 산정 (A - B - A) = 0.12", approx(scores[0], 0.12), f"got {scores[0]}")
+check("건너뛴 라임 최적 매치 인덱스 = 2", best_indexes[0] == 2, f"got {best_indexes[0]}")
+check("라임이 없는 라인 점수 = 0.0", approx(scores[1], 0.0), f"got {scores[1]}")
+check("인접 라임 점수 산정 = 0.7333", approx(scores[3], 0.7333), f"got {scores[3]}")
+check("인접 라임 최적 매치 인덱스 = 2", best_indexes[3] == 2, f"got {best_indexes[3]}")
 
 
 # ─── 6. 그룹 정의 sanity ─────────────────────────────────
