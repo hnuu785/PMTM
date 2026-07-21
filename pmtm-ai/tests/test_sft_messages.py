@@ -42,7 +42,7 @@ class SftMessagesTests(unittest.TestCase):
 
         messages = record["messages"]
         self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
-        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("10~14 범위 내로", messages[0]["content"])
         self.assertIn("1. (2음절) line 1", messages[1]["content"])
         self.assertIn("8. (2음절) line 8", messages[1]["content"])

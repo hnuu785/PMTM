@@ -111,7 +111,7 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate_for_api.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("10~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_use_training_prompt_shape(self):
@@ -127,7 +127,7 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("10~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_omit_bpm_when_unspecified(self):
@@ -135,7 +135,7 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("14~18 범위 내로", messages[0]["content"])
 
 

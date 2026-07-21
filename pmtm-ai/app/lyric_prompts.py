@@ -12,9 +12,9 @@ def build_user_prompt(
     g_name, min_s, max_s = get_genre_and_syllable_range(bpm)
     target_syllables = f"{min_s}~{max_s}"
     base_prompt = (
-        f"랩을 작성해주세요. 한 줄당 한 마디 규칙을 지켜 {bars}마디로 구성해야 하며, "
-        f"마디 당 음절 수는 {target_syllables} 범위 내로 조절해주세요. "
-        f"각 마디 끝 단어 끼리는 라임이 있게 해주세요."
+        f"{g_name} 장르의 한국어 랩 가사를 작성해 주세요. "
+        f"한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, "
+        f"마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
     )
 
     if rhyme_scheme:

@@ -34,14 +34,14 @@ class GrpoMessagesTests(unittest.TestCase):
         # 1st prompt (bpm=90, 붐뱁)
         msg1 = prompts[0]
         self.assertEqual([m["role"] for m in msg1], ["user"])
-        self.assertIn("랩을 작성해주세요", msg1[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", msg1[0]["content"])
         self.assertIn("10~14 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
         # 2nd prompt (bpm=140, 트랩)
         msg2 = prompts[1]
         self.assertEqual([m["role"] for m in msg2], ["user"])
-        self.assertIn("랩을 작성해주세요", msg2[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", msg2[0]["content"])
         self.assertIn("14~18 범위 내로", msg2[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg2[0]["content"])
 
@@ -50,7 +50,7 @@ class GrpoMessagesTests(unittest.TestCase):
         messages = build_messages(bpm=70)
         self.assertEqual(len(messages), 1)
         self.assertEqual([m["role"] for m in messages], ["user"])
-        self.assertIn("랩을 작성해주세요", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("14~18 범위 내로", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
