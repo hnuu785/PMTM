@@ -35,7 +35,7 @@ class GrpoMessagesTests(unittest.TestCase):
         msg1 = prompts[0]
         self.assertEqual([m["role"] for m in msg1], ["user"])
         self.assertIn("한국어 랩 가사를 작성해 주세요", msg1[0]["content"])
-        self.assertIn("10~14 범위 내로", msg1[0]["content"])
+        self.assertIn("7~14 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
         # 2nd prompt (bpm=140, 트랩)

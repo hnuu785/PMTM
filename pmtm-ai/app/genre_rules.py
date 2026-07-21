@@ -9,7 +9,7 @@ def get_genre_and_syllable_range(bpm: float | None) -> tuple[str, int, int]:
     
     # 60 ~ 80 BPM 범위는 하프타임으로 간주하여 2배로 계산
     judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-    if judgment_bpm < 110:
-        return "붐뱁", 10, 14
+    if judgment_bpm < 115:
+        return "붐뱁", 7, 14
     else:
         return "트랩", 14, 18
