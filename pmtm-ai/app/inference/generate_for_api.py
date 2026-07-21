@@ -26,7 +26,7 @@ def parse_args():
         help="Override tokenizer id/path. Useful when the base model cache lacks tokenizer files.",
     )
     p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
-    p.add_argument("--max-new-tokens", type=int, default=180, help="Maximum generated tokens")
+    p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.85, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=0.92, help="Top-p sampling")
     p.add_argument(

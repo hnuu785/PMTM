@@ -24,7 +24,7 @@ def parse_args():
     p.add_argument("--loudness", type=float, help="Loudness in dB")
     p.add_argument("--valence", type=float, help="Valence score (0-1)")
     p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
-    p.add_argument("--max-new-tokens", type=int, default=220, help="Maximum generated tokens")
+    p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=0.9, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=0.95, help="Top-p sampling")
     p.add_argument(

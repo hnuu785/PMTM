@@ -15,8 +15,29 @@ def calculate_syllable_score(s1, s2):
         
     return v_score
 
+def _match_with_offset(p1: list[dict], p2: list[dict], offset1: int, offset2: int) -> float:
+    sub_p1 = p1[:-offset1] if offset1 > 0 else p1
+    sub_p2 = p2[:-offset2] if offset2 > 0 else p2
+    
+    min_len = min(len(sub_p1), len(sub_p2), 3)
+    if min_len <= 0:
+        return 0.0
+        
+    total_score = 0.0
+    for i in range(1, min_len + 1):
+        s1 = sub_p1[-i]
+        s2 = sub_p2[-i]
+        score = calculate_syllable_score(s1, s2)
+        
+        weight = 1.0 if i == 1 else (0.5 if i == 2 else 0.3)
+        total_score += score * weight
+        
+    max_possible = sum([1.0 if i == 1 else (0.5 if i == 2 else 0.3) for i in range(1, min_len + 1)])
+    return total_score / max_possible if max_possible > 0 else 0.0
+
+
 def get_line_rhyme_score(line1, line2):
-    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절)"""
+    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절, 오프셋 1 슬라이딩 허용)"""
     # 0) 어미/동일 단어 단순 반복 감점: 마지막 어절이 철자법상 완전히 동일한 경우 0점 처리
     w1 = line1.strip().split()[-1] if line1.strip().split() else ""
     w2 = line2.strip().split()[-1] if line2.strip().split() else ""
@@ -34,23 +55,16 @@ def get_line_rhyme_score(line1, line2):
     if not p1 or not p2:
         return 0.0
     
-    # 끝에서부터 비교
-    min_len = min(len(p1), len(p2), 3)
-    total_score = 0.0
+    # 1) 오프셋 0 (우측 정렬 매칭)
+    score_offset_0 = _match_with_offset(p1, p2, 0, 0)
     
-    for i in range(1, min_len + 1):
-        s1 = p1[-i]
-        s2 = p2[-i]
-        score = calculate_syllable_score(s1, s2)
-        
-        # 가중치: 가장 끝 음절(1번째)이 가장 중요함
-        weight = 1.0 if i == 1 else (0.5 if i == 2 else 0.3)
-        total_score += score * weight
-        
-    # 정규화
-    max_possible = sum([1.0 if i == 1 else (0.5 if i == 2 else 0.3) for i in range(1, min_len + 1)])
+    # 2) 오프셋 1 (p1 끝 1음절 흘림 - 20% 감점 페널티)
+    score_offset_1_p1 = _match_with_offset(p1, p2, 1, 0) * 0.8 if len(p1) > 1 else 0.0
     
-    return round(total_score / max_possible, 4) if max_possible > 0 else 0.0
+    # 3) 오프셋 1 (p2 끝 1음절 흘림 - 20% 감점 페널티)
+    score_offset_1_p2 = _match_with_offset(p1, p2, 0, 1) * 0.8 if len(p2) > 1 else 0.0
+    
+    return round(max(score_offset_0, score_offset_1_p1, score_offset_1_p2), 4)
 
 def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[int | None]]:
     """

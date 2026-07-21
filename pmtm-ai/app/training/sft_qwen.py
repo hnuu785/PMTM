@@ -130,7 +130,7 @@ def train_sft():
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=8,
-        num_train_epochs=3,
+        num_train_epochs=6,
         learning_rate=7e-5,
         bf16=use_bf16,
         fp16=use_fp16,
