@@ -191,7 +191,8 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
 def build_record(lines: list[str], genre: str) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
-        formatted_lines.append(f"{i}. {line}")
+        syllables = count_syllables(line)
+        formatted_lines.append(f"{i}. ({syllables}음절) {line}")
 
     assistant_content = "\n".join(formatted_lines)
     bpm = 90.0 if genre == "붐뱁" else 140.0
