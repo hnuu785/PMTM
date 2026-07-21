@@ -1,4 +1,4 @@
-title,artist,spotify_id,lyrics,bpm,energy,danceability,loudness,valence,rhyme_density,rhyme_density_old
+﻿title,artist,spotify_id,lyrics,bpm,energy,danceability,loudness,valence,rhyme_density,rhyme_density_old
 Why,Supreme Team,5pYEwyxy945VZAOT0UoXeh,"당연히 난 장난이거나
 아님 잠깐 나에게 뭔가 삐친 게 있겠지 하고 착각 했어
 툴툴 대는 네 말투, 줄어든 만남의 횟수
@@ -34,7 +34,7 @@ Why,Supreme Team,5pYEwyxy945VZAOT0UoXeh,"당연히 난 장난이거나
 전부 다 밀어내야 됐는지
 한번만 더 물어볼게
 한번만 더 대답해
-한번만 다시 생각해",83.0,0.856,0.684,-2.676,0.343,0.3625,0.346
+한번만 다시 생각해",117.027,0.856,0.684,-2.676,0.343,0.3625,0.346
 Unknowingly,Supreme Team,4Oq5kT6QYVJgJwUjcdKJiU,"Yeah, 눈 딱감고 넘어갈까
 뭘 물어보기도 겁이나고
 너와 그 사람 같이 있는 상상에 밤새 머리 아퍼
@@ -74,7 +74,7 @@ Unknowingly,Supreme Team,4Oq5kT6QYVJgJwUjcdKJiU,"Yeah, 눈 딱감고 넘어갈�
 난 놓칠 수 없어
 그 사람이 좋아서
 아무리 날 무시해도
-버틸래 이렇게라도",111.0,0.755,0.653,-6.129,0.397,0.5497,0.5347
+버틸래 이렇게라도",125.02,0.755,0.653,-6.129,0.397,0.5497,0.5347
 Dang Dang Dang,Supreme Team,3Yf5Ca2EwSBI7wQIdGEPuR,"불이야 불, 우리가 나타났을 때 전화 안 해도 돼, one-one-nine
 보석처럼 이 자리를 빛낼 때 baby say ""one more time""
 남자들은 무관심하다가도 어느샌가 내 어깨에 손을 올려
@@ -291,7 +291,7 @@ why,Supreme Team,3HXEvcNNnqJfpg4GtfJL2g,"당연히 난 장난이거나
 전부 다 밀어내야 됐는지
 한번만 더 물어볼게
 한번만 더 대답해
-한번만 다시 생각해",83.0,0.856,0.684,-2.676,0.343,0.3625,0.346
+한번만 다시 생각해",117.027,0.856,0.684,-2.676,0.343,0.3625,0.346
 Tired,Supreme Team,5OUq9SLuUf94xHNV0l5QUf,"모두가 하품해, 다 짠 듯이
 지하철 공짜 newspaper 뒤로 피로를 감추지
 졸다가 앞 사람에게 인사를 해 깍듯이
@@ -1653,7 +1653,7 @@ So DJ spin that, 걸어봐 기대, cuz I'm Veteran
 팬들은 느껴 이젠, 넌 fake rappers
 바보 같은 홍대 놈들은 알아서 걸려
 From the gutter, 이젠 like stunner
-기다린 90' kids back, 이제 난 trend setter",92.0,0.899,0.42,-5.446,0.193,0.4241,0.1756
+기다린 90' kids back, 이제 난 trend setter",132.016,0.899,0.42,-5.446,0.193,0.4241,0.1756
 "NO ROOF (feat. Colde, Khakii)",Ahn Byeong Woong,562W1AKG5vHVov4VXgh8hc,"Oh, 쟤넨 왜 이리 예뻐 형형 색의 benzo
 I want that La Ferrari on the 도산대로
 Artek Artemite USM 데살토
@@ -1735,7 +1735,7 @@ We've been mobbing' wavy season
 쉴 시간 없어 keep tight
 Yeah, that's right
 It's so tight
-Keep it tight",172.0,0.722,0.605,-7.049,0.801,0.3357,0.0923
+Keep it tight",112.758,0.722,0.605,-7.049,0.801,0.3357,0.0923
 Dream girl,Ahn Byeong Woong,4k032jvIta00Jak0i9z90R,"You're my dream girl, day or night, yeah
 볼 때마다 잠들어 all the time, yeah
 처음부터 I know she want to ride with me
@@ -2224,7 +2224,7 @@ LOVE STORY,Epik High,1hV2SwB1pcFXZgYG9Sq2J7,"잊을 때도 됐는데
 필연이라 믿던 첫 만남부터
 악연이라며 돌아선 마지막까지도
 우린 서로 마주 보는 거울이었지
-서로가 던진 눈빛에 깨질 때까지도",94.0,0.12,0.498,-17.721,0.338,0.2819,0.2701
+서로가 던진 눈빛에 깨질 때까지도",121.187,0.12,0.498,-17.721,0.338,0.2819,0.2701
 Rain Song (Feat. Colde),Epik High,2qrDQX9IvOhetvjUcwPtmb,"술이 물처럼 넘어가네
 오늘따라
 몸이 예전 같지 않은 걸 내 마음이 모르나 봐
@@ -2278,7 +2278,7 @@ One (feat. 지선),Epik High,2tSPS5dRintqVulKAKni2T,"그대 눈물이 볼에 쏟
 내가 고장난 그 몸의 흉터
 산산조각난 그 혼의 숨겨버린
 눈물도 지워줄게요
-그대 손을 내 손에 움켜쥐고 믿어줄게요",135.0,0.933,0.557,-3.7,0.435,0.6049,0.6366
+그대 손을 내 손에 움켜쥐고 믿어줄게요",110.946,0.933,0.557,-3.7,0.435,0.6049,0.6366
 Can You Hear My Heart (feat. LEE HI),Epik High,7n5eQJYX7e6H5gkzgyEfQG,"널 잊으려 말을 아끼다가
 정말 잊었다며 결국 너 얘기
 잊으려 하고 있었다는 것도
@@ -2329,7 +2329,7 @@ Don't Hate Me,Epik High,3MWKd1ae7ZM6IiDODVGC8r,"나만 달달달 볶아, 실수�
 이런 비호감, 공공의 적인 나와
 숨만 쉬면 논란, 공공의 껌인 나와
 도마 위에서 춤을 추며 즐기는 너
-취향 하나 참 죽이는 너",155.0,0.184,0.571,-8.254,0.887,0.5797,0.5701
+취향 하나 참 죽이는 너",133.997,0.184,0.571,-8.254,0.887,0.5797,0.5701
 Fly (feat. Amin. J),Epik High,3N17JQ2yJjQTUOt706Uj6h,"힘들죠? (힘들죠?)
 오늘도 잔인한 세상은 너를 비웃고
 거울 앞에서도 기죽고
@@ -2493,7 +2493,7 @@ Pay it no mind
 정상이 아니지 내가 찾고 있던 고지는
 돈보다 명예, 명예보단 가족애
 그 때문에 손해를 본대도
-여유와 행복을 난 선택",97.0,0.732,0.626,-8.802,0.0594,0.4236,0.3512
+여유와 행복을 난 선택",130.006,0.732,0.626,-8.802,0.0594,0.4236,0.3512
 Rocket,OHDAMRYUL,1hJK5WHRIfNpy6Z0r2kBls,"네 기억들이 흐르면
 늘어가는 빈 공간에
 다신 담을 순 없을 테니
@@ -3046,7 +3046,7 @@ Say,YOON MIRAE,1DwTZcAyaCzl3NEXApFYsg,"햇살 가득 내리던 날도
 가깝지만 너무 멀었어
 몰래 보는 것도 숨이 차올라
 혼자 두긴 너무 무거운 네 맘
-그 전부가 나였으면 좋겠어",127.0,0.742,0.548,-5.741,0.31,0.2216,0.2089
+그 전부가 나였으면 좋겠어",122.007,0.742,0.548,-5.741,0.31,0.2216,0.2089
 Breath,YOON MIRAE,05ZsxONrFyGyrc8hu7EGWn,"내 주머니에 네 손이 있었을 때
 그랬다 이맘때쯤
 Coffee가 식어
@@ -4076,7 +4076,7 @@ YouTube이 또 새로
 가고 싶으신 데로 가주세요 하고선
 잡았지 택시
 난 가능해 트립
-이세돌 없이",75.0,0.016,0.448,-24.127,0.181,0.2437,0.2225
+이세돌 없이",75,0.016,0.448,-24.127,0.181,0.2437,0.2225
 "Can't wait (Feat. Bassagong, oygli, Paloalto)", jambino,70ovkw2BOrFTtxdXOE0G0S,"Call me 911 문제아냐
 Virus도 발등에 fire yo
 부리나케 뛰어 모자랄 판에
@@ -4162,7 +4162,7 @@ Pop 비타민 ABC
 나 낳고 처음이시데레레레
 쉬어 이제 쉬어
 내가 이제 지켜줘야겠어
-두선아 이제",145.0,0.969,0.66,-6.003,0.316,0.3594,0.2408
+두선아 이제",145,0.969,0.66,-6.003,0.316,0.3594,0.2408
 Acrobat,Gwangil Jo,0k21uOz3txTfyA1a91QWTr,"돈 되는 song 그 박에 내가 추는 twist
 Deep 해진 기운 탓에 쟤네는 챙겨야 돼 품위를
 여긴 hip-hop 사는 곳이 아냐 거기 ballad rapper
@@ -6156,7 +6156,7 @@ These day
 각자의 시계를 꺼낸 채
 아낌없이 모래알 쏟네 yeah uh
 평생 근사한 날만 준대도
-우리한테 돌아갈 마음뿐이야",97.0,0.6,0.756,-9.658,0.12,0.3268,0.2521
+우리한테 돌아갈 마음뿐이야",119.988,0.6,0.756,-9.658,0.12,0.3268,0.2521
 No you can't,ZICO,3uehjX1ljB40ITtieBbOXW,"누가 예상이나 했겠어
 콩알만 한 애송이에서
 손꼽히는 top ranker
@@ -6340,7 +6340,7 @@ We always say, 나중에 그 나중에를 위해
 남의 눈에 좋은 사람이기 전에
 나 자신한테 먼저 화해를 청해
 어렵다는 거 모두가 알아
-이번이 처음 살아 보는 거잖아",90.0,0.8,0.557,-8.477,0.582,0.3102,0.2784
+이번이 처음 살아 보는 거잖아",135.47,0.8,0.557,-8.477,0.582,0.3102,0.2784
 Eureka (Feat. Zion.T),ZICO,6SOPqWSAZEBJzBTPNCixin,"Oh god, she's hot, 눈에 딱 들어와
 들어갈 덴 들어가고 나올 덴 나온 여자
 Tight 한 위아래 입체감에 뻑 가
@@ -6368,7 +6368,7 @@ Sexy, can you be my 새색시
 너의 조수석 승차를 원해
 난 허우대 건장하고 돈 잘 버는 영계
 Monday to Sunday, 너랑 같이 있어 sexy
-하룻밤 아니 다음날도, uh",120.0,0.504,0.947,-6.143,0.64,0.325,0.3152
+하룻밤 아니 다음날도, uh",110.51,0.504,0.947,-6.143,0.64,0.325,0.3152
 She`s a Baby,ZICO,5uAixcGa446kHFJ8ZSYcjm,"믿을 수가 없어
 난생 처음인 걸
 이만큼 쏟아부었던 적
@@ -6585,7 +6585,7 @@ Idea 바닥나버린 A&R team 내 걸 motive 삼길
 앞으로도 난 나이 들어도
 날 함부로 대하는 놈들 안 봐줘
 날 저격할 속셈이라면 받들어 총
-Yes, I'm back on the microphone, uh",105.0,0.866,0.695,-7.534,0.0383,0.3844,0.3022
+Yes, I'm back on the microphone, uh",137.018,0.866,0.695,-7.534,0.0383,0.3844,0.3022
 wish,CHANGMO,2iGE15tDX1YR1uegNyxaB3,"쌈마이 삶에도 볕들 날
 오긴 하네, 젠장, 오늘 밤
 제게 말이 안 되는 일이 일어났어요 엄마
@@ -6605,7 +6605,7 @@ Yo, 형이 계약금도 준대, uh
 아빠가 시장 사람들에게 말씀할 수도 있으니까
 일단은 비밀로 햇 (쉿)
 밥은 잘 챙기니 걱정 마
-조만간 덕소 갈게, bye mom",130.0,0.989,0.516,-7.206,0.149,0.4362,0.3824
+조만간 덕소 갈게, bye mom",135.053,0.989,0.516,-7.206,0.149,0.4362,0.3824
 METEOR,CHANGMO,4g6XOg9rvB55GCTJcYchOG,"모두?그에게 말해, ""또 왔네"" (새꺄 whut)
 죽지?않고 왔다 이렇게 (새꺄 뭐)
 Snacky Chan의 line을 빌릴래
@@ -7906,7 +7906,7 @@ Hey baby, 아직 몰라
 비밀 싫은데 왜 저질러야 시원할까, yeah
 교회 들어가고 나오면 또 이어나가, yeah
 나 같은 새끼는 차에 치여 뒤져봐야 해
-뒤져봐야 해",100.0,0.241,0.737,-16.034,0.345,0.3417,0.3002
+뒤져봐야 해",100,0.241,0.737,-16.034,0.345,0.3417,0.3002
 SUN GOES DOWN (Prod. R.Tee),JUSTHIS,1pzMTqvKABFaYYde4coFSg,"예전에는 작업실에서 팩 소주에 메로나를 먹었는데
 이제는 쇼미 가사를 LA에서 써
 3년 만에 미국에서 만난 고모 왈
@@ -8934,7 +8934,7 @@ What Should I do,GIRIBOY,4BZuHDcmgmRaAwPd6IO7MY,"너를 만나 나는 점점 미
 내 친구가 너 봤다는 말들 어떻게 설명할래
 진짜 이런 말싸움도 지쳐 이제 그만할게
 우린 운명으로 시작해서 이리 끝날 운명
-이런 얘기 하니 넌 또 울고",112.0,0.127,0.654,-26.641,0.536,0.6043,0.5839
+이런 얘기 하니 넌 또 울고",112,0.127,0.654,-26.641,0.536,0.6043,0.5839
 "I'm Sick (Band Ver.) (Feat. Young B, YUNHWAY, Lil tachi, Han Yo Han, JUSTHIS, Swings)",GIRIBOY,7hI592ZTFArGWQhRPx0JvF,"Drip too hard, 내 친구들 봐
 내 친구들이야, 인물 좀 봐
 인사 오지게 박아, 빡치기 전에
@@ -10081,7 +10081,7 @@ Let it be, yeah, yeah, yeah
 I wake up to the sound of music
 Mother Mary comes to me
 Speaking words of wisdom
-Let it be, let it be",139.936,0.584,0.518,-7.951,0.182,0.281,0.0
+Let it be, let it be",139.936,0.584,0.518,-7.951,0.182,0.281,0
 Know,C JAMM,47CBYfoKaKWHnaLDj7Y7kR,"Look, I be swaggin' fuckin' on my couple stairs, yeah
 Gucci, Rollie, rings, links 벗어, yeah, yeah
 Alexander something, 얼른 벗어, yeah, yeah
@@ -12192,7 +12192,7 @@ You are still my everything
 이 나의 마음 안엔
 나뿐만이 아니야
 묻어둔 무언가가 있어",114.183,0.0657,0.303,-21.62,0.241,0.3007,0.2372
-RED STRING (Feat. Yescoba),VINXEN,12KgGv1fmOevABPl2T1a5Z,"There’s a million ways to fall in love i could be the guy for you, tell your friends like swinging for the fence, got your heartpounding like miss ayase, tryna hit it out from the park but I keep missing you, I’ve been running through these chances like a race I can’t undo, but",142.674,0.37,0.406,-10.91,0.208,0.0,0.0
+RED STRING (Feat. Yescoba),VINXEN,12KgGv1fmOevABPl2T1a5Z,"There’s a million ways to fall in love i could be the guy for you, tell your friends like swinging for the fence, got your heartpounding like miss ayase, tryna hit it out from the park but I keep missing you, I’ve been running through these chances like a race I can’t undo, but",142.674,0.37,0.406,-10.91,0.208,0,0
 i,VINXEN,0e5sAiYzGmJTYttnLq0oaA,"있잖아 내가 할 말이 있는데 기다려 줄래
 어려운 말도 듣기 싫은 말도 아닐 텐데
 그니까
@@ -19823,7 +19823,7 @@ And then call out my name, 돈이 내 머리 위에
 필요 없어 이제 시드 머니
 내가 씨앗이고 my money is for my Mom and Granny
 Kinda guilty for stabbin' all these stupid dummies
-But nevermind, I gotta go to—",125.0,0.962,0.655,-6.715,0.14,0.4162,0.236
+But nevermind, I gotta go to—",125,0.962,0.655,-6.715,0.14,0.4162,0.236
 CANVAS (Feat. Fleeky Bang),BLASÉ,3aF7O1Pnh2bjbRgwXwp30B,"(AKUMA)
 Yo, everything dead, get left on read
 You bitch too late, now your homie bleeds
@@ -29557,7 +29557,7 @@ Yeah 어느새 니 집 앞에 문을 열고 나와
 My Song,Basick,3S0yr3EOoFAtWoURnwDKp8,"Ouch, ouch, ouch, I threw out my back
 Ouch, ouch, ouch, it’s a back attack
 Got a flight tomorrow to go back home
-How am I gonna do it with my back? I don’t know",98.071,0.578,0.786,-8.757,0.723,0.3596,1.0
+How am I gonna do it with my back? I don’t know",98.071,0.578,0.786,-8.757,0.723,0.3596,1
 Double Trouble (feat. Innovator),Basick,4vtXx92CwxoLdAAyVl62gE,"이 도시에 내 목소리를 박어
 한 없이 진실된 청춘을 누가 막어
 피가 솟구치는 게임
@@ -31464,7 +31464,7 @@ Soccer play 차붐
 나의 회전은 멈출 일이 없어 (Uh)
 핀을 전부 쓸어 담는 볼링공 (Swag, swag)
 Say adios to world
-난 세상을 항해하는 Columbus",118.0,0.644,0.687,-12.455,0.891,0.246,0.2301
+난 세상을 항해하는 Columbus",118,0.644,0.687,-12.455,0.891,0.246,0.2301
 Pourin’,HAON,06nCl6O5R3TQ0quxCUd68X,"Yeah, a status lifter, the peace maker, walking demolition, a great filter
 Ain't no man gon' stand right next to me
 Say the name, your parents prolly know me
@@ -32069,7 +32069,7 @@ I'ma takin' more risk that's income
 I betted on myself, then doubled up
 They didn't wanna see me getting W
 So I be movin' in silence double R
-Young traveler, when they see me they get paralyzed",141.042,0.468,0.765,-11.39,0.447,0.4691,0.0
+Young traveler, when they see me they get paralyzed",141.042,0.468,0.765,-11.39,0.447,0.4691,0
 Floss (Feat. Uneducated Kid),Lil Moshpit,0qN2yoCk7jWbiiq9Zoymus,"Trappin' trappin' trappin' trappin'
 내 행보는 마치 참이슬
 왜냐면 난 존** fresh
@@ -33767,7 +33767,7 @@ Evеn bad times, they werе worth it
 閑晃的街
 都帶著?的?
 Late-night drives, hands up high
-Speakers bumpin' lofi",126.016,0.301,0.437,-8.519,0.203,0.1343,0.0
+Speakers bumpin' lofi",126.016,0.301,0.437,-8.519,0.203,0.1343,0
 1000 YEARS (Instrumental) (feat. J.Sheon),TABLO,7kDNDlle1mL8wketfU9L6g,"I've been losin' it
 Feelin' low and high
 'Cause I'm down all-day
@@ -33796,7 +33796,7 @@ Evеn bad times, they werе worth it
 閑晃的街
 都帶著?的?
 Late-night drives, hands up high
-Speakers bumpin' lofi",126.016,0.301,0.437,-8.519,0.203,0.1343,0.0
+Speakers bumpin' lofi",126.016,0.301,0.437,-8.519,0.203,0.1343,0
 Don’t Forget,Crush,0THW04vlFAkfflASMFam0t,"따뜻해 볼이 맞닿을 때
 살며시 시린 내 손 잡아줄 때
 차가운 세상에 지친 내 맘을 온기로 감싸네
@@ -33864,7 +33864,7 @@ Where all I really want is to be invested
 But this whole time that I'm stressing (Please)
 Forgive the time it takes, I know in some way you can relate
 Tell me God: is this really now my fate?
-Swear I'm thinking 'bout it every day",73.769,0.0839,0.185,-26.019,0.133,0.4768,0.0
+Swear I'm thinking 'bout it every day",73.769,0.0839,0.185,-26.019,0.133,0.4768,0
 Oasis,Crush,0L26wNt3MUtn7BrTaHGtjj,"난 널 목말라해 (You)
 너무 더워
 물이 필요해, hot in here
@@ -33907,7 +33907,7 @@ Though my dreams during four seasons were all about you
 The fall stays in my room
 After the cold winter, lethargic spring, and sweltering summer
 In a way, I'm doing well, no, I'm not
-My reality is a cruel fall without you, ooh ooh ooh ooh",130.0,0.845,0.688,-4.095,0.453,0.2077,0.1301
+My reality is a cruel fall without you, ooh ooh ooh ooh",130,0.845,0.688,-4.095,0.453,0.2077,0.1301
 Rush Hour (Feat. j-hope of BTS),Crush,5aucVLKiumD89mxVCB4zvS,"Yo, I've been
 Walking on the street, yo
 유엔빌리지에서 한강진역
@@ -33942,7 +33942,7 @@ All about you
 Nеver stop, oh
 너에게 닿길 바래
 I'll sing it for you till the end
-If you stay nеxt to me",146.073,0.429,0.653,-10.473,0.627,0.1515,0.0
+If you stay nеxt to me",146.073,0.429,0.653,-10.473,0.627,0.1515,0
 SOFA,Crush,3dbyyPqdnNZkvPr7PptIRJ,"네가 있던 소파
 앉아 있어, 혼자
 단 한숨도 못 자고
@@ -34434,7 +34434,7 @@ Oh, for sure
 I've been there, I've done that
 So forgotten, down bad
 Thrown away, still somehow
-Found my way, but I need to be strong",120.318,0.736,0.819,-6.504,0.701,0.2153,0.0
+Found my way, but I need to be strong",120.318,0.736,0.819,-6.504,0.701,0.2153,0
 "BAD BAD (Feat. Tabber, Jay Park)",CODE KUNST,2nL60sTHzYNKL8uaStAXDy,"자세를 틀어 more
 Go low
 Oh, low
@@ -34719,7 +34719,7 @@ LP 둘에 EP와 Mixtape
 시대가 어지럽고 갈 데는 줄어가
 더 늦기 전에 보러 가자 별이 수놓은 밤
 인간의 때가 덜 묻은 해안 위에
-너랑 나 잔뜩 취해 헤엄치게, let’s dip",132.699,0.718,0.62,-9.0,0.385,0.3678,0.3673
+너랑 나 잔뜩 취해 헤엄치게, let’s dip",132.699,0.718,0.62,-9,0.385,0.3678,0.3673
 HAPPEN,Heize,1MtCOuTy3B6fU72LQPvg16,"우연히 눈을 떠 보니
 이 세상에 태어나 있었고
 하필?네가?있는 곳이었다
@@ -34806,7 +34806,7 @@ Somedays the sun will shine down
 Somedays the moon will cry
 Tomorrow we'll see
 Tomorrow we'll be
-As we go on our way",119.992,0.687,0.604,-5.13,0.504,0.3549,0.0
+As we go on our way",119.992,0.687,0.604,-5.13,0.504,0.3549,0
 Star,Heize,41lw42I7uyqwPEQOPZwcOG,"오늘따라 넌 더 희미해
 그래서 이 밤은 내겐 무의미해
 어두운 밤이 지나 아침이 온대도
@@ -35093,7 +35093,7 @@ Eomeo jeongsineul eotda dwonni
 Dasi nun tteo boni (yeah, yeah)
 Arittaun geudaeyeo my sweetie (yeah, yeah, yeah, yeah)
 So, be my agassi ooh
-Yo, be my agassi ooh",105.617,0.531,0.727,-8.219,0.94,0.4725,0.0
+Yo, be my agassi ooh",105.617,0.531,0.727,-8.219,0.94,0.4725,0
 No.5 (Feat. Crush),PENOMECO,2p5a84BGPn74dPthCMxPkP,"Algo sip-eo neoui label
 Sonmog-eseon
 Al su eobsneun ge beeo iss-eo
@@ -35123,7 +35123,7 @@ Neoneun yeogil nollideus-i geolil geol-eo hyang-gi peotteuline
 Teugbyeolhaji neoegeseo
 Salajiji anhneun tabnoteu
 Give it to me I want it more nae gyeot-e iss-eo
-I'll be there for you better know",96.916,0.955,0.683,-3.432,0.583,0.4178,0.0
+I'll be there for you better know",96.916,0.955,0.683,-3.432,0.583,0.4178,0
 Insomnia,PENOMECO,3SvXRjyVcObPXBcEbgriSQ,"난 아직 그 자리에 혼자 남아있어
 돌아오지 않을 걸 알지만 왠지
 인연이란 게 말이야
@@ -35266,7 +35266,7 @@ Bottega Veneta, weaving on' em
 You get that, that, that-that-that-that
 퍼뜩 대답해 네네네네네네
 Keep on bubblin', bubblin'
-Triple doublin', doublin', fuck it",146.0,0.803,0.541,-4.725,0.442,0.3284,0.1396
+Triple doublin', doublin', fuck it",146,0.803,0.541,-4.725,0.442,0.3284,0.1396
 SODA,PENOMECO,3b2vNCzTLU7641Fc2GGdGq,"넌 내 작은 건반 도레미
 Making melodies, you look at me (eh)
 You're my designer
@@ -37306,7 +37306,7 @@ I see hands in the crowds
 See whites, blacks blazing a pound, jump-jumping around
 Tits, ass bump out her gown
 B-bounce from the ground, hype for the sound
-This verse straight from the morgue",131.028,0.815,0.654,-10.587,0.329,0.608,0.0
+This verse straight from the morgue",131.028,0.815,0.654,-10.587,0.329,0.608,0
 Sunny Day (Feat. Young K (DAY6)),Haha,4gx9eR8Bhv9jKS2rsNvIyy,"대체 내게만 왜 이래 (왜 이래?)
 가끔 이유없이 서럽게
 내가 무너지길 바래 (No way)
@@ -37540,7 +37540,7 @@ Hail Mary that bitch ah
 Hail Mary that bitch yeah
 We just trying to do good ah
 We ain't never had shit ah
-We ain't never had shit",110.001,0.842,0.756,-6.228,0.738,0.389,0.0
+We ain't never had shit",110.001,0.842,0.756,-6.228,0.738,0.389,0
 Legacy (feat. SINCE),KOONTA,7vcygKIFt5ZCqOX1RSA1Bl,"변한 게 없지 넌 안게 없지
 내 나이가 몇이든 이젠 한계 없지
 박치 놈들 내 플로우 다 봤지
@@ -38712,7 +38712,7 @@ Double shout out στο ηχε?ο ρωγμ?
 Προσπερν?ω του? μπ?τσου? π?νω μου ?χω τριακ?σια
 Το αμ?ξι φ?λε π?ει με τριακ?σια
 Τρ?νε σκαμπ?λι, οι μπ?ρε? μπουλντ?ζα
-?χω μια πουτ?να μ?σ' τι? μ?ρκε?, βιτσι?ζα",81.177,0.774,0.239,-9.628,0.0801,0.0535,0.0
+?χω μια πουτ?να μ?σ' τι? μ?ρκε?, βιτσι?ζα",81.177,0.774,0.239,-9.628,0.0801,0.0535,0
 Exiled,Fana,3r2PCy93kmO3KMIUIfQQEo,"음악은 이미 옛날부터 취미생활
 눈에 좀 띈 뒤엔 살짝 현실이 된 말
 허나 일위쟁탈, 흔한 이미지의 탈 보다
@@ -44444,7 +44444,7 @@ Gucci bag, Louis bag, Fendi bag, Chanel bag, Birkin bag
 드디어 내 벌이는 억이야, 우리 매일 가던 롯데리아
 단품 말고 살 수 있어 세트 100개
 근데 너가 없이 무슨 소용이야, ya, ya, ya
-(무슨 소용이야, uh, huck, uh, uh, uh, uh, 억)",140.0,0.251,0.0,6.106,0.0,0.4039,0.2738
+(무슨 소용이야, uh, huck, uh, uh, uh, uh, 억)",0,0.251,0,6.106,0,0.4039,0.2738
 "U (feat. Oxynova, Royal 44)",SUPERBEE,162GeV7HFg7uWs3TK29VYo,"내 앨범 제목이 love 그리고 rap and life
 된 건 because of you 우주를 도는 satellite
 처럼 I tripped 질리지도 않아 day and night
@@ -45246,7 +45246,7 @@ Just me and you and you and me alone
 Wake up in your bedroom and there's nothing left to say
 When I try to talk, you're always playing board games
 I wish I had monopoly over your mind
-I wish I didn't care all the time",131.978,0.672,0.797,-6.135,0.561,0.4635,0.0
+I wish I didn't care all the time",131.978,0.672,0.797,-6.135,0.561,0.4635,0
 Showdown,kaogaii,7n5zEvc42vXgrxsyeTaSBE,"이 귀염둥이들 버릇 못 고쳐 입에 달고 살어 어부바 (바)
 꺼져 여태 누가 업어 키운 적 없지, 난 그냥 내가 직접 쇼부 봐
 금수저 인맥 빽 뭐 하나 없이 여기까지 온 새끼 (Uh)
@@ -46513,7 +46513,7 @@ All new life after you hit delete
 Please!
 
 Altered species
-I'll be your nightmare",95.596,0.205,0.515,-13.385,0.314,0.4799,0.0
+I'll be your nightmare",95.596,0.205,0.515,-13.385,0.314,0.4799,0
 Flower (Feat. Benzamin),NO:EL,50w1OKviRH6Mgf7JiQ0DkB,"They say you want love
 You're  like an evil flower that the cattle will crush
 As  you walk on by
@@ -46534,7 +46534,7 @@ As you walk on by (Evil flower)
 That the cattle will crush
 As you walk on by (Evil flower)
 That the cattle will crush
-As you walk on by (Evil flower)",196.78,0.361,0.486,-7.682,0.5,0.4313,0.0
+As you walk on by (Evil flower)",196.78,0.361,0.486,-7.682,0.5,0.4313,0
 Cold winter (Prod. GRIO),NO:EL,05rtraXV60p22qXHmy2Agu,"Do you even really want me?
 I've been tryna figure out
 I pull the blade through my skin
@@ -46550,7 +46550,7 @@ This medication knocks me out
 All these drugs in my system
 Don't try to give me Narcan now
 I know you never cared
-So just get rid of it",160.017,0.359,0.719,-10.807,0.617,0.129,0.0
+So just get rid of it",160.017,0.359,0.719,-10.807,0.617,0.129,0
 FML (Fuck My Life),NO:EL,2qyMzR8K97gkb28IX8DAWv,"Nice to know ya (Nice), even better to see (Oh yeah)
 Misses Florida, mysterious as me (Yeah)
 California (Cali'), you can't compare the two (No, no, no)
@@ -46564,7 +46564,7 @@ I been here ever since you'd say
 One location, one place unlike the same
 One day I'll get away
 And the next, I believe I could stay here with ya
-I'll be there whenever you say",150.046,0.797,0.555,-2.265,0.159,0.3812,0.0
+I'll be there whenever you say",150.046,0.797,0.555,-2.265,0.159,0.3812,0
 asteroid (Feat. MELOH),NO:EL,2r2v5xpRJe4hdAdC8FRHeB,"Can we keep it on the low right now? Lights out
 Told her, ""Baby, pipe down, no sound""
 It's a total blackout, pop out
@@ -46585,7 +46585,7 @@ Shorty, I been up late, howlin' at the moon
 Didn't even rise 'til about noon
 You don't wanna see me in a bad mood
 Take a lil' bite if I have to
-Stack the fuckin' bodies, gettin' ran through",116.947,0.158,0.391,-16.181,0.175,0.5749,0.0
+Stack the fuckin' bodies, gettin' ran through",116.947,0.158,0.391,-16.181,0.175,0.5749,0
 Immature,NO:EL,5skNVWTumifJA4RNVB6Xj9,"Uh
 You seen me moving on, I bet you was salty
 You think ‘bout Target when you working at Aldi’s
@@ -47309,7 +47309,7 @@ I’m playing with the dreams like a nigga Steve Francis
 I’m only 18 and I’m runnin’ round frantic
 Like will I sink or float? A nigga feeling Titanic
 I’m cut from a different stone, Rosetta can't understand this(uh)
-I’m calling on God and I just pray the Man’ll answer, like",90.379,0.392,0.534,-7.636,0.163,0.427,0.0
+I’m calling on God and I just pray the Man’ll answer, like",90.379,0.392,0.534,-7.636,0.163,0.427,0
 Lemonade,Donutman,3XtCtA3xWO9oasWGLp62qw,"난 매일마다 짜내지 lemonade
 내 머리속에서 나와 내 밑에
 깔리는 조명이 날 빛나게
