@@ -17,7 +17,7 @@ from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
-MIN_RHYME_SCORE = 0.30
+MIN_RHYME_SCORE = 0.40
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28

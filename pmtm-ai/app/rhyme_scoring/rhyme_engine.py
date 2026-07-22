@@ -146,9 +146,21 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
 
 
 def calculate_rhyme_density(lines: list[str]) -> float:
-    """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다."""
+    """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다. (3연속 완전 무라임 구간당 -0.05점 감점)"""
     actual_len = len(lines)
     if actual_len <= 1:
         return 0.0
     line_scores, _ = calculate_line_scores(lines)
-    return sum(line_scores) / actual_len
+    base_density = sum(line_scores) / actual_len
+
+    if actual_len < 3:
+        return round(base_density, 4)
+
+    # 3연속 완전 무라임(line_score == 0.0) 구간 탐지 및 -0.05점 감점
+    no_rhyme_triplets = 0
+    for i in range(actual_len - 2):
+        if line_scores[i] == 0.0 and line_scores[i+1] == 0.0 and line_scores[i+2] == 0.0:
+            no_rhyme_triplets += 1
+
+    penalty = no_rhyme_triplets * 0.05
+    return round(max(0.0, base_density - penalty), 4)
