@@ -22,7 +22,7 @@ A6000(48GB) 같은 단일 GPU 서버에서 그대로 실행 가능.
 필수 패키지 (친구 서버에서 미리 설치):
     pip install "transformers>=4.45" "accelerate>=0.34" "peft>=0.13" \
                 "trl>=0.12" "bitsandbytes>=0.43" "datasets>=2.20" \
-                jamo pronouncing tqdm pandas
+                pronouncing tqdm pandas
     pip install g2pk  # 실패해도 자모 분해 폴백 동작
 """
 
@@ -49,7 +49,7 @@ def _bootstrap_experiment_name(argv: list[str]) -> None:
 _bootstrap_experiment_name(sys.argv[1:])
 
 from app.paths import DATA_DIR, EXPERIMENT_NAME, MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
-from app.lyric_prompts import build_api_messages
+from app.lyric_prompts import build_messages
 
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
@@ -323,8 +323,8 @@ def run_eval():
     model.eval()
 
     test_prompts = [
-        build_api_messages(bpm=90),
-        build_api_messages(bpm=95),
+        build_messages(bpm=90),
+        build_messages(bpm=95),
     ]
 
     for messages in test_prompts:

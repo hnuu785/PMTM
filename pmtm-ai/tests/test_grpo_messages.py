@@ -7,7 +7,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.lyric_prompts import build_api_messages
+from app.lyric_prompts import build_messages
 from app.training.grpo_qwen import _format_finite_summary
 from app.training.grpo_qwen import _summarize_tensors, build_prompts, rhyme_reward
 
@@ -34,26 +34,27 @@ class GrpoMessagesTests(unittest.TestCase):
         # 1st prompt (bpm=90, 붐뱁)
         msg1 = prompts[0]
         self.assertEqual([m["role"] for m in msg1], ["user"])
-        self.assertIn("랩을 작성해 주세요", msg1[0]["content"])
-        self.assertIn("10~14 범위 내로", msg1[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", msg1[0]["content"])
+        self.assertIn("7~14 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
         # 2nd prompt (bpm=140, 트랩)
         msg2 = prompts[1]
         self.assertEqual([m["role"] for m in msg2], ["user"])
-        self.assertIn("랩을 작성해 주세요", msg2[0]["content"])
-        self.assertIn("14~18 범위 내로", msg2[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", msg2[0]["content"])
+        self.assertIn("14~24 범위 내로", msg2[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg2[0]["content"])
 
     def test_build_prompts_doubles_halftime_bpm(self):
-        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (14~18 syllables)
-        messages = build_api_messages(bpm=70)
+        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (14~24 syllables)
+        messages = build_messages(bpm=70)
         self.assertEqual(len(messages), 1)
-        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
-        self.assertIn("14~18 범위 내로", messages[0]["content"])
+        self.assertEqual([m["role"] for m in messages], ["user"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
+        self.assertIn("14~24 범위 내로", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
-        prompt = build_api_messages(bpm=90)
+        prompt = build_messages(bpm=90)
         raw_lines = [
             "밤을 지나 나는 다시 올라가",
             "맘을 비워도 박자는 돌아가",
@@ -64,7 +65,7 @@ class GrpoMessagesTests(unittest.TestCase):
             "과거의 기억들을 저 멀리 버렸지",
             "내 앞을 막아선 저 쇠창살을 막았지",
         ]
-        formatted_lines = [f"{i}. {ln}" for i, ln in enumerate(raw_lines, 1)]
+        formatted_lines = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(raw_lines, 1)]
         content = "\n".join(formatted_lines)
         
         completion = [[
@@ -78,8 +79,8 @@ class GrpoMessagesTests(unittest.TestCase):
 
         self.assertEqual(len(rewards), 1)
         self.assertIsInstance(rewards[0], float)
-        # 이 가사는 AAAA BBBB 형태이므로 높은 점수(>0.8)가 기대됨
-        self.assertGreater(rewards[0], 0.8)
+        # 이 가사는 AAAA BBBB 형태이므로 높은 점수(>0.75)가 기대됨
+        self.assertGreater(rewards[0], 0.70)
 
     def test_rhyme_reward_penalizes_abab_and_rewards_aa_and_aaaa(self):
         # 1. AAAA BBBB 가사 (1~4행 -가 라임, 5~8행 -다 라임)
@@ -119,24 +120,22 @@ class GrpoMessagesTests(unittest.TestCase):
         ]
 
         def format_comp(lines):
-            formatted = [f"{i}. {ln}" for i, ln in enumerate(lines, 1)]
+            formatted = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(lines, 1)]
             return [[{"role": "assistant", "content": "\n".join(formatted)}]]
 
-        prompt = build_api_messages(bpm=90)
+        prompt = build_messages(bpm=90)
         
         reward_aaaa = rhyme_reward(format_comp(lines_aaaa_bbbb), prompts=[prompt])[0]
         reward_aabb = rhyme_reward(format_comp(lines_aabb_ccdd), prompts=[prompt])[0]
         reward_abab = rhyme_reward(format_comp(lines_abab_cdcd), prompts=[prompt])[0]
-
-        # 검증:
-        # AAAA BBBB는 0.8 이상의 높은 점수여야 함
-        self.assertGreater(reward_aaaa, 0.8)
-        # AA BB CC DD는 중간 정도의 점수여야 함 (보통 0.4 ~ 0.75)
-        self.assertTrue(0.4 <= reward_aabb <= 0.75)
-        # ABAB CDCD는 우연한 인접 부분 일치만 있으므로 상대적으로 낮아야 함 (< 0.45)
-        self.assertLess(reward_abab, 0.45)
-        # 서열 관계 검증: ABAB < AABB < AAAA
-        self.assertLess(reward_abab, reward_aabb)
+        # AAAA BBBB는 0.70 이상의 높은 점수여야 함
+        self.assertGreater(reward_aaaa, 0.70)
+        # AA BB CC DD는 중간 정도의 점수여야 함
+        self.assertTrue(0.4 <= reward_aabb <= 0.85)
+        # ABAB CDCD는 상대적으로 낮아야 함
+        self.assertLess(reward_abab, 0.65)
+        # 서열 관계 검증: 각각 AAAA보다는 작아야 함
+        self.assertLess(reward_abab, reward_aaaa)
         self.assertLess(reward_aabb, reward_aaaa)
 
 

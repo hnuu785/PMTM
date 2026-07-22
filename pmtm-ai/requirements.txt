@@ -6,8 +6,8 @@ bitsandbytes>=0.43
 datasets>=2.20
 pandas
 tqdm
-jamo
 pronouncing
+g2pk
 matplotlib
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.32,<1.0

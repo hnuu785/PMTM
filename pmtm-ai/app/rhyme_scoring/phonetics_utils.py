@@ -1,18 +1,16 @@
 import re
 from functools import lru_cache
-from jamo import hangul_to_jamo, j2hcj
+# Use mathematical index decomposition to avoid jamo package dependency.
 
 try:
     from loanword_overrides import MANUAL_LOANWORD_OVERRIDES
 except ImportError:
     from .loanword_overrides import MANUAL_LOANWORD_OVERRIDES
 
-try:
-    from loanword_stopwords import ENGLISH_RHYME_STOPWORDS
-except ImportError:
-    from .loanword_stopwords import ENGLISH_RHYME_STOPWORDS
+
 
 try:
+    # pyrefly: ignore [missing-import]
     from g2pk import G2p
     _g2p_kr_inst = G2p()
 
@@ -23,6 +21,7 @@ except Exception:
     _g2p_kr = None
 
 try:
+    # pyrefly: ignore [missing-import]
     import pronouncing
 except ImportError:
     pronouncing = None
@@ -31,10 +30,10 @@ except ImportError:
 # 유사 모음 군집 (현대 한국어 발음의 유사성 기준)
 VOWEL_GROUPS = [
     {'ㅐ', 'ㅔ', 'ㅖ', 'ㅒ', 'ㅙ', 'ㅚ', 'ㅞ'},  # 에/애/예/얘/왜/외/웨 계열 통합
-    {'ㅗ', 'ㅜ'},
-    {'ㅡ', 'ㅣ'},
     {'ㅏ', 'ㅑ'},
-    {'ㅓ', 'ㅕ'},
+    {'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ'},
+    {'ㅡ', 'ㅜ'},
+    {'ㅜ', 'ㅠ'}
 ]
 
 # 종성(받침) 조음 그룹
@@ -262,8 +261,6 @@ def _english_fallback(word: str) -> list[dict]:
 
 
 def _english_word_to_phonemes(word: str) -> list[dict]:
-    if word.lower() in ENGLISH_RHYME_STOPWORDS:
-        return []
 
     override = _LOANWORD_OVERRIDES.get(word.lower())
     if override is not None:
@@ -279,15 +276,27 @@ def _english_word_to_phonemes(word: str) -> list[dict]:
     return _english_fallback(word)
 
 
+JUNGSEONG = (
+    "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ",
+    "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ",
+)
+JONGSEONG = (
+    "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ",
+    "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ",
+    "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+)
+
+
 def _hangul_to_phonemes(text: str) -> list[dict]:
     out = []
     for ch in text:
         if not ('가' <= ch <= '힣'):
             continue
         try:
-            jamo_str = j2hcj(hangul_to_jamo(ch))
-            v = jamo_str[1]
-            c = jamo_str[2] if len(jamo_str) > 2 else None
+            code = ord(ch) - 0xAC00
+            v = JUNGSEONG[(code % 588) // 28]
+            coda = JONGSEONG[code % 28]
+            c = coda if coda else None
             out.append({'v': v, 'c': c})
         except Exception:
             continue
@@ -314,3 +323,56 @@ def normalize_pronunciation(text: str) -> list[dict]:
 def get_phonemes(text: str) -> list[dict]:
     """기존 인터페이스 유지 — rhyme_engine에서 import."""
     return normalize_pronunciation(text)
+
+
+def int_to_korean(n: int) -> str:
+    if n == 0:
+        return "영"
+    units = ["", "십", "백", "천"]
+    big_units = ["", "만", "억", "조"]
+    digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+    
+    num_str = str(n)
+    parts = []
+    rev_str = num_str[::-1]
+    for i in range(0, len(rev_str), 4):
+        chunk = rev_str[i:i+4]
+        chunk_val = ""
+        for j, digit in enumerate(chunk):
+            d = int(digit)
+            if d > 0:
+                if d == 1 and j > 0:
+                    digit_name = ""
+                else:
+                    digit_name = digits[d]
+                chunk_val = digit_name + units[j] + chunk_val
+        if chunk_val:
+            parts.append(chunk_val + big_units[i // 4])
+    
+    return "".join(reversed(parts))
+
+
+def count_syllables(line: str) -> int:
+    tokens = re.findall(r"[가-힣]+|[A-Za-z]+|\d+", line)
+    total_syllables = 0
+    for tok in tokens:
+        if "가" <= tok[0] <= "힣":
+            total_syllables += len(tok)
+        elif tok.isdigit():
+            try:
+                korean_num = int_to_korean(int(tok))
+                total_syllables += len(korean_num)
+            except Exception:
+                total_syllables += len(tok)
+        else:
+            try:
+                phonemes = get_phonemes(tok)
+                if phonemes:
+                    total_syllables += len(phonemes)
+                else:
+                    vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                    total_syllables += max(1, len(vowels))
+            except Exception:
+                vowels = re.findall(r"[aeiouyAEIOUY]", tok)
+                total_syllables += max(1, len(vowels))
+    return total_syllables

@@ -11,12 +11,33 @@ def calculate_syllable_score(s1, s2):
     if s1['v'] == s2['v']:
         v_score = 1.0
     elif any(s1['v'] in g and s2['v'] in g for g in VOWEL_GROUPS):
-        v_score = 0.8  # 유사 모음 점수
+        v_score = 1.0  # 유사 모음 점수 (1.0으로 통일)
         
     return v_score
 
+def _match_with_offset(p1: list[dict], p2: list[dict], offset1: int, offset2: int) -> float:
+    sub_p1 = p1[:-offset1] if offset1 > 0 else p1
+    sub_p2 = p2[:-offset2] if offset2 > 0 else p2
+    
+    min_len = min(len(sub_p1), len(sub_p2), 3)
+    if min_len <= 0:
+        return 0.0
+        
+    total_score = 0.0
+    for i in range(1, min_len + 1):
+        s1 = sub_p1[-i]
+        s2 = sub_p2[-i]
+        score = calculate_syllable_score(s1, s2)
+        
+        weight = 1.0 if i == 1 else (0.5 if i == 2 else 0.3)
+        total_score += score * weight
+        
+    max_possible = sum([1.0 if i == 1 else (0.5 if i == 2 else 0.3) for i in range(1, min_len + 1)])
+    return total_score / max_possible if max_possible > 0 else 0.0
+
+
 def get_line_rhyme_score(line1, line2):
-    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절)"""
+    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절, 오프셋 1 슬라이딩 허용)"""
     # 0) 어미/동일 단어 단순 반복 감점: 마지막 어절이 철자법상 완전히 동일한 경우 0점 처리
     w1 = line1.strip().split()[-1] if line1.strip().split() else ""
     w2 = line2.strip().split()[-1] if line2.strip().split() else ""
@@ -26,7 +47,7 @@ def get_line_rhyme_score(line1, line2):
     w2_clean = re.sub(r"[^\w]", "", w2).lower()
     
     if w1_clean == w2_clean and w1_clean != "":
-        return 0.0
+        return 0.2  # 동일 단어 단순 반복 시 낮은 점수(0.2) 부여
 
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
@@ -34,23 +55,16 @@ def get_line_rhyme_score(line1, line2):
     if not p1 or not p2:
         return 0.0
     
-    # 끝에서부터 비교
-    min_len = min(len(p1), len(p2), 3)
-    total_score = 0.0
+    # 1) 오프셋 0 (우측 정렬 매칭)
+    score_offset_0 = _match_with_offset(p1, p2, 0, 0)
     
-    for i in range(1, min_len + 1):
-        s1 = p1[-i]
-        s2 = p2[-i]
-        score = calculate_syllable_score(s1, s2)
-        
-        # 가중치: 가장 끝 음절(1번째)이 가장 중요함
-        weight = 1.0 if i == 1 else (0.5 if i == 2 else 0.3)
-        total_score += score * weight
-        
-    # 정규화
-    max_possible = sum([1.0 if i == 1 else (0.5 if i == 2 else 0.3) for i in range(1, min_len + 1)])
+    # 2) 오프셋 1 (p1 끝 1음절 흘림 - 20% 감점 페널티)
+    score_offset_1_p1 = _match_with_offset(p1, p2, 1, 0) * 0.8 if len(p1) > 1 else 0.0
     
-    return round(total_score / max_possible, 4) if max_possible > 0 else 0.0
+    # 3) 오프셋 1 (p2 끝 1음절 흘림 - 20% 감점 페널티)
+    score_offset_1_p2 = _match_with_offset(p1, p2, 0, 1) * 0.8 if len(p2) > 1 else 0.0
+    
+    return round(max(score_offset_0, score_offset_1_p1, score_offset_1_p2), 4)
 
 def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[int | None]]:
     """
@@ -67,21 +81,39 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
         score = get_line_rhyme_score(actual_lines[i], actual_lines[i+1])
         adj_scores.append(score)
 
+    # 한 줄 건너뛴 쌍(i, i+2)의 라임 점수를 계산
+    skip_scores = []
+    for i in range(actual_len - 2):
+        score = get_line_rhyme_score(actual_lines[i], actual_lines[i+2])
+        skip_scores.append(score)
+
     line_scores = []
     best_match_indexes = [None] * actual_len
 
     for i in range(actual_len):
-        # 2-1) AA 판정
+        # 2-1) AA 판정 (인접 및 한 줄 건너뛴 라임 결합)
         score_L1 = adj_scores[i-1] if i > 0 else 0.0
         score_R1 = adj_scores[i] if i < actual_len - 1 else 0.0
-        adj_max = max(score_L1, score_R1)
 
-        # best_match_index 결정 (인접 라인 중 라임이 더 큰 쪽)
+        score_L2 = skip_scores[i-2] if i > 1 else 0.0
+        score_R2 = skip_scores[i] if i < actual_len - 2 else 0.0
+        skip_max = max(score_L2, score_R2)
+
+        # 인접 라인은 1.0 가중치, 건너뛴 라임은 0.5 가중치 적용하여 최댓값 선택
+        adj_max = max(score_L1, score_R1, 0.5 * skip_max)
+
+        # best_match_index 결정 (인접 라인 우선, 없으면 건너뛴 라인)
         if adj_max > 0.0:
-            if score_L1 >= score_R1 and i > 0:
-                best_match_indexes[i] = i - 1
-            elif score_R1 > score_L1 and i < actual_len - 1:
-                best_match_indexes[i] = i + 1
+            if score_L1 > 0.0 or score_R1 > 0.0:
+                if score_L1 >= score_R1 and i > 0:
+                    best_match_indexes[i] = i - 1
+                elif score_R1 > score_L1 and i < actual_len - 1:
+                    best_match_indexes[i] = i + 1
+            elif skip_max > 0.0:
+                if score_L2 >= score_R2 and i > 1:
+                    best_match_indexes[i] = i - 2
+                elif score_R2 > score_L2 and i < actual_len - 2:
+                    best_match_indexes[i] = i + 2
 
         # 2-2) AAA 판정
         consec_3_cases = []
@@ -112,3 +144,11 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
 
     return line_scores, best_match_indexes
 
+
+def calculate_rhyme_density(lines: list[str]) -> float:
+    """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다."""
+    actual_len = len(lines)
+    if actual_len <= 1:
+        return 0.0
+    line_scores, _ = calculate_line_scores(lines)
+    return sum(line_scores) / actual_len

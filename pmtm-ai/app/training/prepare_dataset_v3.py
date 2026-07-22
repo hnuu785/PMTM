@@ -8,16 +8,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from app.lyric_prompts import TARGET_BARS, build_api_messages
+from app.lyric_prompts import TARGET_BARS, build_messages
+from app.genre_rules import get_genre_and_syllable_range
 from app.paths import DATA_DIR
-from app.rhyme_scoring.phonetics_utils import get_phonemes
-from app.rhyme_scoring.loanword_stopwords import ENGLISH_RHYME_STOPWORDS
-from app.rhyme_scoring.rhyme_engine import get_line_rhyme_score
+from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
+from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
-MIN_RHYME_SCORE = 0.22
+MIN_RHYME_SCORE = 0.30
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 7
 MAX_MEAN_LINE_LENGTH = 28
@@ -64,59 +64,7 @@ def ending_word(line: str) -> str:
     return line_tokens[-1] if line_tokens else ""
 
 
-def int_to_korean(n: int) -> str:
-    if n == 0:
-        return "영"
-    units = ["", "십", "백", "천"]
-    big_units = ["", "만", "억", "조"]
-    digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
-    
-    num_str = str(n)
-    parts = []
-    rev_str = num_str[::-1]
-    for i in range(0, len(rev_str), 4):
-        chunk = rev_str[i:i+4]
-        chunk_val = ""
-        for j, digit in enumerate(chunk):
-            d = int(digit)
-            if d > 0:
-                if d == 1 and j > 0:
-                    digit_name = ""
-                else:
-                    digit_name = digits[d]
-                chunk_val = digit_name + units[j] + chunk_val
-        if chunk_val:
-            parts.append(chunk_val + big_units[i // 4])
-    
-    return "".join(reversed(parts))
 
-
-def count_syllables(line: str) -> int:
-    tokens = re.findall(r"[가-힣]+|[A-Za-z]+|\d+", line)
-    total_syllables = 0
-    for tok in tokens:
-        if "가" <= tok[0] <= "힣":
-            total_syllables += len(tok)
-        elif tok.lower() in ENGLISH_RHYME_STOPWORDS:
-            total_syllables += 1
-        elif tok.isdigit():
-            try:
-                korean_num = int_to_korean(int(tok))
-                total_syllables += len(korean_num)
-            except Exception:
-                total_syllables += len(tok)
-        else:
-            try:
-                phonemes = get_phonemes(tok)
-                if phonemes:
-                    total_syllables += len(phonemes)
-                else:
-                    vowels = re.findall(r"[aeiouyAEIOUY]", tok)
-                    total_syllables += max(1, len(vowels))
-            except Exception:
-                vowels = re.findall(r"[aeiouyAEIOUY]", tok)
-                total_syllables += max(1, len(vowels))
-    return total_syllables
 
 
 def line_length(line: str) -> int:
@@ -151,9 +99,9 @@ def chunk_features(lines: list[str]) -> dict[str, float | int]:
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_scores = [get_line_rhyme_score(lines[i], lines[i + 1]) for i in range(len(lines) - 1)]
+    rhyme_score = calculate_rhyme_density(lines)
     return {
-        "rhyme_score": sum(rhyme_scores) / len(rhyme_scores),
+        "rhyme_score": rhyme_score,
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
         "max_ending_word_count": max(Counter(endings).values()) if endings else len(lines),
         "korean_ratio": korean_ratio(lines),
@@ -190,13 +138,14 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
 def build_record(lines: list[str], genre: str) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
-        formatted_lines.append(f"{i}. {line}")
+        syllables = count_syllables(line)
+        formatted_lines.append(f"{i}. ({syllables}음절) {line}")
 
     assistant_content = "\n".join(formatted_lines)
     bpm = 90.0 if genre == "붐뱁" else 140.0
 
     return {
-        "messages": build_api_messages(
+        "messages": build_messages(
             bpm=bpm,
             bars=TARGET_BARS,
             assistant=assistant_content
@@ -235,19 +184,13 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-                genre = "붐뱁" if judgment_bpm < 110 else "트랩"
+                genre, min_s, max_s = get_genre_and_syllable_range(bpm)
                 
                 # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]
-                if genre == "붐뱁":
-                    if not all(9 <= s <= 15 for s in syllables_list):
-                        stats["syllable_mismatch"] += 1
-                        continue
-                else: # 트랩
-                    if not all(13 <= s <= 19 for s in syllables_list):
-                        stats["syllable_mismatch"] += 1
-                        continue
+                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
+                    stats["syllable_mismatch"] += 1
+                    continue
 
                 records.append(build_record(chunk, genre))
 

@@ -19,8 +19,17 @@ else:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.rhyme_scoring.phonetics_utils import CODA_GROUPS, VOWEL_GROUPS, get_phonemes
-from app.rhyme_scoring.rhyme_engine import calculate_syllable_score, get_line_rhyme_score
+from app.rhyme_scoring.phonetics_utils import (
+    CODA_GROUPS,
+    VOWEL_GROUPS,
+    get_phonemes,
+    count_syllables,
+)
+from app.rhyme_scoring.rhyme_engine import (
+    calculate_syllable_score,
+    get_line_rhyme_score,
+    calculate_line_scores,
+)
 
 
 failures: list[str] = []
@@ -83,7 +92,7 @@ check("'flow'가 플로우 계열로 분해됨",
       len(p) >= 2 and [s["v"] for s in p[-2:]] == ["ㅗ", "ㅜ"], f"got {p}")
 
 p = get_phonemes("yeah")
-check("'yeah' 같은 추임새는 라임 계산에서 제외됨", p == [], f"got {p}")
+check("'yeah' 같은 추임새도 발음 분석이 수행됨", p != [], f"got {p}")
 
 # 한영 혼합
 p = get_phonemes("hello 강")
@@ -98,7 +107,16 @@ check("숫자만 -> []", get_phonemes("12345") == [])
 check("특수문자만 -> []", get_phonemes("!@#$%") == [])
 
 
-# ─── 4. 음절 라임 점수 (가중치 0.8*v + 0.2*c) ─────────────
+# ─── 3.5 음절 수 계산 (count_syllables) ──────────────────────
+print("\n=== 음절 수 계산 ===")
+check("count_syllables('바다') = 2", count_syllables("바다") == 2, f"got {count_syllables('바다')}")
+check("count_syllables('123') = 4 (백이십삼)", count_syllables("123") == 4, f"got {count_syllables('123')}")
+check("count_syllables('go') = 1 (영어 발음 분석)", count_syllables("go") == 1, f"got {count_syllables('go')}")
+check("count_syllables('apple') = 2 (영어 일반)", count_syllables("apple") == 2, f"got {count_syllables('apple')}")
+check("count_syllables('hello, world!') = 4", count_syllables("hello, world!") == 4, f"got {count_syllables('hello, world!')}")
+
+
+# ─── 4. 음절 라임 점수 (Vowel 100%) ─────────────
 print("\n=== 음절 라임 점수 ===")
 
 gang = get_phonemes("강")[0]   # {ㅏ, ㅇ}
@@ -137,9 +155,9 @@ s_ye_e = calculate_syllable_score(ye, e)     # ㅖ ↔ ㅔ
 s_e_ye = calculate_syllable_score(e, ye)     # ㅔ ↔ ㅖ
 s_ye_yae = calculate_syllable_score(ye, yae) # ㅖ ↔ ㅒ
 
-check("예↔에 (대칭성) = 0.8", approx(s_ye_e, 0.8), f"got {s_ye_e}")
-check("에↔예 (역방향) = 0.8", approx(s_e_ye, 0.8), f"got {s_e_ye}")
-check("예↔얘 (교차 군집) = 0.8", approx(s_ye_yae, 0.8), f"got {s_ye_yae}")
+check("예↔에 (대칭성) = 1.0", approx(s_ye_e, 1.0), f"got {s_ye_e}")
+check("에↔예 (역방향) = 1.0", approx(s_e_ye, 1.0), f"got {s_e_ye}")
+check("예↔얘 (교차 군집) = 1.0", approx(s_ye_yae, 1.0), f"got {s_ye_yae}")
 
 
 # ─── 5. 줄 단위 라임 점수 ─────────────────────────────────
@@ -153,13 +171,13 @@ s = get_line_rhyme_score("강물", "방물")
 check("'강물'↔'방물' = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "강물")
-check("'강물'↔'강물' (동일 단어 반복 감점) = 0.0", s == 0.0, f"got {s}")
+check("'강물'↔'강물' (동일 단어 반복 감점) = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("오늘 밤 너를 사랑해!", "내일도 너를 사랑해")
-check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.0", s == 0.0, f"got {s}")
+check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("너의 smile", "나의 Smile")
-check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.0", s == 0.0, f"got {s}")
+check("동일 끝단어 대소문자 무관 감점 ('smile'↔'Smile') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("바다", "마차")
 # 바(ㅏ,_)다(ㅏ,_) vs 마(ㅏ,_)차(ㅏ,_) -> 모든 끝 음절 일치 -> 1.0
@@ -171,12 +189,29 @@ check("빈 줄 (좌) = 0.0", s == 0.0, f"got {s}")
 s = get_line_rhyme_score("강", "")
 check("빈 줄 (우) = 0.0", s == 0.0, f"got {s}")
 
+s = get_line_rhyme_score("사랑보단 안정감이 더 커서 마음만", "아슬하게 걸쳐있었을 뿐 아름다운")
+check("엇박 슬라이딩 라임 ('마음만'↔'아름다운') = 0.8", approx(s, 0.8), f"got {s}")
+
 # 점수는 [0, 1] 구간 (회귀 가드)
 for a, b in [("내일 가자", "오늘 가자"),
              ("랩 한다", "잽 든다"),
              ("hello", "world")]:
     s = get_line_rhyme_score(a, b)
     check(f"'{a}' ↔ '{b}' in [0,1]", 0.0 <= s <= 1.0, f"got {s}")
+
+
+# ─── 5.5 벌스 단위 라인 점수 (건너뛴 라임 포함) ───────────────
+print("\n=== 벌스 단위 라인 점수 ===")
+lines = ["강", "봄", "방", "마차", "기차"]
+# 0번('강') - 2번('방')은 한 줄 건너뛰어 라임 (점수 0.12, 매치 인덱스 각각 2, 0)
+# 3번('마차') - 4번('기차')은 인접 라임 (점수 0.7333, 매치 인덱스 각각 2, 3)
+# 1번('봄')은 라임 없음 (점수 0.0, 매치 인덱스 None)
+scores, best_indexes = calculate_line_scores(lines)
+check("건너뛴 라임 점수 산정 (A - B - A) = 0.3", approx(scores[0], 0.3), f"got {scores[0]}")
+check("건너뛴 라임 최적 매치 인덱스 = 2", best_indexes[0] == 2, f"got {best_indexes[0]}")
+check("라임이 없는 라인 점수 = 0.0", approx(scores[1], 0.0), f"got {scores[1]}")
+check("인접 라임 점수 산정 = 0.76", approx(scores[3], 0.76), f"got {scores[3]}")
+check("인접 라임 최적 매치 인덱스 = 2", best_indexes[3] == 2, f"got {best_indexes[3]}")
 
 
 # ─── 6. 그룹 정의 sanity ─────────────────────────────────
@@ -193,7 +228,10 @@ if failures:
     print(f"FAILED: {len(failures)}개")
     for name in failures:
         print(f"  - {name}")
-    sys.exit(1)
+    if __name__ == "__main__":
+        sys.exit(1)
 
 print("모든 테스트 통과 OK")
-sys.exit(0)
+if __name__ == "__main__":
+    sys.exit(0)
+

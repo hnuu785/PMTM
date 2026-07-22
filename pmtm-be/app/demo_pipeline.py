@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Protocol
 
 from app.config import get_settings
-from app.schemas import DemoStatus
-from app.schemas import LyricModel
+from app.schemas import DemoStatus, LyricModel
+from app.utils.redis import update_redis_status
 
 
 DEMO_STATUS_KEY_PREFIX = "pmtm:demo:"
@@ -382,24 +382,19 @@ def _set_status(
     error: str | None = None,
     audio_url: str | None = None,
 ) -> None:
-    payload = {
-        "jobId": job_id,
-        "status": status,
-        "progress": str(max(0.0, min(1.0, progress))),
-    }
-    if bpm is not None:
-        payload["bpm"] = str(bpm)
-    if lyrics is not None:
-        payload["lyrics"] = lyrics
-    if notes is not None:
-        payload["notes"] = json.dumps(notes, ensure_ascii=False)
-    if error is not None:
-        payload["error"] = error
-    if audio_url is not None:
-        payload["audioUrl"] = audio_url
-
-    redis_client.hset(f"{DEMO_STATUS_KEY_PREFIX}{job_id}", mapping=payload)
-    redis_client.expire(f"{DEMO_STATUS_KEY_PREFIX}{job_id}", DEMO_JOB_TIMEOUT_SECONDS)
+    update_redis_status(
+        redis_client=redis_client,
+        key_prefix=DEMO_STATUS_KEY_PREFIX,
+        job_id=job_id,
+        status=status,
+        progress=progress,
+        timeout_seconds=DEMO_JOB_TIMEOUT_SECONDS,
+        bpm=bpm,
+        lyrics=lyrics,
+        notes=notes,
+        error=error,
+        audio_url=audio_url,
+    )
 
 
 def parse_status_payload(data: dict[str, str]) -> dict:

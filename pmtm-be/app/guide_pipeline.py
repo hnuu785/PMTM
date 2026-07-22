@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.demo_pipeline import DEMO_JOB_TIMEOUT_SECONDS, DEMO_STATUS_KEY_PREFIX, mix_demo_audio
 from app.flow_adapter import build_flow_plan, write_diffsinger_ds, write_flow_plan
 from app.schemas import DemoStatus
+from app.utils.redis import update_redis_status
 
 
 @dataclass(frozen=True)
@@ -289,24 +290,22 @@ def _set_status(
     vocal_url: str | None = None,
     flow_plan_url: str | None = None,
 ) -> None:
-    payload = {
-        "jobId": job_id,
-        "status": status,
-        "progress": str(max(0.0, min(1.0, progress))),
-    }
-    optional_values = {
-        "bpm": str(bpm) if bpm is not None else None,
-        "lyrics": lyrics,
-        "voicebank": voicebank,
-        "notes": json.dumps(notes, ensure_ascii=False) if notes is not None else None,
-        "error": error,
-        "audioUrl": audio_url,
-        "vocalUrl": vocal_url,
-        "flowPlanUrl": flow_plan_url,
-    }
-    payload.update({key: value for key, value in optional_values.items() if value is not None})
-    redis_client.hset(f"{DEMO_STATUS_KEY_PREFIX}{job_id}", mapping=payload)
-    redis_client.expire(f"{DEMO_STATUS_KEY_PREFIX}{job_id}", DEMO_JOB_TIMEOUT_SECONDS)
+    update_redis_status(
+        redis_client=redis_client,
+        key_prefix=DEMO_STATUS_KEY_PREFIX,
+        job_id=job_id,
+        status=status,
+        progress=progress,
+        timeout_seconds=DEMO_JOB_TIMEOUT_SECONDS,
+        bpm=bpm,
+        lyrics=lyrics,
+        voicebank=voicebank,
+        notes=notes,
+        error=error,
+        audio_url=audio_url,
+        vocal_url=vocal_url,
+        flow_plan_url=flow_plan_url,
+    )
 
 
 def enqueue_guide_demo(

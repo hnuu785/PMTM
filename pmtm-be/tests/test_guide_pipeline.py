@@ -76,6 +76,36 @@ class FlowAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "한글 가사만 지원"):
             build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
 
+    def test_flow_plan_supports_up_to_24_syllables(self):
+        # 24 syllables should compile successfully and use the 24-syllable template
+        dense_lyrics = "\n".join([
+            "가나다라마바사아자차카타파하가나다라마바사아자",  # 24 syllables
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan = build_flow_plan(dense_lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        self.assertEqual(len(plan.bars), 8)
+
+    def test_flow_plan_supports_7_syllables(self):
+        # 7 syllables should compile successfully and use the 7-syllable template
+        sparse_lyrics = "\n".join([
+            "가나다라마바사",  # 7 syllables
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan = build_flow_plan(sparse_lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        self.assertEqual(len(plan.bars), 8)
+
     def test_diffsinger_score_contains_eight_manual_sections(self):
         plan = build_flow_plan(EIGHT_BARS, 90, 2.0, "rang", base_f0_hz=145.0)
         with TemporaryDirectory() as tmp:

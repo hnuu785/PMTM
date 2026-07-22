@@ -111,8 +111,8 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate_for_api.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
-        self.assertIn("10~14 범위 내로", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
+        self.assertIn("7~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_use_training_prompt_shape(self):
         args = SimpleNamespace(
@@ -127,15 +127,27 @@ class InferencePromptingTests(unittest.TestCase):
         messages = generate.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
-        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
-        self.assertIn("10~14 범위 내로", messages[0]["content"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
+        self.assertIn("7~14 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_omit_bpm_when_unspecified(self):
         args = SimpleNamespace(bpm=None, bars=8)
         messages = generate.build_messages(args)
 
-        self.assertIn("랩을 작성해 주세요", messages[0]["content"])
-        self.assertIn("14~18 범위 내로", messages[0]["content"])
+        self.assertEqual([message["role"] for message in messages], ["user"])
+        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
+        self.assertIn("14~24 범위 내로", messages[0]["content"])
+
+    def test_bpm_threshold_distinction(self):
+        # 114 BPM should be Boombap (7~14 syllables)
+        args_114 = SimpleNamespace(bpm=114, bars=8)
+        messages_114 = generate.build_messages(args_114)
+        self.assertIn("7~14 범위 내로", messages_114[0]["content"])
+
+        # 115 BPM should be Trap (14~24 syllables)
+        args_115 = SimpleNamespace(bpm=115, bars=8)
+        messages_115 = generate.build_messages(args_115)
+        self.assertIn("14~24 범위 내로", messages_115[0]["content"])
 
 
 if __name__ == "__main__":

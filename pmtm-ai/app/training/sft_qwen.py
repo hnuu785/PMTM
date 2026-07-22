@@ -4,11 +4,10 @@ os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 import torch
 from transformers import (
     AutoModelForCausalLM,
-    AutoTokenizer,
     TrainingArguments,
     Trainer,
-    BitsAndBytesConfig,
 )
+from app.training.train_utils import setup_training_env
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from datasets import Dataset
 
@@ -20,13 +19,6 @@ SAVE_DIR = str(MODELS_DIR / "sft_rap_qwen")
 MAX_LENGTH = 768
 EVAL_RATIO = 0.1
 SEED = 42
-
-
-def _detect_precision():
-    """A100/L4/H100 → bf16; T4/V100 → fp16."""
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
-        return torch.bfloat16, True, False
-    return torch.float16, False, True
 
 
 def _tokenize_messages(tokenizer, messages: list[dict], max_length: int = MAX_LENGTH) -> dict:
@@ -85,13 +77,10 @@ def _make_data_collator(tokenizer):
 
 
 def train_sft():
-    compute_dtype, use_bf16, use_fp16 = _detect_precision()
+    tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(
+        MODEL_ID, padding_side="right"
+    )
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
-
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
 
     raw = Dataset.from_json(DATA_PATH)
     if "messages" not in raw.column_names:
@@ -110,13 +99,6 @@ def train_sft():
     train_ds = train_raw.map(tokenize_function, batched=True, remove_columns=train_raw.column_names)
     eval_ds = eval_raw.map(tokenize_function, batched=True, remove_columns=eval_raw.column_names)
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=compute_dtype,
-        bnb_4bit_use_double_quant=True,
-    )
-
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config,
@@ -130,11 +112,11 @@ def train_sft():
     model = prepare_model_for_kbit_training(model)
 
     lora_config = LoraConfig(
-        r=16,
-        lora_alpha=32,
+        r=32,
+        lora_alpha=64,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
-        lora_dropout=0.05,
+        lora_dropout=0.1,
         bias="none",
         task_type="CAUSAL_LM",
     )
@@ -148,13 +130,13 @@ def train_sft():
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=8,
-        num_train_epochs=3,
-        learning_rate=1e-4,
+        num_train_epochs=6,
+        learning_rate=7e-5,
         bf16=use_bf16,
         fp16=use_fp16,
         warmup_ratio=0.03,
         lr_scheduler_type="cosine",
-        weight_decay=0.01,
+        weight_decay=0.05,
         logging_steps=10,
         eval_strategy="no",
         save_strategy="steps",
