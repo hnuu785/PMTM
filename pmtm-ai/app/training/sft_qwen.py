@@ -1,14 +1,19 @@
 import os
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
+# pyrefly: ignore [missing-import]
 import torch
+# pyrefly: ignore [missing-import]
 from transformers import (
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
 )
+# pyrefly: ignore [missing-import]
 from app.training.train_utils import setup_training_env
+# pyrefly: ignore [missing-import]
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+# pyrefly: ignore [missing-import]
 from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR

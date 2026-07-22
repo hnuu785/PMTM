@@ -4,6 +4,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 from g2pk2 import G2p
 
 g2p = G2p()

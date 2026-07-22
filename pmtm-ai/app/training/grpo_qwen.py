@@ -7,12 +7,18 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import torch
+# pyrefly: ignore [missing-import]
 from datasets import Dataset
+# pyrefly: ignore [missing-import]
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
+# pyrefly: ignore [missing-import]
 from transformers import AutoModelForCausalLM
+# pyrefly: ignore [missing-import]
 from transformers import TrainerCallback
 from app.training.train_utils import setup_training_env
+# pyrefly: ignore [missing-import]
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_messages
