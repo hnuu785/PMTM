@@ -19,7 +19,7 @@ OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
 MIN_RHYME_SCORE = 0.30
 MIN_KOREAN_RATIO = 0.35
-MIN_MEAN_LINE_LENGTH = 7
+MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28
 MAX_LINE_LENGTH_STDEV = 9
 MAX_SHORT_LINES = 1
@@ -186,7 +186,7 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                # 엄격 모드: 모든 줄의 음절 수가 반드시 지침 범위(7~16음절) 내여야 함
+                # 엄격 모드: 모든 줄의 음절 수가 반드시 지침 범위(6~18음절) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]
                 if not all(min_s <= s <= max_s for s in syllables_list):
                     stats["syllable_mismatch"] += 1
