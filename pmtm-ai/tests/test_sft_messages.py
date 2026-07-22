@@ -38,14 +38,15 @@ class FakeTokenizer:
 class SftMessagesTests(unittest.TestCase):
     def test_prepare_outputs_chat_messages_with_assistant_lyrics(self):
         lines = [f"line {i}" for i in range(1, 9)]
-        record = build_record(lines, "붐뱁")
+        record = build_record(lines, "붐뱁", 90.0)
 
         messages = record["messages"]
         self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
-        self.assertIn("한국어 랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("7~14 범위 내로", messages[0]["content"])
+        self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
+        self.assertIn("7~16 범위 내로", messages[0]["content"])
         self.assertIn("1. (2음절) line 1", messages[1]["content"])
         self.assertIn("8. (2음절) line 8", messages[1]["content"])
+
 
     def test_tokenize_messages_masks_user_tokens(self):
         messages = [

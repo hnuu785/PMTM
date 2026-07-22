@@ -1,4 +1,4 @@
-from app.genre_rules import get_genre_and_syllable_range
+from app.genre_rules import get_genre_rules
 
 TARGET_BARS = 8
 
@@ -6,15 +6,16 @@ TARGET_BARS = 8
 def build_user_prompt(
     *,
     bpm: float | None = None,
-    bars: int = TARGET_BARS,
+    bars: int | None = None,
     rhyme_scheme: str | None = None,
 ) -> str:
-    g_name, min_s, max_s = get_genre_and_syllable_range(bpm)
+    g_name, default_lines, min_s, max_s = get_genre_rules(bpm)
+    target_lines = bars if bars is not None else default_lines
     target_syllables = f"{min_s}~{max_s}"
     base_prompt = (
-        f"{g_name} 장르의 한국어 랩 가사를 작성해 주세요. "
-        f"한 줄당 한 마디(1 Bar) 규칙을 지켜 정확히 {bars}마디로 구성해야 하며, "
-        f"마디당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
+        f"{g_name} 랩 가사를 작성해 주세요. "
+        f"정확히 {target_lines}줄로 구성해야 하며, "
+        f"줄당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
     )
 
     if rhyme_scheme:
@@ -25,7 +26,7 @@ def build_user_prompt(
 def build_messages(
     *,
     bpm: float | None = None,
-    bars: int = TARGET_BARS,
+    bars: int | None = None,
     rhyme_scheme: str | None = None,
     assistant: str | None = None,
 ) -> list[dict[str, str]]:
@@ -40,3 +41,4 @@ def build_messages(
     if assistant is not None:
         messages.append({"role": "assistant", "content": assistant})
     return messages
+

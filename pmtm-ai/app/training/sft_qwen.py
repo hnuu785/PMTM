@@ -84,7 +84,8 @@ def train_sft():
 
     raw = Dataset.from_json(DATA_PATH)
     if "messages" not in raw.column_names:
-        raise ValueError("prepared_dataset_v2.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v2.py.")
+        raise ValueError("prepared_dataset_v3.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v3.py.")
+
     split = raw.train_test_split(test_size=EVAL_RATIO, seed=SEED)
     train_raw, eval_raw = split["train"], split["test"]
 

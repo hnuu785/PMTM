@@ -108,12 +108,12 @@ def parse_eight_bar_lyrics(lyrics: str) -> list[str]:
         for line in lyrics.splitlines()
         if line.strip() and not line.strip().lower().startswith("[verse")
     ]
-    if len(lines) != TARGET_BARS:
-        raise ValueError(f"가이드는 정확히 {TARGET_BARS}줄의 가사가 필요합니다. 현재 {len(lines)}줄입니다.")
+    if len(lines) not in (8, 16):
+        raise ValueError(f"가이드는 정확히 8줄 또는 16줄의 가사가 필요합니다. 현재 {len(lines)}줄입니다.")
     return lines
 
 
-def build_beat_map(bpm: int, first_bar_start_sec: float) -> BeatMap:
+def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> BeatMap:
     if bpm < 40 or bpm > 220:
         raise ValueError("BPM은 40부터 220 사이여야 합니다.")
     if not math.isfinite(first_bar_start_sec) or first_bar_start_sec < 0:
@@ -124,18 +124,20 @@ def build_beat_map(bpm: int, first_bar_start_sec: float) -> BeatMap:
     actual_bpm = bpm / 2.0 if bpm >= 110.0 else float(bpm)
 
     beat_duration = 60.0 / actual_bpm
-    bar_duration = beat_duration * 4
-    bar_starts = [first_bar_start_sec + index * bar_duration for index in range(TARGET_BARS)]
-    beat_times = [first_bar_start_sec + index * beat_duration for index in range(TARGET_BARS * 4)]
+    beats_per_unit = 4 if bar_count == 8 else 2
+    bar_duration = beat_duration * beats_per_unit
+    bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
+    beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
     return BeatMap(
         bpm=int(round(actual_bpm)),
-        beatsPerBar=4,
-        barCount=TARGET_BARS,
+        beatsPerBar=beats_per_unit,
+        barCount=bar_count,
         firstBarStartSec=round(first_bar_start_sec, 6),
         barDurationSec=round(bar_duration, 6),
         barStartTimes=_rounded(bar_starts),
         beatTimes=_rounded(beat_times),
     )
+
 
 
 def build_flow_plan(
@@ -147,7 +149,7 @@ def build_flow_plan(
     base_f0_hz: float,
 ) -> FlowPlan:
     lines = parse_eight_bar_lyrics(lyrics)
-    beat_map = build_beat_map(bpm, first_bar_start_sec)
+    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(lines))
     bars: list[FlowBar] = []
     for index, line in enumerate(lines):
         # Validate original line for unsupported characters
