@@ -144,10 +144,14 @@ def train_sft():
         lr_scheduler_type="cosine",
         weight_decay=0.05,
         logging_steps=10,
-        eval_strategy="no",
+        eval_strategy="steps",
+        eval_steps=10,
         save_strategy="steps",
-        save_steps=125,
+        save_steps=10,
         save_total_limit=3,
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
         optim="paged_adamw_8bit",
         report_to="none",
         seed=SEED,
@@ -170,7 +174,7 @@ def train_sft():
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
 
-    model.save_pretrained(SAVE_DIR)
+    trainer.save_model(SAVE_DIR)
     tokenizer.save_pretrained(SAVE_DIR)
     print(f"SFT done -> {SAVE_DIR}")
 
