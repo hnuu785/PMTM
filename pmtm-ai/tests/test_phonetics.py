@@ -29,6 +29,7 @@ from app.rhyme_scoring.rhyme_engine import (
     calculate_syllable_score,
     get_line_rhyme_score,
     calculate_line_scores,
+    calculate_rhyme_density,
 )
 
 
@@ -212,6 +213,15 @@ check("건너뛴 라임 최적 매치 인덱스 = 2", best_indexes[0] == 2, f"go
 check("라임이 없는 라인 점수 = 0.0", approx(scores[1], 0.0), f"got {scores[1]}")
 check("인접 라임 점수 산정 = 0.76", approx(scores[3], 0.76), f"got {scores[3]}")
 check("인접 라임 최적 매치 인덱스 = 2", best_indexes[3] == 2, f"got {best_indexes[3]}")
+
+# ─── 5.6 라임 밀도 및 무라임 패널티 테스트 ───────────────
+print("\n=== 라임 밀도 및 무라임 패널티 ===")
+# AABBCDEF 형태 (8줄 중 A, A, B, B 라임, C, D, E, F 무라임 4줄 -> 3연속 무라임 트립렛 2회 발생)
+# line_scores: [0.6, 0.6, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0] -> base_density = 2.4 / 8 = 0.30
+# penalty: 2 * 0.05 = 0.10 -> final_density = 0.20
+aabbcdef_lines = ["강", "방", "봄", "곰", "집", "책", "달", "물"]
+d_score = calculate_rhyme_density(aabbcdef_lines)
+check("AABBCDEF 패턴 라임 밀도 (-0.05 x 2 페널티 적용 = 0.20)", approx(d_score, 0.20), f"got {d_score}")
 
 
 # ─── 6. 그룹 정의 sanity ─────────────────────────────────

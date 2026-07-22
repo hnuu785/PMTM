@@ -1,14 +1,19 @@
 import os
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
+# pyrefly: ignore [missing-import]
 import torch
+# pyrefly: ignore [missing-import]
 from transformers import (
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
 )
+# pyrefly: ignore [missing-import]
 from app.training.train_utils import setup_training_env
+# pyrefly: ignore [missing-import]
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+# pyrefly: ignore [missing-import]
 from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR
@@ -84,7 +89,8 @@ def train_sft():
 
     raw = Dataset.from_json(DATA_PATH)
     if "messages" not in raw.column_names:
-        raise ValueError("prepared_dataset_v2.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v2.py.")
+        raise ValueError("prepared_dataset_v3.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v3.py.")
+
     split = raw.train_test_split(test_size=EVAL_RATIO, seed=SEED)
     train_raw, eval_raw = split["train"], split["test"]
 
@@ -138,10 +144,14 @@ def train_sft():
         lr_scheduler_type="cosine",
         weight_decay=0.05,
         logging_steps=10,
-        eval_strategy="no",
+        eval_strategy="steps",
+        eval_steps=10,
         save_strategy="steps",
-        save_steps=125,
+        save_steps=10,
         save_total_limit=3,
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
         optim="paged_adamw_8bit",
         report_to="none",
         seed=SEED,
@@ -164,7 +174,7 @@ def train_sft():
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
 
-    model.save_pretrained(SAVE_DIR)
+    trainer.save_model(SAVE_DIR)
     tokenizer.save_pretrained(SAVE_DIR)
     print(f"SFT done -> {SAVE_DIR}")
 

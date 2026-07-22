@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from app.lyric_prompts import TARGET_BARS, build_messages
-from app.genre_rules import get_genre_and_syllable_range
+from app.genre_rules import get_genre_rules
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
 from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
@@ -17,9 +17,9 @@ from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
-MIN_RHYME_SCORE = 0.30
+MIN_RHYME_SCORE = 0.40
 MIN_KOREAN_RATIO = 0.35
-MIN_MEAN_LINE_LENGTH = 7
+MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28
 MAX_LINE_LENGTH_STDEV = 9
 MAX_SHORT_LINES = 1
@@ -135,19 +135,18 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
     return None
 
 
-def build_record(lines: list[str], genre: str) -> dict:
+def build_record(lines: list[str], genre: str, bpm: float) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
         syllables = count_syllables(line)
         formatted_lines.append(f"{i}. ({syllables}음절) {line}")
 
     assistant_content = "\n".join(formatted_lines)
-    bpm = 90.0 if genre == "붐뱁" else 140.0
 
     return {
         "messages": build_messages(
             bpm=bpm,
-            bars=TARGET_BARS,
+            bars=len(lines),
             assistant=assistant_content
         )
     }
@@ -166,11 +165,14 @@ def prepare() -> tuple[list[dict], Counter]:
             except ValueError:
                 bpm = 0.0
 
-            for chunk in make_chunks(clean_lines(lyrics)):
+            if bpm <= 0:
+                stats["bad_bpm"] += 1
+                continue
+
+            genre, target_lines, min_s, max_s = get_genre_rules(bpm)
+
+            for chunk in make_chunks(clean_lines(lyrics), chunk_size=target_lines):
                 stats["candidate_chunks"] += 1
-                if bpm <= 0:
-                    stats["bad_bpm"] += 1
-                    continue
 
                 chunk_key = "\n".join(normalize_text(line) for line in chunk)
                 if chunk_key in seen_chunks:
@@ -184,18 +186,18 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                genre, min_s, max_s = get_genre_and_syllable_range(bpm)
-                
-                # 엄격 모드: 모든 마디의 음절 수가 반드시 지침 범위(±1음절 허용) 내여야 함
+                # 엄격 모드: 모든 줄의 음절 수가 반드시 지침 범위(6~18음절) 내여야 함
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
+                if not all(min_s <= s <= max_s for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 
-                records.append(build_record(chunk, genre))
+
+                records.append(build_record(chunk, genre, bpm))
 
     stats["kept"] = len(records)
     return records, stats
+
 
 
 def main() -> None:

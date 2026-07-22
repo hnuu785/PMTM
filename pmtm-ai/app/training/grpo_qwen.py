@@ -7,12 +7,18 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import torch
+# pyrefly: ignore [missing-import]
 from datasets import Dataset
+# pyrefly: ignore [missing-import]
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
+# pyrefly: ignore [missing-import]
 from transformers import AutoModelForCausalLM
+# pyrefly: ignore [missing-import]
 from transformers import TrainerCallback
 from app.training.train_utils import setup_training_env
+# pyrefly: ignore [missing-import]
 from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_messages
@@ -26,7 +32,7 @@ OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
 # 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
-GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(7~14음절), 트랩(14~24음절)
+GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(7~16음절), 트랩(14~28음절)
 
 
 @dataclass
@@ -194,9 +200,10 @@ def build_prompts(df=None) -> list[list[dict[str, str]]]:
     학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
     """
     return [
-        build_messages(bpm=bpm, bars=TARGET_BARS)
+        build_messages(bpm=bpm, bars=None)
         for bpm in GRPO_BPMS
     ]
+
 
 
 _END_RE = re.compile(r"\[End\]")
@@ -277,49 +284,35 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """연속된 라임 블록(AA, AAA, AAAA)의 길이에 따라 차등 채점."""
-    try:
-        from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
-    except ImportError:
-        from rhyme_engine import calculate_rhyme_density
-
-    if prompts is None:
-        prompts = [""] * len(completions)
+    """생성된 가사의 줄 수와 관계없이 라임 밀도와 중복 감점만 평가합니다."""
     rewards = []
     
-    for prompt, comp in zip(prompts, completions):
+    for comp in completions:
         lines = _extract_verse(comp)
         
-        # 아예 한 줄도 생성하지 못한 극단적인 경우 0점 처리
+        # 아예 한 줄도 생성하지 못한 경우 0점 처리
         if not lines:
             rewards.append(0.0)
             continue
             
-        actual_lines = lines[:8]
-        actual_len = len(actual_lines)
+        # 1) 전체 줄의 중복 비율 계산
+        dup_ratio = (1.0 - len(set(lines)) / len(lines)) if len(lines) > 0 else 0.0
         
-        # 1) 실제 줄들의 중복 비율 계산
-        dup_ratio = (1.0 - len(set(actual_lines)) / actual_len) if actual_len > 0 else 0.0
-        
-        # 2) 연속 라임 점수 계산 (AA: 0.6, AAA: 0.8, AAAA: 1.0, 그 외 0.0)
-        rhyme_score = calculate_rhyme_density(actual_lines)
-
+        # 2) 전체 생성 라인의 평균 라임 점수 계산
+        rhyme_score = calculate_rhyme_density(lines)
             
-        # 3) 중복 리워드 해킹 방지
+        # 3) 중복 리워드 해킹 방지 및 감점
         effective_rhyme = rhyme_score * (1.0 - dup_ratio)
         r = effective_rhyme
         
-        # 중복이 극단적으로 심하면 강한 감점
         if dup_ratio >= 0.3:
             r = min(r, -1.0)
-            
-        # 4) 분량이 8마디 미만인 경우 비례 스케일링 (단일 분량 페널티)
-        if actual_len < 8:
-            r = r * (actual_len / 8.0)
             
         rewards.append(float(r))
         
     return rewards
+
+
 
 
 def load_model(bnb_config):
@@ -364,7 +357,7 @@ def _build_grpo_config(
         gradient_accumulation_steps=8,
         max_steps=max_steps,
         num_generations=8,
-        max_completion_length=300,
+        max_completion_length=512,
         beta=0.04,
         scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,
