@@ -7,6 +7,7 @@ datasets>=2.20
 pandas
 tqdm
 pronouncing
+g2pk
 matplotlib
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.32,<1.0
