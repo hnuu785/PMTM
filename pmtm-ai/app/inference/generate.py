@@ -10,6 +10,7 @@ DEFAULT_ADAPTER = MODELS_DIR / "grpo_rap_qwen"
 PROMPT_FORMATS = ("auto", "chat", "raw")
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_TOP_P = 0.95
+DEFAULT_REPETITION_PENALTY = 1.1
 
 
 def parse_args():
@@ -29,6 +30,7 @@ def parse_args():
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
+    p.add_argument("--repetition-penalty", type=float, default=DEFAULT_REPETITION_PENALTY, help="Repetition penalty for generation")
     p.add_argument(
         "--base-model",
         default=None,
@@ -160,7 +162,7 @@ def build_model(base_model: str, adapter_path: Path | None):
     return tokenizer, model
 
 
-def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float) -> str:
+def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float, repetition_penalty: float = 1.1) -> str:
     # pyrefly: ignore [missing-import]
     import torch
 
@@ -172,6 +174,7 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
             do_sample=True,
             temperature=temperature,
             top_p=top_p,
+            repetition_penalty=repetition_penalty,
             remove_invalid_values=True,
             pad_token_id=tokenizer.eos_token_id,
         )
@@ -227,6 +230,7 @@ def main():
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p,
+        repetition_penalty=args.repetition_penalty,
     )
     
     print("=== Raw Generated Output ===")
