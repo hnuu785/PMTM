@@ -32,7 +32,7 @@ OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
 # 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
-GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(7~16음절), 트랩(14~28음절)
+GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(8~16음절), 트랩(6~14음절)
 
 
 @dataclass
@@ -288,7 +288,7 @@ def rhyme_reward(completions, prompts=None, **kwargs):
     """생성된 가사의 줄 수와 관계없이 라임 밀도와 중복 감점만 평가합니다."""
     rewards = []
     
-    for comp in completions:
+    for idx, comp in enumerate(completions):
         lines = _extract_verse(comp)
         
         # 아예 한 줄도 생성하지 못한 경우 0점 처리
@@ -296,11 +296,18 @@ def rhyme_reward(completions, prompts=None, **kwargs):
             rewards.append(0.0)
             continue
             
+        bpm = None
+        if prompts and idx < len(prompts):
+            p_text = str(prompts[idx])
+            m = re.search(r"BPM:\s*(\d+(?:\.\d+)?)", p_text) or re.search(r"bpm[=:]\s*(\d+(?:\.\d+)?)", p_text)
+            if m:
+                bpm = float(m.group(1))
+
         # 1) 전체 줄의 중복 비율 계산
         dup_ratio = (1.0 - len(set(lines)) / len(lines)) if len(lines) > 0 else 0.0
         
-        # 2) 전체 생성 라인의 평균 라임 점수 계산
-        rhyme_score = calculate_rhyme_density(lines)
+        # 2) 전체 생성 라인의 평균 라임 점수 계산 (BPM 정보 반영)
+        rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
             
         # 3) 중복 리워드 해킹 방지 및 감점
         effective_rhyme = rhyme_score * (1.0 - dup_ratio)

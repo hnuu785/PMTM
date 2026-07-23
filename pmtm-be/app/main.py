@@ -138,7 +138,7 @@ def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
         llm=payload.llm,
         lyrics=lyrics,
         notes=notes,
-        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines),
+        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines, bpm=bpm),
     )
 
 
@@ -170,7 +170,7 @@ async def generate_lyrics_from_beat(
         llm=llm,
         lyrics=lyrics,
         notes=notes,
-        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines),
+        rhymeAnalysis=_analyze_rhyme_lines(lyric_lines, bpm=analyzed_bpm),
     )
 
 
@@ -381,7 +381,7 @@ def _extract_lyric_lines(lyrics: str) -> list[str]:
     ]
 
 
-def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
+def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     line_count = len(clean_lines)
     parents = list(range(line_count))
@@ -400,8 +400,8 @@ def _analyze_rhyme_lines(lines: list[str]) -> list[RhymeLineAnalysis]:
 
     get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
     
-    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산
-    scores, best_match_indexes = calculate_line_scores(clean_lines)
+    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산 (BPM 정보 반영)
+    scores, best_match_indexes = calculate_line_scores(clean_lines, bpm=bpm)
 
     # 2) 학습 기준(인접 라인 간 라임)으로 그룹 병합(union) 진행
     for i in range(line_count - 1):
