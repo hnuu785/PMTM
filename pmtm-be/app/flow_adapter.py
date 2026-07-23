@@ -212,9 +212,9 @@ def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> 
     if not math.isfinite(first_bar_start_sec) or first_bar_start_sec < 0:
         raise ValueError("첫 마디 시작 시각은 0 이상의 유한한 값이어야 합니다.")
 
-    # 110 BPM 이상의 빠른 템포는 물리적 1마디 길이를 확보하기 위해 하프타임으로 보정합니다.
+    # 115 BPM 이상의 빠른 템포는 물리적 1마디 길이를 확보하기 위해 하프타임으로 보정합니다.
     # 예: 140 BPM -> 70 BPM (1마디가 1.71초에서 3.42초로 늘어남)
-    actual_bpm = bpm / 2.0 if bpm >= 110.0 else float(bpm)
+    actual_bpm = bpm / 2.0 if bpm >= 115.0 else float(bpm)
 
     beat_duration = 60.0 / actual_bpm
     beats_per_unit = 4 if bar_count == 8 else 2
