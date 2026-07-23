@@ -4,9 +4,13 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 from g2pk2 import G2p
+# pyrefly: ignore [missing-import]
+import pronouncing
 
 g2p = G2p()
+
 
 
 
@@ -65,6 +69,79 @@ SILENT_ONSET_COMPOUNDS = {
     "ㅢ": ("", "ui"),
 }
 
+ARPABET_VOWELS = {
+    "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey",
+    "ih", "iy", "ow", "oy", "uh", "uw"
+}
+ARPABET_TO_POTG = {
+    "aa": "aa", "ae": "ae", "ah": "ah", "ao": "ao", "aw": "aw",
+    "ax": "ax", "ay": "ay", "b": "b", "ch": "ch", "d": "d",
+    "dh": "dh", "dx": "dx", "eh": "eh", "er": "er", "ey": "ey",
+    "f": "f", "g": "g", "hh": "hh", "ih": "ih", "iy": "iy",
+    "jh": "jh", "k": "k", "l": "l", "m": "m", "n": "n",
+    "ng": "ng", "ow": "ow", "oy": "oy", "p": "p", "r": "r",
+    "s": "s", "sh": "sh", "t": "t", "th": "th", "uh": "uh",
+    "uw": "uw", "v": "v", "w": "w", "y": "y", "z": "z", "zh": "zh"
+}
+LETTER_TO_POTG = {
+    "a": "a", "b": "b", "c": "k", "d": "d", "e": "e", "f": "f", "g": "g",
+    "h": "hh", "i": "i", "j": "jh", "k": "k", "l": "l", "m": "m", "n": "n",
+    "o": "o", "p": "p", "q": "k", "r": "r", "s": "s", "t": "t", "u": "u",
+    "v": "v", "w": "w", "x": "k", "y": "i", "z": "z"
+}
+
+
+def _english_word_to_syllables(word: str) -> list[list[str]]:
+    clean = re.sub(r"[^a-zA-Z']", "", word).lower()
+    if not clean:
+        return []
+    lookup = re.sub(r"'", "", clean)
+    phones_list = pronouncing.phones_for_word(clean) or pronouncing.phones_for_word(lookup)
+    if phones_list:
+        raw_phones = [re.sub(r"\d+", "", p).lower() for p in phones_list[0].split()]
+        potg_phones = [ARPABET_TO_POTG.get(p, p) for p in raw_phones]
+        v_indices = [i for i, p in enumerate(raw_phones) if p in ARPABET_VOWELS]
+        if len(v_indices) <= 1:
+            return [potg_phones]
+        syllables = []
+        start = 0
+        for k in range(len(v_indices) - 1):
+            v_curr = v_indices[k]
+            v_next = v_indices[k + 1]
+            consonants_between = v_next - v_curr - 1
+            split_at = v_curr + (1 if consonants_between <= 1 else 2)
+            syllables.append(potg_phones[start:split_at])
+            start = split_at
+        syllables.append(potg_phones[start:])
+        return syllables
+
+    letters = re.sub(r"[^a-zA-Z]", "", word).lower()
+    if not letters:
+        return []
+    return [[LETTER_TO_POTG.get(char, "a")] for char in letters]
+
+
+def _extract_line_syllables_and_text(text: str) -> tuple[list[list[str]], str]:
+    unsupported = re.sub(r"[가-힣a-zA-Z\s.,!?~'\"()\[\]{}:;·…-]", "", text)
+    if unsupported:
+        raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
+    tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", text)
+    syllables_phones: list[list[str]] = []
+    g2p_parts: list[str] = []
+    for token in tokens:
+        if re.match(r"^[가-힣]+$", token):
+            g2p_token = g2p(token)
+            g2p_parts.append(g2p_token)
+            syllables = re.findall(r"[가-힣]", g2p_token)
+            for syl in syllables:
+                syllables_phones.append(_syllable_to_phonemes(syl))
+        else:
+            g2p_parts.append(token)
+            e_syls = _english_word_to_syllables(token)
+            syllables_phones.extend(e_syls)
+    return syllables_phones, " ".join(g2p_parts)
+
+
 
 @dataclass(frozen=True)
 class BeatMap:
@@ -108,12 +185,12 @@ def parse_eight_bar_lyrics(lyrics: str) -> list[str]:
         for line in lyrics.splitlines()
         if line.strip() and not line.strip().lower().startswith("[verse")
     ]
-    if len(lines) != TARGET_BARS:
-        raise ValueError(f"가이드는 정확히 {TARGET_BARS}줄의 가사가 필요합니다. 현재 {len(lines)}줄입니다.")
+    if len(lines) not in (8, 16):
+        raise ValueError(f"가이드는 정확히 8줄 또는 16줄의 가사가 필요합니다. 현재 {len(lines)}줄입니다.")
     return lines
 
 
-def build_beat_map(bpm: int, first_bar_start_sec: float) -> BeatMap:
+def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> BeatMap:
     if bpm < 40 or bpm > 220:
         raise ValueError("BPM은 40부터 220 사이여야 합니다.")
     if not math.isfinite(first_bar_start_sec) or first_bar_start_sec < 0:
@@ -124,18 +201,20 @@ def build_beat_map(bpm: int, first_bar_start_sec: float) -> BeatMap:
     actual_bpm = bpm / 2.0 if bpm >= 110.0 else float(bpm)
 
     beat_duration = 60.0 / actual_bpm
-    bar_duration = beat_duration * 4
-    bar_starts = [first_bar_start_sec + index * bar_duration for index in range(TARGET_BARS)]
-    beat_times = [first_bar_start_sec + index * beat_duration for index in range(TARGET_BARS * 4)]
+    beats_per_unit = 4 if bar_count == 8 else 2
+    bar_duration = beat_duration * beats_per_unit
+    bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
+    beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
     return BeatMap(
         bpm=int(round(actual_bpm)),
-        beatsPerBar=4,
-        barCount=TARGET_BARS,
+        beatsPerBar=beats_per_unit,
+        barCount=bar_count,
         firstBarStartSec=round(first_bar_start_sec, 6),
         barDurationSec=round(bar_duration, 6),
         barStartTimes=_rounded(bar_starts),
         beatTimes=_rounded(beat_times),
     )
+
 
 
 def build_flow_plan(
@@ -147,30 +226,31 @@ def build_flow_plan(
     base_f0_hz: float,
 ) -> FlowPlan:
     lines = parse_eight_bar_lyrics(lyrics)
-    beat_map = build_beat_map(bpm, first_bar_start_sec)
+    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(lines))
     bars: list[FlowBar] = []
     for index, line in enumerate(lines):
-        # Validate original line for unsupported characters
-        _extract_hangul_syllables(line)
-
-        # Convert line phonetically
-        g2p_line = g2p(line)
-
-        syllables = _extract_hangul_syllables(g2p_line)
-        if not syllables:
-            raise ValueError(f"{index + 1}마디에 합성 가능한 한글 음절이 없습니다.")
-        if len(syllables) > MAX_SYLLABLES_PER_BAR:
+        syllable_phones, g2p_line = _extract_line_syllables_and_text(line)
+        if not syllable_phones:
+            raise ValueError(f"{index + 1}마디에 합성 가능한 음절이 없습니다.")
+        if len(syllable_phones) > MAX_SYLLABLES_PER_BAR:
             raise ValueError(
-                f"{index + 1}마디가 너무 조밀합니다. 한 마디는 한글 {MAX_SYLLABLES_PER_BAR}음절 이하로 수정해주세요."
+                f"{index + 1}마디가 너무 조밀합니다. 한 마디는 {MAX_SYLLABLES_PER_BAR}음절 이하로 수정해주세요."
             )
 
-        phonemes, ph_num = _line_to_phonemes(syllables)
+        phonemes = ["SP"]
+        ph_num = [1]
+        for syl_p in syllable_phones:
+            phonemes.extend(syl_p)
+            ph_num.append(len(syl_p))
+        phonemes.append("SP")
+        ph_num.append(1)
+
         durations, template = _allocate_phoneme_durations(
             phonemes,
             ph_num,
             beat_map.barDurationSec,
             index,
-            len(syllables),
+            len(syllable_phones),
         )
         start = beat_map.barStartTimes[index]
         bars.append(
@@ -180,7 +260,7 @@ def build_flow_plan(
                 startSec=start,
                 endSec=round(start + beat_map.barDurationSec, 6),
                 template=template,
-                syllableCount=len(syllables),
+                syllableCount=len(syllable_phones),
                 phonemes=[
                     FlowPhoneme(symbol=symbol, durationSec=duration)
                     for symbol, duration in zip(phonemes, durations)
@@ -202,7 +282,8 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
     for bar in plan.bars:
         symbols = [phoneme.symbol for phoneme in bar.phonemes]
         durations = [phoneme.durationSec for phoneme in bar.phonemes]
-        _, ph_num = _line_to_phonemes(_extract_hangul_syllables(bar.text))
+        syllable_phones, _ = _extract_line_syllables_and_text(bar.text)
+        ph_num = [1] + [len(syl_p) for syl_p in syllable_phones] + [1]
         if sum(ph_num) != len(symbols):
             raise RuntimeError(f"{bar.barIndex}마디 음절과 음소 매핑이 맞지 않습니다.")
         f0_values = _build_f0_curve(symbols, durations, base_f0_hz, bar.barIndex)
@@ -241,10 +322,11 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
 
 
 def _extract_hangul_syllables(text: str) -> list[str]:
-    unsupported = re.sub(r"[가-힣\s.,!?~'\"()\[\]{}:;·…-]", "", text)
+    unsupported = re.sub(r"[가-힣a-zA-Z\s.,!?~'\"()\[\]{}:;·…-]", "", text)
     if unsupported:
-        raise ValueError(f"현재 SVS 테스트는 한글 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
+        raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
     return re.findall(r"[가-힣]", text)
+
 
 
 def _line_to_phonemes(syllables: list[str]) -> tuple[list[str], list[int]]:

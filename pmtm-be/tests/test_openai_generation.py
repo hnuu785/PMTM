@@ -4,7 +4,9 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
+# pyrefly: ignore [missing-import]
 from fastapi import HTTPException
+# pyrefly: ignore [missing-import]
 from fastapi.testclient import TestClient
 
 from app import demo_pipeline
@@ -400,7 +402,7 @@ class DemoGenerationTests(unittest.TestCase):
                 "verse",
             )
 
-        self.assertEqual(generate.call_args.kwargs["bars"], 8)
+        self.assertIsNone(generate.call_args.kwargs["bars"])
 
     def test_run_demo_generation_passes_capped_vocal_start_offset(self):
         class FakeRedisClient:
@@ -520,7 +522,7 @@ class OpenAIGenerationTests(unittest.TestCase):
             main.EXP_005_SFT_ADAPTER,
             genre="Korean hip-hop",
             mood="confident",
-            bars=8,
+            bars=None,
         )
         self.assertIn("exp-005 SFT", notes[0])
 
@@ -534,7 +536,7 @@ class OpenAIGenerationTests(unittest.TestCase):
             main.EXP_005_GRPO_ADAPTER,
             genre="Korean hip-hop",
             mood="confident",
-            bars=8,
+            bars=None,
         )
         self.assertIn("exp-005 GRPO", notes[0])
 
@@ -548,7 +550,7 @@ class OpenAIGenerationTests(unittest.TestCase):
             main.EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
             genre="Korean hip-hop",
             mood="confident",
-            bars=8,
+            bars=None,
         )
         self.assertIn("checkpoint-450", notes[0])
 

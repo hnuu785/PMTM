@@ -94,6 +94,46 @@ def _save_single_plot(
     plt.close()
 
 
+def _save_sft_plot(
+    train_points: list[tuple[int, float]],
+    eval_points: list[tuple[int, float]],
+    title: str,
+    output_path: Path,
+) -> None:
+    try:
+        import matplotlib
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "matplotlib is required. Run `pip install -r requirements.txt` first."
+        ) from exc
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(10, 5))
+    if train_points:
+        steps_t = [step for step, _ in train_points]
+        values_t = [v for _, v in train_points]
+        plt.plot(steps_t, values_t, marker="o", markersize=3, linewidth=1.5,
+                 color="#1f2937", label="train_loss")
+
+    if eval_points:
+        steps_e = [step for step, _ in eval_points]
+        values_e = [v for _, v in eval_points]
+        plt.plot(steps_e, values_e, marker="s", markersize=3, linewidth=1.5,
+                 linestyle="--", color="#dc2626", label="eval_loss")
+
+    plt.title(title)
+    plt.xlabel("Step")
+    plt.ylabel("Loss")
+    if eval_points:
+        plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=180)
+    plt.close()
+
+
 def save_plot(points: list[tuple[int, float]], title: str, output_path: Path) -> None:
     """하위 호환성 유지용 래퍼."""
     _save_single_plot(points, title, "Loss", output_path)
@@ -185,13 +225,14 @@ def generate_loss_plots(
     exp_label = experiment_name or outputs_dir.name
     saved: list[Path] = []
 
-    # ── SFT: loss만 ───────────────────────────────────────────────────────────
+    # ── SFT: train loss + eval loss ───────────────────────────────────────────
     sft_dir = outputs_dir / "sft_qwen"
     if sft_dir.exists():
-        points = load_loss_points(sft_dir)
-        if points:
+        train_points = load_loss_points(sft_dir)
+        eval_points = _load_metric_points(sft_dir, "eval_loss")
+        if train_points or eval_points:
             out = plot_dir / "sft_qwen_loss.png"
-            _save_single_plot(points, f"SFT Loss ({exp_label})", "Loss", out)
+            _save_sft_plot(train_points, eval_points, f"SFT Loss ({exp_label})", out)
             saved.append(out)
 
     # ── GRPO: loss + reward + kl ──────────────────────────────────────────────

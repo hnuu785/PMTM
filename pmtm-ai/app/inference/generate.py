@@ -8,6 +8,8 @@ from app.paths import MODEL_ID, MODELS_DIR
 
 DEFAULT_ADAPTER = MODELS_DIR / "grpo_rap_qwen"
 PROMPT_FORMATS = ("auto", "chat", "raw")
+DEFAULT_TEMPERATURE = 0.8
+DEFAULT_TOP_P = 0.95
 
 
 def parse_args():
@@ -23,10 +25,10 @@ def parse_args():
     p.add_argument("--danceability", type=float, help="Danceability score (0-1)")
     p.add_argument("--loudness", type=float, help="Loudness in dB")
     p.add_argument("--valence", type=float, help="Valence score (0-1)")
-    p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
+    p.add_argument("--bars", type=int, default=None, help="Target bar count (default: auto based on BPM)")
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
-    p.add_argument("--temperature", type=float, default=0.9, help="Sampling temperature")
-    p.add_argument("--top-p", type=float, default=0.95, help="Top-p sampling")
+    p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
+    p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
     p.add_argument(
         "--base-model",
         default=None,
@@ -80,6 +82,7 @@ def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
         return MODEL_ID
 
     try:
+        # pyrefly: ignore [missing-import]
         from peft import PeftConfig
 
         cfg = PeftConfig.from_pretrained(str(adapter_path))
@@ -114,8 +117,11 @@ def build_model_input_text(tokenizer, base_model: str, prompt_format: str, promp
 
 
 def build_model(base_model: str, adapter_path: Path | None):
+    # pyrefly: ignore [missing-import]
     import torch
+    # pyrefly: ignore [missing-import]
     from peft import PeftModel
+    # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
     tokenizer_path = str(adapter_path) if adapter_path else base_model
@@ -155,6 +161,7 @@ def build_model(base_model: str, adapter_path: Path | None):
 
 
 def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float) -> str:
+    # pyrefly: ignore [missing-import]
     import torch
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model_device(model))
