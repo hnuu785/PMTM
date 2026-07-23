@@ -17,7 +17,7 @@ from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
-MIN_RHYME_SCORE = 0.40
+MIN_RHYME_SCORE = 0.35
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28
@@ -186,9 +186,9 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                # 데이터셋 구축 시에는 6~18음절 범위의 풍부한 샘플(798개)을 100% 보존
+                # 장르별 ±1음절 허용 범위 (붐뱁 7~17음절, 트랩 5~15음절) 필터링
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(6 <= s <= 18 for s in syllables_list):
+                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 
