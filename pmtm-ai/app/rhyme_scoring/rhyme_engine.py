@@ -37,7 +37,7 @@ def _match_with_offset(p1: list[dict], p2: list[dict], offset1: int, offset2: in
 
 
 def get_line_rhyme_score(line1, line2):
-    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절, 오프셋 1 슬라이딩 허용)"""
+    """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절, 우측 정렬 매칭)"""
     # 0) 어미/동일 단어 단순 반복 감점: 마지막 어절이 철자법상 완전히 동일한 경우 0점 처리
     w1 = line1.strip().split()[-1] if line1.strip().split() else ""
     w2 = line2.strip().split()[-1] if line2.strip().split() else ""
@@ -55,21 +55,20 @@ def get_line_rhyme_score(line1, line2):
     if not p1 or not p2:
         return 0.0
     
-    # 1) 오프셋 0 (우측 정렬 매칭)
-    score_offset_0 = _match_with_offset(p1, p2, 0, 0)
-    
-    # 2) 오프셋 1 (p1 끝 1음절 흘림 - 20% 감점 페널티)
-    score_offset_1_p1 = _match_with_offset(p1, p2, 1, 0) * 0.8 if len(p1) > 1 else 0.0
-    
-    # 3) 오프셋 1 (p2 끝 1음절 흘림 - 20% 감점 페널티)
-    score_offset_1_p2 = _match_with_offset(p1, p2, 0, 1) * 0.8 if len(p2) > 1 else 0.0
-    
-    return round(max(score_offset_0, score_offset_1_p1, score_offset_1_p2), 4)
+    # 오프셋 0 (우측 정렬 매칭만 수행)
+    return round(_match_with_offset(p1, p2, 0, 0), 4)
 
-def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[int | None]]:
+def calculate_line_scores(
+    actual_lines: list[str],
+    bpm: float | None = None,
+    genre: str | None = None,
+) -> tuple[list[float], list[int | None]]:
     """
     각 라인별 연속 라임 점수와 최적 매칭 인접 라인 인덱스 계산.
     (AI 학습의 reward 채점 로직과 동일)
+
+    bpm 또는 genre 매개변수를 기준으로 트랩(genre="트랩" 또는 bpm >= 115) 환경에서는
+    건너뛴 라임(ABAC, BACA 등 i <-> i+2) 가중치를 1.3333 (line_score 기준 0.8점 반영)으로 상향 조절합니다.
     """
     actual_len = len(actual_lines)
     if actual_len <= 1:
@@ -87,6 +86,17 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
         score = get_line_rhyme_score(actual_lines[i], actual_lines[i+2])
         skip_scores.append(score)
 
+    # 장르 판별 (트랩 여부 확인)
+    is_trap = False
+    if genre is not None:
+        is_trap = genre.lower() in ("trap", "트랩")
+    elif bpm is not None:
+        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+        is_trap = judgment_bpm >= 115
+
+    # 건너뛴 라임 가중치: 붐뱁 0.5 (줄당 0.3점), 트랩 1.3333 (줄당 0.8점)
+    skip_factor = (4.0 / 3.0) if is_trap else 0.5
+
     line_scores = []
     best_match_indexes = [None] * actual_len
 
@@ -99,8 +109,8 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
         score_R2 = skip_scores[i] if i < actual_len - 2 else 0.0
         skip_max = max(score_L2, score_R2)
 
-        # 인접 라인은 1.0 가중치, 건너뛴 라임은 0.5 가중치 적용하여 최댓값 선택
-        adj_max = max(score_L1, score_R1, 0.5 * skip_max)
+        # 인접 라인은 1.0 가중치, 건너뛴 라임은 skip_factor 가중치 적용하여 최댓값 선택
+        adj_max = max(score_L1, score_R1, skip_factor * skip_max)
 
         # best_match_index 결정 (인접 라인 우선, 없으면 건너뛴 라인)
         if adj_max > 0.0:
@@ -145,12 +155,16 @@ def calculate_line_scores(actual_lines: list[str]) -> tuple[list[float], list[in
     return line_scores, best_match_indexes
 
 
-def calculate_rhyme_density(lines: list[str]) -> float:
+def calculate_rhyme_density(
+    lines: list[str],
+    bpm: float | None = None,
+    genre: str | None = None,
+) -> float:
     """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다. (3연속 완전 무라임 구간당 -0.05점 감점)"""
     actual_len = len(lines)
     if actual_len <= 1:
         return 0.0
-    line_scores, _ = calculate_line_scores(lines)
+    line_scores, _ = calculate_line_scores(lines, bpm=bpm, genre=genre)
     base_density = sum(line_scores) / actual_len
 
     if actual_len < 3:

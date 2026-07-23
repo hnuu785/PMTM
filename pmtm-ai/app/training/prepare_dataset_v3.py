@@ -17,7 +17,7 @@ from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
 
-MIN_RHYME_SCORE = 0.40
+MIN_RHYME_SCORE = 0.35
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28
@@ -95,11 +95,11 @@ def repeated_ngram_count(lines: list[str], n: int) -> int:
     return sum(count - 1 for count in Counter(ngrams).values() if count > 1)
 
 
-def chunk_features(lines: list[str]) -> dict[str, float | int]:
+def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, float | int]:
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_score = calculate_rhyme_density(lines)
+    rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
     return {
         "rhyme_score": rhyme_score,
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
@@ -180,15 +180,15 @@ def prepare() -> tuple[list[dict], Counter]:
                     continue
                 seen_chunks.add(chunk_key)
 
-                features = chunk_features(chunk)
+                features = chunk_features(chunk, bpm=bpm)
                 reason = rejection_reason(features)
                 if reason:
                     stats[reason] += 1
                     continue
 
-                # 엄격 모드: 모든 줄의 음절 수가 반드시 지침 범위(6~18음절) 내여야 함
+                # 장르별 ±1음절 허용 범위 (붐뱁 7~17음절, 트랩 5~15음절) 필터링
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s <= s <= max_s for s in syllables_list):
+                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 

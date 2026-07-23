@@ -2,17 +2,17 @@
 
 def get_genre_rules(bpm: float | None) -> tuple[str, int, int, int]:
     """BPM을 기준으로 장르 이름, 목표 줄 수(target_lines), 목표 음절 범위(min_s, max_s)를 반환합니다.
-    - 붐뱁 (< 115 BPM): 8줄, 6~18음절
-    - 트랩 (>= 115 BPM): 16줄, 6~18음절
+    - 붐뱁 (< 115 BPM): 8줄, 8~16음절
+    - 트랩 (>= 115 BPM): 16줄, 6~14음절
     """
     if bpm is None:
-        return "트랩", 16, 6, 18
+        return "트랩", 16, 6, 14
 
     judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
     if judgment_bpm < 115:
-        return "붐뱁", 8, 6, 18
+        return "붐뱁", 8, 8, 16
     else:
-        return "트랩", 16, 6, 18
+        return "트랩", 16, 6, 14
 
 
 def get_genre_and_syllable_range(bpm: float | None) -> tuple[str, int, int]:

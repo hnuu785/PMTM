@@ -9,7 +9,7 @@ import numpy as np
 import onnxruntime as ort
 
 # pyrefly: ignore [missing-import]
-from diffsinger_utau.voice_bank import PredAcoustic, PredVariance, PredVocoder
+from diffsinger_utau.voice_bank import PredAcoustic, PredDuration, PredVariance, PredVocoder
 # pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank.commons.ds_reader import DSReader
 # pyrefly: ignore [missing-import]
@@ -27,6 +27,8 @@ def parse_args():
     parser.add_argument("--lang", default="ko")
     parser.add_argument("--acoustic-steps", type=int, default=30)
     parser.add_argument("--variance-steps", type=int, default=20)
+    parser.add_argument("--use-ai-dur", action="store_true", default=True, help="Enable hybrid AI duration scaling")
+    parser.add_argument("--no-ai-dur", action="store_false", dest="use_ai_dur", help="Disable hybrid AI duration scaling")
     return parser.parse_args()
 
 
@@ -45,7 +47,7 @@ def select_device(requested):
     return requested
 
 
-def render(score_path, voice_bank_path, output_path, device, lang, acoustic_steps, variance_steps):
+def render(score_path, voice_bank_path, output_path, device, lang, acoustic_steps, variance_steps, use_ai_dur=True):
     sections = DSReader(score_path).read_ds()
     if len(sections) not in (8, 16):
         raise RuntimeError(f"PMTM DiffSinger score must contain 8 or 16 sections. (currently: {len(sections)})")
@@ -55,10 +57,47 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
     variance = PredVariance(reader.get_dsvariance())
     vocoder = PredVocoder(reader.get_dsvocoder())
     sample_rate = vocoder.ds_vocoder.sample_rate
+    
+    dur_model = None
+    if use_ai_dur and (voice_bank_path / "dsdur").is_dir():
+        try:
+            dur_model = PredDuration(reader.get_dsdur())
+        except Exception as exc:
+            print(f"Warning: Could not initialize PredDuration: {exc}", file=sys.stderr)
+
     rendered = []
 
     for index, section in enumerate(sections):
         section["lang"] = lang
+        
+        if dur_model is not None:
+            try:
+                pred_dur = dur_model.predict(section, lang=lang)
+                if pred_dur is not None and len(pred_dur) > 0:
+                    ph_dur_orig = [float(v) for v in section["ph_dur"].split()]
+                    ph_num = [int(v) for v in section["ph_num"].split()]
+                    
+                    if len(ph_dur_orig) == len(pred_dur) and sum(ph_num) == len(ph_dur_orig):
+                        scaled_dur = []
+                        cursor = 0
+                        for num in ph_num:
+                            syllable_orig_dur = sum(ph_dur_orig[cursor : cursor + num])
+                            ai_durs = [max(0.001, float(pred_dur[cursor + k])) for k in range(num)]
+                            ai_sum = sum(ai_durs)
+                            
+                            if ai_sum > 0:
+                                for k in range(num):
+                                    scaled_dur.append(syllable_orig_dur * (ai_durs[k] / ai_sum))
+                            else:
+                                scaled_dur.extend(ph_dur_orig[cursor : cursor + num])
+                            cursor += num
+                            
+                        diff = sum(ph_dur_orig) - sum(scaled_dur)
+                        scaled_dur[-1] += diff
+                        section["ph_dur"] = " ".join(f"{v:.6f}" for v in scaled_dur)
+            except Exception as exc:
+                print(f"Warning: Hybrid AI duration scaling failed for bar {index + 1}: {exc}", file=sys.stderr)
+
         predicted_variances = variance.predict(
             section,
             lang=lang,
@@ -117,6 +156,7 @@ def main():
             args.lang,
             args.acoustic_steps,
             args.variance_steps,
+            args.use_ai_dur,
         )
     except Exception as exc:
         print(str(exc), file=sys.stderr)
