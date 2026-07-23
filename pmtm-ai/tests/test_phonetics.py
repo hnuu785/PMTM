@@ -191,7 +191,7 @@ s = get_line_rhyme_score("강", "")
 check("빈 줄 (우) = 0.0", s == 0.0, f"got {s}")
 
 s = get_line_rhyme_score("사랑보단 안정감이 더 커서 마음만", "아슬하게 걸쳐있었을 뿐 아름다운")
-check("엇박 슬라이딩 라임 ('마음만'↔'아름다운') = 0.8", approx(s, 0.8), f"got {s}")
+check("엇박 슬라이딩 제거 확인 ('마음만'↔'아름다운') = 0.0", s == 0.0, f"got {s}")
 
 # 점수는 [0, 1] 구간 (회귀 가드)
 for a, b in [("내일 가자", "오늘 가자"),
@@ -211,8 +211,12 @@ scores, best_indexes = calculate_line_scores(lines)
 check("건너뛴 라임 점수 산정 (A - B - A) = 0.3", approx(scores[0], 0.3), f"got {scores[0]}")
 check("건너뛴 라임 최적 매치 인덱스 = 2", best_indexes[0] == 2, f"got {best_indexes[0]}")
 check("라임이 없는 라인 점수 = 0.0", approx(scores[1], 0.0), f"got {scores[1]}")
-check("인접 라임 점수 산정 = 0.76", approx(scores[3], 0.76), f"got {scores[3]}")
+check("인접 라임 점수 산정 = 0.7333", approx(scores[3], 0.7333), f"got {scores[3]}")
 check("인접 라임 최적 매치 인덱스 = 2", best_indexes[3] == 2, f"got {best_indexes[3]}")
+
+# 트랩 장르 (bpm >= 115 또는 genre="트랩") 건너뛴 라임 상향 채점 (0.8점)
+trap_scores, _ = calculate_line_scores(lines, bpm=130)
+check("트랩 장르 건너뛴 라임 점수 산정 (A - B - A) = 0.8", approx(trap_scores[0], 0.8), f"got {trap_scores[0]}")
 
 # ─── 5.6 라임 밀도 및 무라임 패널티 테스트 ───────────────
 print("\n=== 라임 밀도 및 무라임 패널티 ===")

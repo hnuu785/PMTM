@@ -113,6 +113,69 @@ class FlowAdapterTests(unittest.TestCase):
         plan = build_flow_plan(sparse_lyrics, 90, 0, "potg", base_f0_hz=190.0)
         self.assertEqual(len(plan.bars), 8)
 
+    def test_hierarchical_word_rhythm_allocation(self):
+        # Test word-chunk based hierarchical rhythm allocation with micro-pauses
+        test_lyrics = "\n".join([
+            "그걸 보고 감동하는 너에게 감동",  # 5 words, 13 syllables
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan = build_flow_plan(test_lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        bar0 = plan.bars[0]
+        self.assertIn("adaptive_hierarchical_13syl_5words", bar0.template)
+        # Check that inter-word SPs are removed for legato flow (only lead & tail SP remain)
+        sp_count = sum(1 for p in bar0.phonemes if p.symbol == "SP")
+        self.assertEqual(sp_count, 2)
+        self.assertAlmostEqual(
+            sum(p.durationSec for p in bar0.phonemes),
+            plan.beatMap.barDurationSec,
+            places=5,
+        )
+
+    def test_adaptive_min_dur_and_max_cap(self):
+        # Test 13-syllable bar at 130 BPM ensures minimum phoneme duration is guaranteed
+        dense_130bpm = "\n".join([
+            "쏟아지는 빗속에서 기다려본 적?",  # 13 syllables at 130 BPM
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan = build_flow_plan(dense_130bpm, 130, 0, "potg", base_f0_hz=190.0)
+        bar0 = plan.bars[0]
+        self.assertIn("adaptive_hierarchical_13syl", bar0.template)
+        # Ensure total duration matches bar duration
+        self.assertAlmostEqual(
+            sum(p.durationSec for p in bar0.phonemes),
+            plan.beatMap.barDurationSec,
+            places=5,
+        )
+
+        # Test single-syllable bar enforces MAX_SYLLABLE_DUR_SEC (0.60s) Cap
+        sparse_lyrics = "\n".join([
+            "아",  # 1 syllable
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan_sparse = build_flow_plan(sparse_lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        bar0_sparse = plan_sparse.bars[0]
+        # Syllable phonemes (for '아' -> vowel 'a') should not exceed 0.60s
+        syllable_dur = sum(p.durationSec for p in bar0_sparse.phonemes if p.symbol != "SP")
+        self.assertLessEqual(syllable_dur, 0.600001)
+
     def test_diffsinger_score_contains_eight_manual_sections(self):
         plan = build_flow_plan(EIGHT_BARS, 90, 2.0, "rang", base_f0_hz=145.0)
         with TemporaryDirectory() as tmp:

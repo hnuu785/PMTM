@@ -121,26 +121,41 @@ def _english_word_to_syllables(word: str) -> list[list[str]]:
     return [[LETTER_TO_POTG.get(char, "a")] for char in letters]
 
 
-def _extract_line_syllables_and_text(text: str) -> tuple[list[list[str]], str]:
+@dataclass(frozen=True)
+class WordChunk:
+    syllables: list[list[str]]
+    punctuation: str | None = None
+
+
+def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     unsupported = re.sub(r"[가-힣a-zA-Z\s.,!?~'\"()\[\]{}:;·…-]", "", text)
     if unsupported:
         raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
-    tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", text)
-    syllables_phones: list[list[str]] = []
+    raw_words = text.strip().split()
+    word_chunks: list[WordChunk] = []
     g2p_parts: list[str] = []
-    for token in tokens:
-        if re.match(r"^[가-힣]+$", token):
-            g2p_token = g2p(token)
-            g2p_parts.append(g2p_token)
-            syllables = re.findall(r"[가-힣]", g2p_token)
-            for syl in syllables:
-                syllables_phones.append(_syllable_to_phonemes(syl))
-        else:
-            g2p_parts.append(token)
-            e_syls = _english_word_to_syllables(token)
-            syllables_phones.extend(e_syls)
-    return syllables_phones, " ".join(g2p_parts)
 
+    for raw_word in raw_words:
+        punct_match = re.search(r"([?,!.])+$", raw_word)
+        punct = punct_match.group(1) if punct_match else None
+
+        tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", raw_word)
+        current_word_syllables: list[list[str]] = []
+        for token in tokens:
+            if re.match(r"^[가-힣]+$", token):
+                g2p_token = g2p(token)
+                g2p_parts.append(g2p_token)
+                syllables = re.findall(r"[가-힣]", g2p_token)
+                for syl in syllables:
+                    current_word_syllables.append(_syllable_to_phonemes(syl))
+            else:
+                g2p_parts.append(token)
+                e_syls = _english_word_to_syllables(token)
+                current_word_syllables.extend(e_syls)
+        if current_word_syllables:
+            word_chunks.append(WordChunk(syllables=current_word_syllables, punctuation=punct))
+
+    return word_chunks, " ".join(g2p_parts)
 
 
 @dataclass(frozen=True)
@@ -169,6 +184,7 @@ class FlowBar:
     template: str
     syllableCount: int
     phonemes: list[FlowPhoneme]
+    phNum: list[int] | None = None
 
 
 @dataclass(frozen=True)
@@ -229,28 +245,19 @@ def build_flow_plan(
     beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(lines))
     bars: list[FlowBar] = []
     for index, line in enumerate(lines):
-        syllable_phones, g2p_line = _extract_line_syllables_and_text(line)
-        if not syllable_phones:
+        word_chunks, g2p_line = _extract_word_syllables_and_text(line)
+        total_syllable_count = sum(len(w.syllables) for w in word_chunks)
+        if total_syllable_count == 0:
             raise ValueError(f"{index + 1}마디에 합성 가능한 음절이 없습니다.")
-        if len(syllable_phones) > MAX_SYLLABLES_PER_BAR:
+        if total_syllable_count > MAX_SYLLABLES_PER_BAR:
             raise ValueError(
                 f"{index + 1}마디가 너무 조밀합니다. 한 마디는 {MAX_SYLLABLES_PER_BAR}음절 이하로 수정해주세요."
             )
 
-        phonemes = ["SP"]
-        ph_num = [1]
-        for syl_p in syllable_phones:
-            phonemes.extend(syl_p)
-            ph_num.append(len(syl_p))
-        phonemes.append("SP")
-        ph_num.append(1)
-
-        durations, template = _allocate_phoneme_durations(
-            phonemes,
-            ph_num,
+        phonemes, ph_num, durations, template = _allocate_word_hierarchical_durations(
+            word_chunks,
             beat_map.barDurationSec,
             index,
-            len(syllable_phones),
         )
         start = beat_map.barStartTimes[index]
         bars.append(
@@ -260,11 +267,12 @@ def build_flow_plan(
                 startSec=start,
                 endSec=round(start + beat_map.barDurationSec, 6),
                 template=template,
-                syllableCount=len(syllable_phones),
+                syllableCount=total_syllable_count,
                 phonemes=[
                     FlowPhoneme(symbol=symbol, durationSec=duration)
                     for symbol, duration in zip(phonemes, durations)
                 ],
+                phNum=ph_num,
             )
         )
 
@@ -282,10 +290,44 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
     for bar in plan.bars:
         symbols = [phoneme.symbol for phoneme in bar.phonemes]
         durations = [phoneme.durationSec for phoneme in bar.phonemes]
-        syllable_phones, _ = _extract_line_syllables_and_text(bar.text)
-        ph_num = [1] + [len(syl_p) for syl_p in syllable_phones] + [1]
+        if bar.phNum is not None:
+            ph_num = bar.phNum
+        else:
+            word_chunks, _ = _extract_word_syllables_and_text(bar.text)
+            flat_syllables = [syl for w in word_chunks for syl in w.syllables]
+            ph_num = [1] + [len(syl_p) for syl_p in flat_syllables] + [1]
+
         if sum(ph_num) != len(symbols):
             raise RuntimeError(f"{bar.barIndex}마디 음절과 음소 매핑이 맞지 않습니다.")
+
+        note_seq_list: list[str] = []
+        note_dur_list: list[float] = []
+        note_slur_list: list[int] = []
+
+        cursor = 0
+        is_after_rest = True
+
+        for count in ph_num:
+            group_symbols = symbols[cursor : cursor + count]
+            group_durs = durations[cursor : cursor + count]
+            group_dur_sum = sum(group_durs)
+
+            if group_symbols == ["SP"]:
+                note_seq_list.append("rest")
+                note_dur_list.append(group_dur_sum)
+                note_slur_list.append(0)
+                is_after_rest = True
+            else:
+                note_seq_list.append("C4")
+                note_dur_list.append(group_dur_sum)
+                if is_after_rest:
+                    note_slur_list.append(0)
+                    is_after_rest = False
+                else:
+                    note_slur_list.append(1)
+
+            cursor += count
+
         f0_values = _build_f0_curve(symbols, durations, base_f0_hz, bar.barIndex)
         zero_curve = " ".join("0" for _ in f0_values)
         energy_curve = " ".join(
@@ -303,9 +345,9 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
                 "ph_seq": " ".join(symbols),
                 "ph_dur": " ".join(f"{value:.6f}" for value in durations),
                 "ph_num": " ".join(str(value) for value in ph_num),
-                "note_seq": "C4",
-                "note_dur": f"{plan.beatMap.barDurationSec:.6f}",
-                "note_slur": "0",
+                "note_seq": " ".join(note_seq_list),
+                "note_dur": " ".join(f"{value:.6f}" for value in note_dur_list),
+                "note_slur": " ".join(str(value) for value in note_slur_list),
                 "f0_seq": " ".join(f"{value:.3f}" for value in f0_values),
                 "f0_timestep": f"{F0_TIMESTEP_SEC:.3f}",
                 "breathiness": breathiness_curve,
@@ -360,46 +402,34 @@ def _syllable_to_phonemes(syllable: str) -> list[str]:
     return [phone for phone in (onset_phone, vowel_phone, coda_phone) if phone]
 
 
-# Rhythmic templates representing natural, groovy, and syncopated rap flows.
-# The numbers indicate relative syllable durations (weights) where:
-# - 3: dotted eighth note (swing/bounce)
-# - 2: eighth note (standard)
-# - 1.33: triplet sixteenth note (trap shuffle)
-# - 1: sixteenth note (fast/tight)
-# - 0.5: thirty-second note (double-time pickup)
-# - 4 or 6: extended hold (release/emphasis at the end of a phrase)
-RHYTHM_TEMPLATES = {
-    7: [3, 1, 2, 2, 3, 1, 4],
-    8: [3, 1, 2, 2, 3, 1, 2, 2],
-    9: [3, 1, 2, 1, 1, 2, 2, 1, 3],
-    10: [1.5, 0.5, 1, 1, 2, 1.5, 0.5, 1, 1, 6],
-    11: [1, 1, 1, 1, 2, 2, 1.5, 0.5, 1, 1, 4],
-    12: [1.33, 1.33, 1.33, 2, 1, 1, 1.33, 1.33, 1.33, 2, 1, 1],
-    13: [2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2],
-    14: [1, 1, 1, 1, 2, 1.5, 0.5, 1, 1, 1, 1, 2, 1, 1],
-    15: [2, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 2],
-    16: [1, 1, 1, 1, 1.5, 0.5, 1, 1, 1, 1, 1, 1, 1.5, 0.5, 1, 1],
-    17: [1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1.5, 0.5, 1, 1, 1],
-    18: [1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1],
-    19: [1, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    20: [1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1],
-    21: [1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    22: [1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1],
-    23: [1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1],
-    24: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1],
-}
+DEFAULT_MIN_DUR_SEC = 0.11
+ABSOLUTE_MIN_DUR_SEC = 0.08
+MAX_SYLLABLE_DUR_SEC = 0.60
 
 
-def _allocate_phoneme_durations(
-    phonemes: list[str],
-    ph_num: list[int],
+def _get_word_syllable_weights(syllable_count: int) -> list[float]:
+    if syllable_count == 1:
+        return [1.5]
+    elif syllable_count == 2:
+        return [2.0, 1.0]
+    elif syllable_count == 3:
+        return [2.0, 1.0, 1.0]
+    elif syllable_count == 4:
+        return [1.5, 1.0, 1.5, 1.0]
+    else:
+        return [2.0] + [1.0] * (syllable_count - 1)
+
+
+def _allocate_word_hierarchical_durations(
+    word_chunks: list[WordChunk],
     bar_duration_sec: float,
     bar_index: int,
-    syllable_count: int,
-) -> tuple[list[float], str]:
-    if syllable_count <= 8:
+) -> tuple[list[str], list[int], list[float], str]:
+    total_syllable_count = sum(len(w.syllables) for w in word_chunks)
+
+    if total_syllable_count <= 8:
         lead_ratio, tail_ratio = 0.10, 0.12
-    elif syllable_count <= 16:
+    elif total_syllable_count <= 16:
         lead_ratio, tail_ratio = 0.06, 0.08
     else:
         lead_ratio, tail_ratio = 0.04, 0.05
@@ -408,26 +438,103 @@ def _allocate_phoneme_durations(
     tail_duration = bar_duration_sec * tail_ratio
     active_duration = bar_duration_sec - lead_duration - tail_duration
 
-    # Fetch template or fallback to uniform weights
-    weights = RHYTHM_TEMPLATES.get(syllable_count, [1.0] * syllable_count)
-    weight_sum = sum(weights)
-    syllable_durations = [active_duration * (w / weight_sum) for w in weights]
+    if total_syllable_count > 0:
+        avail_per_syl = active_duration / total_syllable_count
+        target_min_dur = max(ABSOLUTE_MIN_DUR_SEC, min(DEFAULT_MIN_DUR_SEC, avail_per_syl))
+    else:
+        target_min_dur = DEFAULT_MIN_DUR_SEC
 
-    durations = [lead_duration]
-    cursor = 1
-    for i, phone_count in enumerate(ph_num[1:-1]):
-        symbols = phonemes[cursor : cursor + phone_count]
-        phone_weights = [_phoneme_weight(sym) for sym in symbols]
-        phone_weight_sum = sum(phone_weights)
-        
-        # Divide this syllable's allocated duration among its phonemes
-        durations.extend(syllable_durations[i] * pw / phone_weight_sum for pw in phone_weights)
-        cursor += phone_count
+    required_syl_time = total_syllable_count * target_min_dur
+    residual_time = active_duration - required_syl_time
+
+    word_count = len(word_chunks)
+    items: list[dict[str, object]] = []
+
+    for w_idx, chunk in enumerate(word_chunks):
+        syl_weights = _get_word_syllable_weights(len(chunk.syllables))
+        for s_idx, syl_phones in enumerate(chunk.syllables):
+            items.append({
+                "type": "SYLLABLE",
+                "phones": syl_phones,
+                "base_dur": target_min_dur,
+                "weight": syl_weights[s_idx],
+            })
+
+        if chunk.punctuation in ("?", "!", "."):
+            sp_weight = 1.2
+        elif chunk.punctuation == ",":
+            sp_weight = 0.8
+        else:
+            sp_weight = 0.0
+
+        if sp_weight > 0:
+            if residual_time <= 0:
+                sp_base = 0.06 if chunk.punctuation in ("?", "!", ".") else (0.04 if chunk.punctuation == "," else 0.0)
+                if sp_base > 0:
+                    items.append({
+                        "type": "SP",
+                        "phones": None,
+                        "base_dur": sp_base,
+                        "weight": 0.0,
+                    })
+            else:
+                items.append({
+                    "type": "SP",
+                    "phones": None,
+                    "base_dur": 0.0,
+                    "weight": sp_weight,
+                })
+
+    total_weight = sum(float(item["weight"]) for item in items)
+    base_sum = sum(float(item["base_dur"]) for item in items)
+    effective_residual = max(0.0, active_duration - base_sum)
+
+    cap_overflow = 0.0
+    raw_item_durations: list[float] = []
+
+    for item in items:
+        w = float(item["weight"])
+        b = float(item["base_dur"])
+        add_dur = (effective_residual * (w / total_weight)) if total_weight > 0 else 0.0
+        dur = b + add_dur
+
+        if item["type"] == "SYLLABLE" and dur > MAX_SYLLABLE_DUR_SEC:
+            cap_overflow += (dur - MAX_SYLLABLE_DUR_SEC)
+            dur = MAX_SYLLABLE_DUR_SEC
+        raw_item_durations.append(dur)
+
+    tail_duration += cap_overflow
+
+    phonemes: list[str] = ["SP"]
+    ph_num: list[int] = [1]
+    durations: list[float] = [lead_duration]
+
+    for item, dur in zip(items, raw_item_durations):
+        if item["type"] == "SP":
+            phonemes.append("SP")
+            ph_num.append(1)
+            durations.append(dur)
+        else:
+            syl_phones = item["phones"]
+            assert isinstance(syl_phones, list)
+            phonemes.extend(syl_phones)
+            ph_num.append(len(syl_phones))
+            phone_weights = [_phoneme_weight(sym) for sym in syl_phones]
+            pw_sum = sum(phone_weights)
+            durations.extend(dur * pw / pw_sum for pw in phone_weights)
+
+    phonemes.append("SP")
+    ph_num.append(1)
     durations.append(tail_duration)
 
-    rounded = [round(value, 6) for value in durations]
+    rounded = [round(v, 6) for v in durations]
     rounded[-1] = round(rounded[-1] + (bar_duration_sec - sum(rounded)), 6)
-    return rounded, f"template_{syllable_count}syl"
+
+    template_name = f"adaptive_hierarchical_{total_syllable_count}syl_{word_count}words"
+    return phonemes, ph_num, rounded, template_name
+
+
+
 
 
 def _phoneme_weight(symbol: str) -> float:
