@@ -95,11 +95,11 @@ def repeated_ngram_count(lines: list[str], n: int) -> int:
     return sum(count - 1 for count in Counter(ngrams).values() if count > 1)
 
 
-def chunk_features(lines: list[str]) -> dict[str, float | int]:
+def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, float | int]:
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_score = calculate_rhyme_density(lines)
+    rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
     return {
         "rhyme_score": rhyme_score,
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
@@ -180,7 +180,7 @@ def prepare() -> tuple[list[dict], Counter]:
                     continue
                 seen_chunks.add(chunk_key)
 
-                features = chunk_features(chunk)
+                features = chunk_features(chunk, bpm=bpm)
                 reason = rejection_reason(features)
                 if reason:
                     stats[reason] += 1
