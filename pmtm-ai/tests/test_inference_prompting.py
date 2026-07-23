@@ -153,6 +153,14 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertIn("정확히 16줄로 구성해야 하며", messages_115[0]["content"])
         self.assertIn("6~18 범위 내로", messages_115[0]["content"])
 
+    def test_parse_target_bars_korean_prompt(self):
+        import re
+        ko_lines_re = re.compile(r"정확히\s+(\d+)줄")
+        prompt_16 = "트랩 랩 가사를 작성해 주세요. 정확히 16줄로 구성해야 하며, 줄당 음절 수는 6~18 범위 내로 조절해 주세요."
+        prompt_8 = "붐뱁 랩 가사를 작성해 주세요. 정확히 8줄로 구성해야 하며, 줄당 음절 수는 6~18 범위 내로 조절해 주세요."
+        self.assertEqual(int(ko_lines_re.search(prompt_16).group(1)), 16)
+        self.assertEqual(int(ko_lines_re.search(prompt_8).group(1)), 8)
+
 
 if __name__ == "__main__":
     unittest.main()

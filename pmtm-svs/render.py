@@ -3,12 +3,18 @@ import argparse
 import sys
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import numpy as np
+# pyrefly: ignore [missing-import]
 import onnxruntime as ort
 
+# pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank import PredAcoustic, PredVariance, PredVocoder
+# pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank.commons.ds_reader import DSReader
+# pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank.commons.utils import resample_align_curve
+# pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank.commons.voice_bank_reader import VoiceBankReader
 
 
@@ -41,8 +47,8 @@ def select_device(requested):
 
 def render(score_path, voice_bank_path, output_path, device, lang, acoustic_steps, variance_steps):
     sections = DSReader(score_path).read_ds()
-    if len(sections) != 8:
-        raise RuntimeError("PMTM DiffSinger score must contain exactly 8 sections.")
+    if len(sections) not in (8, 16):
+        raise RuntimeError(f"PMTM DiffSinger score must contain 8 or 16 sections. (currently: {len(sections)})")
 
     reader = VoiceBankReader(voice_bank_path)
     acoustic = PredAcoustic(reader.get_dsacoustic())
@@ -86,7 +92,8 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
         )
         wav = vocoder.predict(mel, f0, device=device).astype(np.float32)
         rendered.append((float(section["offset"]), wav))
-        print("Rendered bar {}/8".format(index + 1), flush=True)
+        print("Rendered bar {}/{}".format(index + 1, len(sections)), flush=True)
+
 
     total_samples = max(int(round(offset * sample_rate)) + len(wav) for offset, wav in rendered)
     mixed = np.zeros(total_samples, dtype=np.float32)

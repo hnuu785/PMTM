@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
 type LyricResponse = {
@@ -265,7 +265,7 @@ export default function Home() {
     };
   }, [apiBaseUrl, lyricLines, result]);
 
-  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+  async function handleGenerate(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (mode === "beat" && !beatFile) {
@@ -359,6 +359,9 @@ export default function Home() {
     const body = new FormData();
     body.append("beat", beatFile as File);
     body.append("llm", llm);
+    if (beatAnalysis?.tempo) {
+      body.append("bpm", String(Math.round(beatAnalysis.tempo)));
+    }
 
     return fetch(`${apiBaseUrl}/api/v1/lyrics/generate-from-beat`, {
       method: "POST",
@@ -367,8 +370,8 @@ export default function Home() {
   }
 
   async function handleGuideDemo() {
-    if (!beatFile || !result || lyricLines.length !== 8 || lyricLines.some((line) => !line.trim())) {
-      setError("비트와 비어 있지 않은 8줄 가사가 필요합니다.");
+    if (!beatFile || !result || (lyricLines.length !== 8 && lyricLines.length !== 16) || lyricLines.some((line) => !line.trim())) {
+      setError("비트와 비어 있지 않은 가사(8줄 또는 16줄)가 필요합니다.");
       return;
     }
     const parsedStart = Number(firstBarStartSec);
@@ -771,7 +774,7 @@ export default function Home() {
                       isGeneratingDemo ||
                       !beatAnalysis ||
                       !voicebankOptions.some((option) => option.id === voicebank && option.available) ||
-                      lyricLines.length !== 8 ||
+                      (lyricLines.length !== 8 && lyricLines.length !== 16) ||
                       lyricLines.some((line) => !line.trim())
                     }
                     className="h-10 border border-[#8af5eb]/55 bg-[#169c91] px-4 text-xs font-black tracking-[0.08em] text-white uppercase transition hover:bg-[#20b9ac] disabled:cursor-not-allowed disabled:border-[#315c58] disabled:bg-[#315c58] disabled:text-[#9abdb9]"
@@ -780,7 +783,7 @@ export default function Home() {
                   </button>
                 </div>
                 <p className="text-xs leading-5 text-[#8fcac4]">
-                  편집된 8줄만 사용합니다. 각 줄은 한 마디로 고정되고, 첫 마디 시작점을 직접 보정할 수 있습니다.
+                  편집된 가사(붐뱁 8줄 / 트랩 16줄)를 사용합니다. 첫 마디 시작점을 직접 보정할 수 있습니다.
                 </p>
                 {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                   <div className="space-y-2">
@@ -884,12 +887,14 @@ function parseLyricLines(lyrics: string) {
   const lines = lyrics
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !line.toLowerCase().startsWith("[verse"))
-    .slice(0, 8);
-  while (lines.length < 8) {
-    lines.push("");
+    .filter((line) => line && !line.toLowerCase().startsWith("[verse"));
+
+  const targetLen = lines.length > 8 ? 16 : 8;
+  const sliced = lines.slice(0, targetLen);
+  while (sliced.length < targetLen) {
+    sliced.push("");
   }
-  return lines;
+  return sliced;
 }
 
 function renderHighlightedLine(line: string, analysis?: RhymeLineAnalysis) {

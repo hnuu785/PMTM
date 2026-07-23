@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from app.inference.device import model_device, move_model_to_device, select_inference_device
+from app.inference.generate import DEFAULT_TEMPERATURE, DEFAULT_TOP_P
 from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
 from app.paths import MODEL_ID
 
@@ -25,10 +26,15 @@ def parse_args():
         default=None,
         help="Override tokenizer id/path. Useful when the base model cache lacks tokenizer files.",
     )
-    p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
+    p.add_argument("--bars", type=int, default=None, help="Target bar count (default: auto based on BPM)")
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
-    p.add_argument("--temperature", type=float, default=0.85, help="Sampling temperature")
-    p.add_argument("--top-p", type=float, default=0.92, help="Top-p sampling")
+    p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
+    p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
+    p.add_argument(
+        "--print-prompt",
+        action="store_true",
+        help="Print the constructed prompt before generation",
+    )
     p.add_argument(
         "--prompt-format",
         choices=PROMPT_FORMATS,
@@ -59,6 +65,7 @@ def resolve_base_model(adapter_path: Path | None, override: str) -> str:
         return override
 
     try:
+        # pyrefly: ignore [missing-import]
         from peft import PeftConfig
 
         cfg = PeftConfig.from_pretrained(str(adapter_path))
@@ -93,8 +100,11 @@ def build_model_input_text(tokenizer, base_model: str, prompt_format: str, promp
 
 
 def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str | None):
+    # pyrefly: ignore [missing-import]
     import torch
+    # pyrefly: ignore [missing-import]
     from peft import PeftModel
+    # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer_path = tokenizer_model or (str(adapter_path) if adapter_path else base_model)
@@ -123,6 +133,7 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
 
 
 def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float) -> str:
+    # pyrefly: ignore [missing-import]
     import torch
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model_device(model))
@@ -175,6 +186,12 @@ def main():
         build_prompt(args),
         build_messages(args),
     )
+    if args.print_prompt:
+        import sys
+        print("=== Constructed Prompt ===", file=sys.stderr)
+        print(prompt, file=sys.stderr)
+        print("-" * 60, file=sys.stderr)
+
     text = generate_text(
         tokenizer,
         model,

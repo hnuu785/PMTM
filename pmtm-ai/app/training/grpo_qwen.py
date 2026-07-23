@@ -209,6 +209,7 @@ def build_prompts(df=None) -> list[list[dict[str, str]]]:
 _END_RE = re.compile(r"\[End\]")
 _BARS_RE = re.compile(r"\[Verse\s+(\d+)\s*마디\]")
 _LINES_RE = re.compile(r"exactly\s+(\d+)\s+lines", re.IGNORECASE)
+_KO_LINES_RE = re.compile(r"정확히\s+(\d+)줄")
 
 
 def _message_content(value) -> str:
@@ -259,7 +260,7 @@ def _extract_verse(completion) -> list[str]:
 
 def _parse_target_bars(prompt, default: int = TARGET_BARS) -> int:
     prompt_text = _message_content(prompt)
-    for pattern in (_LINES_RE, _BARS_RE):
+    for pattern in (_KO_LINES_RE, _LINES_RE, _BARS_RE):
         m = pattern.search(prompt_text)
         if m:
             return int(m.group(1))

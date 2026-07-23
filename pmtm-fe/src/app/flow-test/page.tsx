@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
 type DemoStatus =
@@ -161,7 +161,7 @@ export default function FlowTestPage() {
       .filter((line) => line.length > 0 && !line.toLowerCase().startsWith("[verse")).length;
   }, [lyrics]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
@@ -182,8 +182,8 @@ export default function FlowTestPage() {
       return;
     }
 
-    if (lineCount !== 8) {
-      setError(`가이드는 정확히 8줄의 가사만 지원합니다. (현재: ${lineCount}줄)`);
+    if (lineCount !== 8 && lineCount !== 16) {
+      setError(`가이드는 8줄(붐뱁) 또는 16줄(트랩)의 가사만 지원합니다. (현재: ${lineCount}줄)`);
       return;
     }
 
@@ -259,9 +259,9 @@ export default function FlowTestPage() {
             {/* Lyrics Area */}
             <div>
               <div className="flex justify-between items-end">
-                <label htmlFor="lyrics-input" className="text-sm font-bold text-[#d8b993]">랩 가사 (정확히 8줄)</label>
-                <span className={`text-xs font-bold ${lineCount === 8 ? "text-[#52d4c8]" : "text-[#ff5a1f]"}`}>
-                  현재: {lineCount} / 8 줄
+                <label htmlFor="lyrics-input" className="text-sm font-bold text-[#d8b993]">랩 가사 (8줄 또는 16줄)</label>
+                <span className={`text-xs font-bold ${lineCount === 8 || lineCount === 16 ? "text-[#52d4c8]" : "text-[#ff5a1f]"}`}>
+                  현재: {lineCount} / 8 또는 16 줄
                 </span>
               </div>
               <textarea
@@ -269,13 +269,14 @@ export default function FlowTestPage() {
                 rows={10}
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
-                placeholder="1줄이 1마디에 대응됩니다. 한글 가사만 입력해주세요."
+                placeholder="1줄이 1마디에 대응됩니다. 한글 및 영문 가사를 입력해주세요."
                 className="mt-2 block w-full border border-[#f5b950]/45 bg-[#130806]/88 p-4 text-sm font-semibold leading-relaxed focus:border-[#ff5a1f] focus:outline-none font-mono"
               />
               <p className="mt-1.5 text-xs text-[#b9865f]">
-                ※ 영어/숫자는 현재 보이스뱅크에서 발화되지 않으므로 한글 발음으로 적어주세요.
+                ※ 한글 및 영문 가사(POTG 발음 음소)를 지원합니다.
               </p>
             </div>
+
 
             {/* Grid options */}
             <div className="grid gap-4 sm:grid-cols-3">
@@ -344,7 +345,7 @@ export default function FlowTestPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || lineCount !== 8 || !beatFile}
+              disabled={isLoading || (lineCount !== 8 && lineCount !== 16) || !beatFile}
               className="w-full h-12 border border-[#ffd78a]/55 bg-[#ff5a1f] font-black text-white transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_4px_20px_rgba(255,90,31,0.25)]"
             >
               {isLoading ? "렌더링 중..." : "가이드 랩 보컬 생성"}
@@ -357,8 +358,9 @@ export default function FlowTestPage() {
             <div className="pmtm-panel p-5 border border-[#52d4c8]/25 bg-black/15">
               <h2 className="text-md font-black text-[#52d4c8] uppercase tracking-wider">💡 안내 및 규칙</h2>
               <ul className="mt-3 text-xs leading-relaxed text-[#d8b993] list-disc list-inside space-y-2">
-                <li>가사는 **정확히 8줄**이어야 하며, 공백 라인은 제외됩니다.</li>
+                <li>가사는 **8줄(붐뱁) 또는 16줄(트랩)**이어야 하며, 공백 라인은 제외됩니다.</li>
                 <li>**1줄은 정확히 1마디(1 Bar)**로 자동 변환되어 리듬을 타고 노래합니다.</li>
+
                 <li>마디 당 음절 수에 따라 **스윙 그루브 템플릿**이 동적으로 적용됩니다.</li>
                 <li>로컬 서버의 렌더링 워커(`rq worker`)가 실행 중이어야 결과물이 나옵니다.</li>
               </ul>

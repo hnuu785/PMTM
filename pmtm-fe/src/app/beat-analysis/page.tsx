@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
 type TimedValue = { time: number; value: number };
@@ -54,7 +54,7 @@ export default function BeatAnalysisPage() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
   }, [audioUrl]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return;
 
