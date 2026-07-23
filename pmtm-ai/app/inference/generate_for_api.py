@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from app.inference.device import model_device, move_model_to_device, select_inference_device
+from app.inference.generate import DEFAULT_TEMPERATURE, DEFAULT_TOP_P
 from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
 from app.paths import MODEL_ID
 
@@ -27,8 +28,8 @@ def parse_args():
     )
     p.add_argument("--bars", type=int, choices=[TARGET_BARS], default=TARGET_BARS, help="Target bar count")
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
-    p.add_argument("--temperature", type=float, default=0.85, help="Sampling temperature")
-    p.add_argument("--top-p", type=float, default=0.92, help="Top-p sampling")
+    p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
+    p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
     p.add_argument(
         "--prompt-format",
         choices=PROMPT_FORMATS,

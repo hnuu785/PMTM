@@ -880,11 +880,7 @@ def _generate_qwen_verse(
                 "--bars",
                 str(bars),
                 "--max-new-tokens",
-                "180",
-                "--temperature",
-                "0.85",
-                "--top-p",
-                "0.92",
+                "400",
         ]
         if adapter:
             adapter_path = ai_root / adapter
