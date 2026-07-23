@@ -149,13 +149,39 @@ class GrpoFiniteTraceCallback(TrainerCallback):
             raise RuntimeError(f"Non-finite trainer log at step {state.global_step}: {bad}")
 
 
+class GrpoBestRewardCallback(TrainerCallback):
+    """학습 진행 중 reward_mean이 가장 높았던 최고 성적의 모델을 추적하여
+    'best_checkpoint' 경로에 저장합니다.
+    """
+
+    def __init__(self):
+        self.best_reward: float = float("-inf")
+        self.best_checkpoint: str | None = None
+        self.best_step: int = 0
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        r = logs.get("reward")
+        if r is None:
+            r = logs.get("reward_mean")
+
+        if r is not None and r > self.best_reward:
+            self.best_reward = float(r)
+            self.best_step = state.global_step
+            model = kwargs.get("model")
+            if model is not None:
+                best_dir = os.path.join(args.output_dir, "best_checkpoint")
+                model.save_pretrained(best_dir)
+                self.best_checkpoint = best_dir
+                print(
+                    f"[best_model] ★ New Best reward={self.best_reward:+.4f} at step {state.global_step} (saved to {best_dir})"
+                )
+
+
 class GrpoRewardStdEarlyStoppingCallback(TrainerCallback):
     """reward_std가 threshold 이하로 patience step 연속 유지되면
-    체크포인트를 저장하고 학습을 조기 종료한다.
-
-    프롬프트 종류가 고정된 환경에서 모델이 수렴하면 그룹 내 reward 분산이
-    0에 가까워져 scale_rewards='group' 정규화가 불안정해지므로, 해당 시점에
-    학습을 멈추는 것이 안전하다.
+    학습을 조기 종료한다.
     """
 
     def __init__(self, threshold: float = 0.05, patience: int = 3):
@@ -178,13 +204,12 @@ class GrpoRewardStdEarlyStoppingCallback(TrainerCallback):
             )
             if self._count >= self.patience:
                 print(
-                    f"[early_stop] reward_std converged — "
-                    f"saving checkpoint and stopping training."
+                    f"[early_stop] reward_std converged — stopping training."
                 )
-                control.should_save = True
                 control.should_training_stop = True
         else:
             self._count = 0
+
 
 
 def _latest_checkpoint(output_dir: str) -> str | None:
@@ -436,7 +461,8 @@ def _build_grpo_trainer(
 
 
 def train_grpo(*, trace_finite: bool = False, max_steps: int = 200):
-    callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback()]
+    best_cb = GrpoBestRewardCallback()
+    callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback(), best_cb]
     if trace_finite:
         callbacks.append(GrpoFiniteTraceCallback())
     trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks, max_steps=max_steps)
@@ -448,8 +474,20 @@ def train_grpo(*, trace_finite: bool = False, max_steps: int = 200):
     if resume:
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
-    trainer.save_model(SAVE_DIR)
+
+    # 전체 학습 스텝 중 reward_mean이 가장 높았던 최고 성적 모델을 SAVE_DIR에 최종 저장
+    if best_cb.best_checkpoint and os.path.exists(best_cb.best_checkpoint):
+        print(
+            f"[final_save] Loading & saving Best Model (reward={best_cb.best_reward:+.4f}, step={best_cb.best_step}) from {best_cb.best_checkpoint} -> {SAVE_DIR}"
+        )
+        model = PeftModel.from_pretrained(trainer.model.get_base_model(), best_cb.best_checkpoint)
+        model.save_pretrained(SAVE_DIR)
+    else:
+        print(f"[final_save] Saving current model state to {SAVE_DIR}")
+        trainer.save_model(SAVE_DIR)
+
     print(f"GRPO done -> {SAVE_DIR}")
+
 
 
 def run_grpo_smoke_test(max_steps: int = 10) -> None:
