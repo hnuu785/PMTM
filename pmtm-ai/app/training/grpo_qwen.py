@@ -285,15 +285,15 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """생성된 가사의 줄 수와 관계없이 라임 밀도와 중복 감점만 평가합니다."""
+    """생성된 가사의 라임 밀도를 산출하고, 중복 줄 수에 따른 단계별 차감 감점을 부여합니다."""
     rewards = []
     
     for idx, comp in enumerate(completions):
         lines = _extract_verse(comp)
         
-        # 아예 한 줄도 생성하지 못한 경우 0점 처리
+        # 아예 한 줄도 생성하지 못한 경우 최소 보상 처리
         if not lines:
-            rewards.append(0.0)
+            rewards.append(-1.0)
             continue
             
         bpm = None
@@ -303,22 +303,30 @@ def rhyme_reward(completions, prompts=None, **kwargs):
             if m:
                 bpm = float(m.group(1))
 
-        # 1) 전체 줄의 중복 비율 계산
-        dup_ratio = (1.0 - len(set(lines)) / len(lines)) if len(lines) > 0 else 0.0
+        # 1) 공백/특수문자를 제거한 정규화 문장 기반으로 중복 줄 수 계산
+        norm_lines = [re.sub(r"[^\w]", "", line) for line in lines if line.strip()]
+        dup_count = (len(norm_lines) - len(set(norm_lines))) if norm_lines else 0
         
         # 2) 전체 생성 라인의 평균 라임 점수 계산 (BPM 정보 반영)
         rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
-            
-        # 3) 중복 리워드 해킹 방지 및 감점
-        effective_rhyme = rhyme_score * (1.0 - dup_ratio)
-        r = effective_rhyme
-        
-        if dup_ratio >= 0.3:
-            r = min(r, -1.0)
-            
-        rewards.append(float(r))
+
+        # 3) 중복 줄 수에 따른 단계별 차감 페널티 (Subtractive Penalty Gradient)
+        if dup_count == 0:
+            dup_penalty = 0.0
+        elif dup_count == 1:
+            dup_penalty = 0.2
+        elif dup_count == 2:
+            dup_penalty = 0.5
+        elif dup_count == 3:
+            dup_penalty = 0.8
+        else:
+            dup_penalty = 1.2  # 4줄 이상 중복 도배 시 강력 차단
+
+        final_reward = rhyme_score - dup_penalty
+        rewards.append(float(final_reward))
         
     return rewards
+
 
 
 
@@ -365,7 +373,7 @@ def _build_grpo_config(
         gradient_accumulation_steps=8,
         max_steps=max_steps,
         num_generations=8,
-        max_completion_length=512,
+        max_completion_length=768,
         beta=0.04,
         scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
         cast_lm_head_to_fp32=False,

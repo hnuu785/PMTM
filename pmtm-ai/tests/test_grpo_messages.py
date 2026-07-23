@@ -139,6 +139,54 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertLess(reward_abab, reward_aaaa)
         self.assertLess(reward_aabb, reward_aaaa)
 
+    def test_rhyme_reward_stepwise_duplicate_penalty(self):
+        base_lines = [
+            "밤을 지나 나는 다시 올라가",
+            "맘을 비워도 박자는 돌아가",
+            "길 위의 불빛이 나를 불러가",
+            "진심을 눌러도 rhyme은 흘러가",
+            "차가운 빗줄기가 어깨에 내렸지",
+            "이 밤이 흐르기 전 모든 걸 바쳤지",
+            "과거의 기억들을 저 멀리 버렸지",
+            "내 앞을 막아선 저 쇠창살을 막았지",
+        ]
+        
+        def make_comp(lines):
+            formatted = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(lines, 1)]
+            return [[{"role": "assistant", "content": "\n".join(formatted)}]]
+
+        prompt = build_messages(bpm=90)
+        
+        # 0줄 중복
+        r0 = rhyme_reward(make_comp(base_lines), prompts=[prompt])[0]
+        
+        # 1줄 중복 (마지막 줄을 1번 줄과 동일하게 만듦)
+        lines_1dup = list(base_lines)
+        lines_1dup[7] = base_lines[0]
+        r1 = rhyme_reward(make_comp(lines_1dup), prompts=[prompt])[0]
+        
+        # 2줄 중복 (7, 8번 줄을 1, 2번 줄과 동일하게 만듦)
+        lines_2dup = list(base_lines)
+        lines_2dup[6] = base_lines[0]
+        lines_2dup[7] = base_lines[1]
+        r2 = rhyme_reward(make_comp(lines_2dup), prompts=[prompt])[0]
+
+        # 3줄 중복
+        lines_3dup = list(base_lines)
+        lines_3dup[5] = base_lines[0]
+        lines_3dup[6] = base_lines[1]
+        lines_3dup[7] = base_lines[2]
+        r3 = rhyme_reward(make_comp(lines_3dup), prompts=[prompt])[0]
+
+        # 차감 보상 경사 검증 (중복이 늘어날수록 단조 감소: r0 > r1 > r2 > r3)
+        self.assertGreater(r0, 0.70)
+        self.assertGreater(r0, r1)
+        self.assertGreater(r1, r2)
+        self.assertGreater(r2, r3)
+        self.assertLess(r3, 0.10)
+
+
 
 if __name__ == "__main__":
     unittest.main()
+
