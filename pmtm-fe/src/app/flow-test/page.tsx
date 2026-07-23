@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
 type DemoStatus =
@@ -161,7 +161,7 @@ export default function FlowTestPage() {
       .filter((line) => line.length > 0 && !line.toLowerCase().startsWith("[verse")).length;
   }, [lyrics]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 

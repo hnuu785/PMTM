@@ -10,12 +10,19 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI
+# pyrefly: ignore [missing-import]
 from fastapi import File
+# pyrefly: ignore [missing-import]
 from fastapi import Form
+# pyrefly: ignore [missing-import]
 from fastapi import HTTPException
+# pyrefly: ignore [missing-import]
 from fastapi import UploadFile
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
@@ -138,24 +145,28 @@ def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
 @app.post("/api/v1/lyrics/generate-from-beat", response_model=LyricGenerateResponse)
 async def generate_lyrics_from_beat(
     llm: LyricModel = Form("qwen-local"),
+    bpm: float | None = Form(None),
     beat: UploadFile = File(...),
 ) -> LyricGenerateResponse:
-    beat_path = await _save_uploaded_beat(beat)
-    try:
-        bpm = _analyze_beat_bpm(beat_path)
-    finally:
+    if bpm and bpm > 0:
+        analyzed_bpm = round(bpm)
+    else:
+        beat_path = await _save_uploaded_beat(beat)
         try:
-            os.unlink(beat_path)
-        except FileNotFoundError:
-            pass
+            analyzed_bpm = _analyze_beat_bpm(beat_path)
+        finally:
+            try:
+                os.unlink(beat_path)
+            except FileNotFoundError:
+                pass
 
-    lyrics, notes = _generate_verse_for_model(bpm, llm)
+    lyrics, notes = _generate_verse_for_model(analyzed_bpm, llm)
     notes = ["librosa tempo 분석값을 BPM으로 사용했습니다.", *notes]
     lyric_lines = _extract_lyric_lines(lyrics)
 
     return LyricGenerateResponse(
-        title=f"{bpm} BPM Verse",
-        bpm=bpm,
+        title=f"{analyzed_bpm} BPM Verse",
+        bpm=analyzed_bpm,
         llm=llm,
         lyrics=lyrics,
         notes=notes,
@@ -450,7 +461,9 @@ def _load_rhyme_analysis_funcs():
     if str(scoring_root) not in sys.path:
         sys.path.insert(0, str(scoring_root))
 
+    # pyrefly: ignore [missing-import]
     from phonetics_utils import get_phonemes
+    # pyrefly: ignore [missing-import]
     from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
 
     return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
@@ -558,6 +571,7 @@ async def _save_uploaded_beat(
 
 def _get_redis_client():
     try:
+        # pyrefly: ignore [missing-import]
         import redis
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="redis package is not installed.") from exc
@@ -567,6 +581,7 @@ def _get_redis_client():
 
 def _get_demo_worker_count(redis_client) -> int:
     try:
+        # pyrefly: ignore [missing-import]
         from rq import Worker
     except ImportError:
         return 0
@@ -582,7 +597,9 @@ def _sync_failed_rq_status(redis_client, job_id: str, payload: dict) -> None:
         return
 
     try:
+        # pyrefly: ignore [missing-import]
         from rq.job import Job
+        # pyrefly: ignore [missing-import]
         from rq.job import JobStatus
 
         job = Job.fetch(job_id, connection=redis_client)
@@ -616,6 +633,7 @@ def _enqueue_demo_job(
     vocal_start_bars: int,
 ) -> None:
     try:
+        # pyrefly: ignore [missing-import]
         from rq import Queue
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
@@ -652,14 +670,23 @@ def _enqueue_demo_job(
 
 def _analyze_beat_bpm(file_path: str) -> int:
     try:
+        # pyrefly: ignore [missing-import]
         import librosa
+        # pyrefly: ignore [missing-import]
         import numpy as np
 
         y, sr = librosa.load(file_path, sr=None, mono=True, duration=60)
         if len(y) == 0:
             raise ValueError("empty audio")
 
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        hop_length = 512
+        onset_envelope = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
+        tempo, _ = librosa.beat.beat_track(
+            y=y,
+            sr=sr,
+            onset_envelope=onset_envelope,
+            hop_length=hop_length,
+        )
         tempo_value = float(np.asarray(tempo).reshape(-1)[0])
     except HTTPException:
         raise
@@ -678,7 +705,9 @@ def _analyze_beat_bpm(file_path: str) -> int:
 
 def _analyze_beat(file_path: str, file_name: str) -> BeatAnalysisResponse:
     try:
+        # pyrefly: ignore [missing-import]
         import librosa
+        # pyrefly: ignore [missing-import]
         import numpy as np
 
         y, sr = librosa.load(file_path, sr=None, mono=True, duration=60)
@@ -832,6 +861,7 @@ def _build_first_bar(beat_times, first_beat_sec: float, tempo: float) -> tuple[l
 
 
 def _downsample_series(times, values, max_points: int) -> list[dict[str, float]]:
+    # pyrefly: ignore [missing-import]
     import numpy as np
 
     value_count = min(len(times), len(values))

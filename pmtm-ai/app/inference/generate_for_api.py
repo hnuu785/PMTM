@@ -31,6 +31,11 @@ def parse_args():
     p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
     p.add_argument(
+        "--print-prompt",
+        action="store_true",
+        help="Print the constructed prompt before generation",
+    )
+    p.add_argument(
         "--prompt-format",
         choices=PROMPT_FORMATS,
         default="auto",
@@ -181,6 +186,12 @@ def main():
         build_prompt(args),
         build_messages(args),
     )
+    if args.print_prompt:
+        import sys
+        print("=== Constructed Prompt ===", file=sys.stderr)
+        print(prompt, file=sys.stderr)
+        print("-" * 60, file=sys.stderr)
+
     text = generate_text(
         tokenizer,
         model,

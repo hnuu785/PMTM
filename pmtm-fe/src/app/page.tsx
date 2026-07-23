@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api";
 
 type LyricResponse = {
@@ -265,7 +265,7 @@ export default function Home() {
     };
   }, [apiBaseUrl, lyricLines, result]);
 
-  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+  async function handleGenerate(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (mode === "beat" && !beatFile) {
@@ -359,6 +359,9 @@ export default function Home() {
     const body = new FormData();
     body.append("beat", beatFile as File);
     body.append("llm", llm);
+    if (beatAnalysis?.tempo) {
+      body.append("bpm", String(Math.round(beatAnalysis.tempo)));
+    }
 
     return fetch(`${apiBaseUrl}/api/v1/lyrics/generate-from-beat`, {
       method: "POST",
@@ -884,12 +887,14 @@ function parseLyricLines(lyrics: string) {
   const lines = lyrics
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !line.toLowerCase().startsWith("[verse"))
-    .slice(0, 8);
-  while (lines.length < 8) {
-    lines.push("");
+    .filter((line) => line && !line.toLowerCase().startsWith("[verse"));
+
+  const targetLen = lines.length > 8 ? 16 : 8;
+  const sliced = lines.slice(0, targetLen);
+  while (sliced.length < targetLen) {
+    sliced.push("");
   }
-  return lines;
+  return sliced;
 }
 
 function renderHighlightedLine(line: string, analysis?: RhymeLineAnalysis) {
