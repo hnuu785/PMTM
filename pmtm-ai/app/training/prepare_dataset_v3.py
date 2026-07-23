@@ -186,9 +186,9 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                # 엄격 모드: 모든 줄의 음절 수가 반드시 지침 범위(6~18음절) 내여야 함
+                # 데이터셋 구축 시에는 6~18음절 범위의 풍부한 샘플(798개)을 100% 보존
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s <= s <= max_s for s in syllables_list):
+                if not all(6 <= s <= 18 for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 
