@@ -71,10 +71,17 @@ class FlowAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "정확히 8줄"):
             parse_eight_bar_lyrics("한 줄\n두 줄")
 
-    def test_flow_plan_rejects_unsupported_english(self):
-        lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "나는 beat 위를 달려")
-        with self.assertRaisesRegex(ValueError, "한글 가사만 지원"):
+    def test_flow_plan_supports_english_lyrics(self):
+        lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "I'm on my way to the future")
+        plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        self.assertEqual(len(plan.bars), 8)
+        self.assertIn("ay", [p.symbol for p in plan.bars[0].phonemes])
+
+    def test_flow_plan_rejects_unsupported_characters(self):
+        lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "나는 🚀 위를 달려")
+        with self.assertRaisesRegex(ValueError, "지원하지 않는 문자"):
             build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
+
 
     def test_flow_plan_supports_up_to_24_syllables(self):
         # 24 syllables should compile successfully and use the 24-syllable template
