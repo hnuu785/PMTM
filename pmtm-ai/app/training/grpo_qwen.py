@@ -32,7 +32,7 @@ OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen")
 SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
 # 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
-GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(7~16음절), 트랩(14~28음절)
+GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(8~16음절), 트랩(6~14음절)
 
 
 @dataclass
