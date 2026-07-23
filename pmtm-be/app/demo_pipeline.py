@@ -143,15 +143,15 @@ def run_demo_generation(
         _trim_beat_segment(beat_file, work_path / "beat_segment.wav", demo_length_sec)
 
         _set_status(redis_client, job_id, "writing", progress=0.32, bpm=bpm)
-        bars = TARGET_LYRIC_BARS
+        target_lines = 16 if bpm >= 115 else 8
         lyrics, notes = main._generate_verse_for_model(
             bpm,
             llm,
             genre=genre,
             mood=mood,
-            bars=bars,
+            bars=None,
         )
-        lyric_bars = normalize_lyric_bars(lyrics, bars)
+        lyric_bars = normalize_lyric_bars(lyrics, target_lines, bpm=bpm)
         lyrics_payload = {
             "bpm": bpm,
             "genre": genre,
@@ -189,12 +189,14 @@ def run_demo_generation(
         _set_status(redis_client, job_id, "failed", progress=1.0, error=str(exc))
 
 
-def normalize_lyric_bars(lyrics: str, bars: int) -> list[LyricBar]:
+def normalize_lyric_bars(lyrics: str, bars: int | None = None, bpm: float | None = None) -> list[LyricBar]:
     lines = [
         line.strip()
         for line in lyrics.splitlines()
         if line.strip() and not line.strip().lower().startswith("[verse")
     ]
+    if bars is None:
+        bars = 16 if (bpm is not None and bpm >= 115) else 8
     selected = lines[:bars]
     while len(selected) < bars:
         selected.append("")
@@ -204,7 +206,8 @@ def normalize_lyric_bars(lyrics: str, bars: int) -> list[LyricBar]:
 def calculate_vocal_start_offset_sec(bpm: int, lyric_bars: int, demo_length_sec: int, requested_start_bars: int) -> float:
     bar_duration_sec = 60.0 / bpm * 4.0
     requested_offset_sec = requested_start_bars * bar_duration_sec
-    vocal_duration_sec = lyric_bars * bar_duration_sec
+    effective_bars = lyric_bars / 2.0 if (lyric_bars > 8 or bpm >= 115) else float(lyric_bars)
+    vocal_duration_sec = effective_bars * bar_duration_sec
     max_offset_sec = max(0.0, demo_length_sec - vocal_duration_sec)
     return min(requested_offset_sec, max_offset_sec)
 
@@ -219,15 +222,16 @@ def synthesize_vocal_track(
     start_offset_sec: float = 0.0,
 ) -> None:
     bar_duration_sec = 60.0 / bpm * 4.0
+    line_duration_sec = (bar_duration_sec / 2.0) if (len(bars) > 8 or bpm >= 115) else bar_duration_sec
     line_paths: list[Path] = []
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     for bar in bars:
         line_path = output_path.parent / f"vocal_line_{bar.bar_index:02d}.wav"
         text = bar.text or " "
-        provider.synthesize_line(text, voice, bpm, bar_duration_sec, line_path)
+        provider.synthesize_line(text, voice, bpm, line_duration_sec, line_path)
         aligned_path = output_path.parent / f"vocal_line_{bar.bar_index:02d}_aligned.wav"
-        align_wav_to_duration(line_path, aligned_path, bar_duration_sec)
+        align_wav_to_duration(line_path, aligned_path, line_duration_sec)
         line_paths.append(aligned_path)
 
     if start_offset_sec > 0:

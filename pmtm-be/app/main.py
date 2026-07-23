@@ -316,9 +316,8 @@ def _generate_verse_for_model(
     *,
     genre: str = "Korean hip-hop",
     mood: str = "confident",
-    bars: int = 8,
+    bars: int | None = None,
 ) -> tuple[str, list[str]]:
-    bars = TARGET_LYRIC_BARS
     if llm == "openai":
         return _generate_openai_verse(bpm, genre=genre, mood=mood, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",
@@ -851,9 +850,8 @@ def _generate_qwen_verse(
     *,
     genre: str = "Korean hip-hop",
     mood: str = "confident",
-    bars: int = 8,
+    bars: int | None = None,
 ) -> str:
-    bars = TARGET_LYRIC_BARS
     project_root = Path(__file__).resolve().parents[2]
     ai_root = project_root / "pmtm-ai"
     python_path = Path(settings.qwen_python_path)
@@ -868,20 +866,19 @@ def _generate_qwen_verse(
 
     try:
         command = [
-                str(python_path),
-                "-m",
-                "app.inference.generate_for_api",
-                "--bpm",
-                str(bpm),
-                "--genre",
-                genre,
-                "--mood",
-                mood,
-                "--bars",
-                str(bars),
-                "--max-new-tokens",
-                "400",
+            str(python_path),
+            "-m",
+            "app.inference.generate_for_api",
+            "--bpm",
+            str(bpm),
+            "--genre",
+            genre,
+            "--mood",
+            mood,
         ]
+        if bars is not None:
+            command.extend(["--bars", str(bars)])
+        command.extend(["--max-new-tokens", "512"])
         if adapter:
             adapter_path = ai_root / adapter
             if not adapter_path.exists():

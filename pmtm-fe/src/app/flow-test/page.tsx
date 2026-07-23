@@ -182,8 +182,8 @@ export default function FlowTestPage() {
       return;
     }
 
-    if (lineCount !== 8) {
-      setError(`가이드는 정확히 8줄의 가사만 지원합니다. (현재: ${lineCount}줄)`);
+    if (lineCount !== 8 && lineCount !== 16) {
+      setError(`가이드는 8줄(붐뱁) 또는 16줄(트랩)의 가사만 지원합니다. (현재: ${lineCount}줄)`);
       return;
     }
 
@@ -344,7 +344,7 @@ export default function FlowTestPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || lineCount !== 8 || !beatFile}
+              disabled={isLoading || (lineCount !== 8 && lineCount !== 16) || !beatFile}
               className="w-full h-12 border border-[#ffd78a]/55 bg-[#ff5a1f] font-black text-white transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_4px_20px_rgba(255,90,31,0.25)]"
             >
               {isLoading ? "렌더링 중..." : "가이드 랩 보컬 생성"}
