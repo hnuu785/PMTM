@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from app.inference.device import model_device, move_model_to_device, select_inference_device
-from app.inference.generate import DEFAULT_TEMPERATURE, DEFAULT_TOP_P
+from app.inference.generate import DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE, DEFAULT_TOP_P
 from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
 from app.paths import MODEL_ID
 
@@ -30,6 +30,7 @@ def parse_args():
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
     p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
+    p.add_argument("--repetition-penalty", type=float, default=DEFAULT_REPETITION_PENALTY, help="Repetition penalty for generation")
     p.add_argument(
         "--print-prompt",
         action="store_true",
@@ -132,7 +133,7 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
     return tokenizer, model
 
 
-def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float) -> str:
+def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float, repetition_penalty: float = 1.1) -> str:
     # pyrefly: ignore [missing-import]
     import torch
 
@@ -144,6 +145,7 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
             do_sample=True,
             temperature=temperature,
             top_p=top_p,
+            repetition_penalty=repetition_penalty,
             pad_token_id=tokenizer.eos_token_id,
         )
     generated = output[0][inputs["input_ids"].shape[1]:]
@@ -199,6 +201,7 @@ def main():
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p,
+        repetition_penalty=args.repetition_penalty,
     )
     
     import sys
