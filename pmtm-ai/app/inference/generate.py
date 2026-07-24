@@ -126,7 +126,11 @@ def build_model(base_model: str, adapter_path: Path | None):
     # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    tokenizer_path = str(adapter_path) if adapter_path else base_model
+    tokenizer_path = (
+        str(adapter_path)
+        if adapter_path and (adapter_path / "tokenizer_config.json").exists()
+        else base_model
+    )
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
