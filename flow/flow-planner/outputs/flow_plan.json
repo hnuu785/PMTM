@@ -2,14 +2,19 @@
   "metadata": {
     "source_audio_file": "120_trap.mp3",
     "time_signature": "4/4",
-    "bpm": 120,
+    "bpm": 120.0,
+    "genre_rule": "trap",
+    "micro_offset_enabled": true,
+    "micro_offset_max_ms": 15.0,
+    "snare_confidence_min": 0.65,
+    "snare_event_count": 0,
     "downbeat_offset_sec": 0.1974,
     "language": "ko",
     "morph_analyzer": "kiwipiepy",
     "rhyme_method": "hangul_vowel_coda_family",
     "stress_method": "pos_and_phrase_boundary_heuristic",
     "slot_unit": "16th_note",
-    "slot_duration_sec": 0.125,
+    "slot_duration_sec": 0.12480000000000047,
     "verse_start_bar": 9,
     "verse_end_bar": 12,
     "line_count": 4,
@@ -117,7 +122,7 @@
           {
             "index": 9,
             "form": "어",
-            "tag": "EF",
+            "tag": "EC",
             "start": 16,
             "length": 1,
             "end": 17,
@@ -295,7 +300,7 @@
               {
                 "index": 9,
                 "form": "어",
-                "tag": "EF",
+                "tag": "EC",
                 "start": 16,
                 "length": 1,
                 "end": 17,
@@ -421,7 +426,7 @@
             {
               "index": 9,
               "form": "어",
-              "tag": "EF",
+              "tag": "EC",
               "start": 16,
               "length": 1,
               "end": 17,
@@ -599,7 +604,7 @@
                 {
                   "index": 9,
                   "form": "어",
-                  "tag": "EF",
+                  "tag": "EC",
                   "start": 16,
                   "length": 1,
                   "end": 17,
@@ -645,8 +650,14 @@
               "is_slur": false,
               "start_absolute_slot": 128,
               "end_absolute_slot_exclusive": 130,
-              "start_sec": 16.1974,
-              "end_sec": 16.4474
+              "start_sec": 16.1727,
+              "end_sec": 16.4223,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 16.16646,
+              "micro_end_sec": 16.41606,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "늘",
@@ -670,8 +681,14 @@
               "is_slur": false,
               "start_absolute_slot": 130,
               "end_absolute_slot_exclusive": 131,
-              "start_sec": 16.4474,
-              "end_sec": 16.5724
+              "start_sec": 16.4223,
+              "end_sec": 16.5471,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 16.41606,
+              "micro_end_sec": 16.54086,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "도",
@@ -695,8 +712,14 @@
               "is_slur": false,
               "start_absolute_slot": 131,
               "end_absolute_slot_exclusive": 132,
-              "start_sec": 16.5724,
-              "end_sec": 16.6974
+              "start_sec": 16.5471,
+              "end_sec": 16.6719,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 16.5471,
+              "micro_end_sec": 16.6719,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "난",
@@ -720,8 +743,14 @@
               "is_slur": false,
               "start_absolute_slot": 132,
               "end_absolute_slot_exclusive": 133,
-              "start_sec": 16.6974,
-              "end_sec": 16.8224
+              "start_sec": 16.6719,
+              "end_sec": 16.7967,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 16.6719,
+              "micro_end_sec": 16.7967,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "이",
@@ -745,8 +774,14 @@
               "is_slur": false,
               "start_absolute_slot": 133,
               "end_absolute_slot_exclusive": 134,
-              "start_sec": 16.8224,
-              "end_sec": 16.9474
+              "start_sec": 16.7967,
+              "end_sec": 16.9215,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 16.7967,
+              "micro_end_sec": 16.9215,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "도",
@@ -770,8 +805,14 @@
               "is_slur": false,
               "start_absolute_slot": 134,
               "end_absolute_slot_exclusive": 136,
-              "start_sec": 16.9474,
-              "end_sec": 17.1974
+              "start_sec": 16.9215,
+              "end_sec": 17.171100000000003,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 16.91526,
+              "micro_end_sec": 17.16486,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "시",
@@ -795,8 +836,14 @@
               "is_slur": false,
               "start_absolute_slot": 136,
               "end_absolute_slot_exclusive": 137,
-              "start_sec": 17.1974,
-              "end_sec": 17.3224
+              "start_sec": 17.1712,
+              "end_sec": 17.296,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 17.16496,
+              "micro_end_sec": 17.28976,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "위",
@@ -820,8 +867,14 @@
               "is_slur": false,
               "start_absolute_slot": 137,
               "end_absolute_slot_exclusive": 138,
-              "start_sec": 17.3224,
-              "end_sec": 17.4474
+              "start_sec": 17.296,
+              "end_sec": 17.4208,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 17.28976,
+              "micro_end_sec": 17.41456,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "를",
@@ -845,8 +898,14 @@
               "is_slur": false,
               "start_absolute_slot": 138,
               "end_absolute_slot_exclusive": 139,
-              "start_sec": 17.4474,
-              "end_sec": 17.5724
+              "start_sec": 17.4208,
+              "end_sec": 17.5456,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 17.4208,
+              "micro_end_sec": 17.5456,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "달",
@@ -870,8 +929,14 @@
               "is_slur": false,
               "start_absolute_slot": 139,
               "end_absolute_slot_exclusive": 140,
-              "start_sec": 17.5724,
-              "end_sec": 17.6974
+              "start_sec": 17.5456,
+              "end_sec": 17.6704,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 17.53936,
+              "micro_end_sec": 17.66416,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "려",
@@ -895,8 +960,14 @@
               "is_slur": false,
               "start_absolute_slot": 140,
               "end_absolute_slot_exclusive": 141,
-              "start_sec": 17.6974,
-              "end_sec": 17.8224
+              "start_sec": 17.6704,
+              "end_sec": 17.7952,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 17.66416,
+              "micro_end_sec": 17.78896,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "가",
@@ -920,8 +991,14 @@
               "is_slur": false,
               "start_absolute_slot": 141,
               "end_absolute_slot_exclusive": 143,
-              "start_sec": 17.8224,
-              "end_sec": 18.0724
+              "start_sec": 17.7952,
+              "end_sec": 18.044800000000002,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 17.78896,
+              "micro_end_sec": 18.03856,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -931,20 +1008,20 @@
           "start_absolute_slot": 128,
           "end_absolute_slot_exclusive": 143,
           "available_slots": 15,
-          "start_sec": 16.1974,
-          "end_sec": 18.0724,
-          "allocated_duration_sec": 1.875,
+          "start_sec": 16.1727,
+          "end_sec": 18.044700000000006,
+          "allocated_duration_sec": 1.872000000000007,
           "density": "normal",
           "density_ratio": 0.8,
           "diffsinger": {
-            "offset": "16.197400",
+            "offset": "16.172700",
             "text": "오늘도 나 니 도시 위를 달려가",
             "original_text": "오늘도 난 이 도시 위를 달려가",
             "ph_seq": "o n eu l d o n a n i d o s i w i rx eu l d a l rx ieo g a",
-            "ph_dur": "0.250000 0.023936 0.077128 0.023936 0.029605 0.095395 0.029605 0.095395 0.029605 0.095395 0.059211 0.190789 0.029605 0.095395 0.029605 0.095395 0.023936 0.077128 0.023936 0.023936 0.077128 0.023936 0.029605 0.095395 0.059211 0.190789",
+            "ph_dur": "0.249600 0.023898 0.077004 0.023898 0.029558 0.095242 0.029558 0.095242 0.029558 0.095242 0.059116 0.190484 0.029558 0.095242 0.029558 0.095242 0.023898 0.077004 0.023898 0.023898 0.077004 0.023898 0.029558 0.095242 0.059116 0.190484",
             "ph_num": "1 3 2 2 2 2 2 2 3 3 2 2",
             "note_seq": "D4 C4 C4 D4 C4 D4 C4 D4 C4 D4 C4 A#3",
-            "note_dur": "0.250000 0.125000 0.125000 0.125000 0.125000 0.250000 0.125000 0.125000 0.125000 0.125000 0.125000 0.250000",
+            "note_dur": "0.249600 0.124800 0.124800 0.124800 0.124800 0.249600 0.124800 0.124800 0.124800 0.124800 0.124800 0.249600",
             "note_slur": "0 0 0 0 0 0 0 0 0 0 0 0"
           }
         }
@@ -955,8 +1032,8 @@
           "start_absolute_slot": 143,
           "end_absolute_slot_exclusive": 144,
           "duration_slots": 1,
-          "start_sec": 18.0724,
-          "end_sec": 18.1974
+          "start_sec": 18.0448,
+          "end_sec": 18.1696
         }
       ]
     },
@@ -1506,8 +1583,14 @@
               "is_slur": false,
               "start_absolute_slot": 144,
               "end_absolute_slot_exclusive": 145,
-              "start_sec": 18.1974,
-              "end_sec": 18.3224
+              "start_sec": 18.1696,
+              "end_sec": 18.2944,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 18.16336,
+              "micro_end_sec": 18.28816,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "용",
@@ -1531,8 +1614,14 @@
               "is_slur": false,
               "start_absolute_slot": 145,
               "end_absolute_slot_exclusive": 146,
-              "start_sec": 18.3224,
-              "end_sec": 18.4474
+              "start_sec": 18.2944,
+              "end_sec": 18.4192,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 18.28816,
+              "micro_end_sec": 18.41296,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "한",
@@ -1556,8 +1645,14 @@
               "is_slur": false,
               "start_absolute_slot": 146,
               "end_absolute_slot_exclusive": 147,
-              "start_sec": 18.4474,
-              "end_sec": 18.5724
+              "start_sec": 18.4192,
+              "end_sec": 18.544,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 18.4192,
+              "micro_end_sec": 18.544,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "밤",
@@ -1581,8 +1676,14 @@
               "is_slur": false,
               "start_absolute_slot": 147,
               "end_absolute_slot_exclusive": 148,
-              "start_sec": 18.5724,
-              "end_sec": 18.6974
+              "start_sec": 18.544,
+              "end_sec": 18.6688,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 18.53776,
+              "micro_end_sec": 18.66256,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "을",
@@ -1606,8 +1707,14 @@
               "is_slur": false,
               "start_absolute_slot": 148,
               "end_absolute_slot_exclusive": 149,
-              "start_sec": 18.6974,
-              "end_sec": 18.8224
+              "start_sec": 18.6688,
+              "end_sec": 18.7936,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 18.6688,
+              "micro_end_sec": 18.7936,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "깨",
@@ -1631,8 +1738,14 @@
               "is_slur": false,
               "start_absolute_slot": 149,
               "end_absolute_slot_exclusive": 150,
-              "start_sec": 18.8224,
-              "end_sec": 18.9474
+              "start_sec": 18.7937,
+              "end_sec": 18.9185,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 18.78746,
+              "micro_end_sec": 18.91226,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "우",
@@ -1656,8 +1769,14 @@
               "is_slur": false,
               "start_absolute_slot": 150,
               "end_absolute_slot_exclusive": 151,
-              "start_sec": 18.9474,
-              "end_sec": 19.0724
+              "start_sec": 18.9185,
+              "end_sec": 19.043300000000002,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 18.91226,
+              "micro_end_sec": 19.03706,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "며",
@@ -1681,8 +1800,14 @@
               "is_slur": false,
               "start_absolute_slot": 151,
               "end_absolute_slot_exclusive": 152,
-              "start_sec": 19.0724,
-              "end_sec": 19.1974
+              "start_sec": 19.0433,
+              "end_sec": 19.1681,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 19.0433,
+              "micro_end_sec": 19.1681,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -1692,20 +1817,20 @@
           "start_absolute_slot": 144,
           "end_absolute_slot_exclusive": 152,
           "available_slots": 8,
-          "start_sec": 18.1974,
-          "end_sec": 19.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 18.1696,
+          "end_sec": 19.168000000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 1.0,
           "diffsinger": {
-            "offset": "18.197400",
+            "offset": "18.169600",
             "text": "조용한 바믈 깨우며",
             "original_text": "조용한 밤을 깨우며",
             "ph_seq": "jh o io ng hh a n b a m eu l kk e u m ieo",
-            "ph_dur": "0.029605 0.095395 0.082386 0.042614 0.023936 0.077128 0.023936 0.029605 0.095395 0.023936 0.077128 0.023936 0.029605 0.095395 0.125000 0.029605 0.095395",
+            "ph_dur": "0.029558 0.095242 0.082255 0.042545 0.023898 0.077004 0.023898 0.029558 0.095242 0.023898 0.077004 0.023898 0.029558 0.095242 0.124800 0.029558 0.095242",
             "ph_num": "2 2 3 2 3 2 1 2",
             "note_seq": "D4 C4 C4 D4 C4 D4 C4 C4",
-            "note_dur": "0.125000 0.125000 0.125000 0.125000 0.125000 0.125000 0.125000 0.125000",
+            "note_dur": "0.124800 0.124800 0.124800 0.124800 0.124800 0.124800 0.124800 0.124800",
             "note_slur": "0 0 0 0 0 0 0 0"
           }
         },
@@ -1871,8 +1996,14 @@
               "is_slur": false,
               "start_absolute_slot": 152,
               "end_absolute_slot_exclusive": 154,
-              "start_sec": 19.1974,
-              "end_sec": 19.4474
+              "start_sec": 19.1681,
+              "end_sec": 19.4177,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.16186,
+              "micro_end_sec": 19.41146,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "높",
@@ -1896,8 +2027,14 @@
               "is_slur": false,
               "start_absolute_slot": 154,
               "end_absolute_slot_exclusive": 155,
-              "start_sec": 19.4474,
-              "end_sec": 19.5724
+              "start_sec": 19.4177,
+              "end_sec": 19.5425,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.41146,
+              "micro_end_sec": 19.53626,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "이",
@@ -1921,8 +2058,14 @@
               "is_slur": false,
               "start_absolute_slot": 155,
               "end_absolute_slot_exclusive": 156,
-              "start_sec": 19.5724,
-              "end_sec": 19.6974
+              "start_sec": 19.5425,
+              "end_sec": 19.6673,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.53626,
+              "micro_end_sec": 19.66106,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "올",
@@ -1946,8 +2089,14 @@
               "is_slur": false,
               "start_absolute_slot": 156,
               "end_absolute_slot_exclusive": 157,
-              "start_sec": 19.6974,
-              "end_sec": 19.8224
+              "start_sec": 19.6673,
+              "end_sec": 19.7921,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.66106,
+              "micro_end_sec": 19.78586,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "라",
@@ -1971,8 +2120,14 @@
               "is_slur": false,
               "start_absolute_slot": 157,
               "end_absolute_slot_exclusive": 158,
-              "start_sec": 19.8224,
-              "end_sec": 19.9474
+              "start_sec": 19.7921,
+              "end_sec": 19.916900000000002,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.78586,
+              "micro_end_sec": 19.91066,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "가",
@@ -1996,8 +2151,14 @@
               "is_slur": false,
               "start_absolute_slot": 158,
               "end_absolute_slot_exclusive": 160,
-              "start_sec": 19.9474,
-              "end_sec": 20.1974
+              "start_sec": 19.9169,
+              "end_sec": 20.1665,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 19.91066,
+              "micro_end_sec": 20.16026,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -2007,20 +2168,20 @@
           "start_absolute_slot": 152,
           "end_absolute_slot_exclusive": 160,
           "available_slots": 8,
-          "start_sec": 19.1974,
-          "end_sec": 20.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 19.1681,
+          "end_sec": 20.166500000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 0.75,
           "diffsinger": {
-            "offset": "19.197400",
+            "offset": "19.168100",
             "text": "더 노피 올라가",
             "original_text": "더 높이 올라가",
             "ph_seq": "d eo n o p i o l rx a g a",
-            "ph_dur": "0.059211 0.190789 0.029605 0.095395 0.029605 0.095395 0.095395 0.029605 0.029605 0.095395 0.059211 0.190789",
+            "ph_dur": "0.059116 0.190484 0.029558 0.095242 0.029558 0.095242 0.095242 0.029558 0.029558 0.095242 0.059116 0.190484",
             "ph_num": "2 2 2 2 2 2",
             "note_seq": "D4 D4 C4 D4 C4 A#3",
-            "note_dur": "0.250000 0.125000 0.125000 0.125000 0.125000 0.250000",
+            "note_dur": "0.249600 0.124800 0.124800 0.124800 0.124800 0.249600",
             "note_slur": "0 0 0 0 0 0"
           }
         }
@@ -2117,7 +2278,7 @@
           {
             "index": 8,
             "form": "어",
-            "tag": "EF",
+            "tag": "EC",
             "start": 16,
             "length": 1,
             "end": 17,
@@ -2271,7 +2432,7 @@
               {
                 "index": 8,
                 "form": "어",
-                "tag": "EF",
+                "tag": "EC",
                 "start": 16,
                 "length": 1,
                 "end": 17,
@@ -2445,8 +2606,14 @@
               "is_slur": false,
               "start_absolute_slot": 160,
               "end_absolute_slot_exclusive": 162,
-              "start_sec": 20.1974,
-              "end_sec": 20.4474
+              "start_sec": 20.1665,
+              "end_sec": 20.4161,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 20.16026,
+              "micro_end_sec": 20.40986,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "제",
@@ -2470,8 +2637,14 @@
               "is_slur": false,
               "start_absolute_slot": 162,
               "end_absolute_slot_exclusive": 163,
-              "start_sec": 20.4474,
-              "end_sec": 20.5724
+              "start_sec": 20.4161,
+              "end_sec": 20.5409,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 20.40986,
+              "micro_end_sec": 20.53466,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "의",
@@ -2495,8 +2668,14 @@
               "is_slur": false,
               "start_absolute_slot": 163,
               "end_absolute_slot_exclusive": 164,
-              "start_sec": 20.5724,
-              "end_sec": 20.6974
+              "start_sec": 20.541,
+              "end_sec": 20.6658,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 20.541,
+              "micro_end_sec": 20.6658,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "상",
@@ -2520,8 +2699,14 @@
               "is_slur": false,
               "start_absolute_slot": 164,
               "end_absolute_slot_exclusive": 165,
-              "start_sec": 20.6974,
-              "end_sec": 20.8224
+              "start_sec": 20.6658,
+              "end_sec": 20.7906,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 20.65956,
+              "micro_end_sec": 20.78436,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "처",
@@ -2545,8 +2730,14 @@
               "is_slur": false,
               "start_absolute_slot": 165,
               "end_absolute_slot_exclusive": 166,
-              "start_sec": 20.8224,
-              "end_sec": 20.9474
+              "start_sec": 20.7906,
+              "end_sec": 20.9154,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 20.78436,
+              "micro_end_sec": 20.90916,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "까",
@@ -2570,8 +2761,14 @@
               "is_slur": false,
               "start_absolute_slot": 166,
               "end_absolute_slot_exclusive": 167,
-              "start_sec": 20.9474,
-              "end_sec": 21.0724
+              "start_sec": 20.9154,
+              "end_sec": 21.040200000000002,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 20.9154,
+              "micro_end_sec": 21.0402,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "지",
@@ -2595,8 +2792,14 @@
               "is_slur": false,
               "start_absolute_slot": 167,
               "end_absolute_slot_exclusive": 168,
-              "start_sec": 21.0724,
-              "end_sec": 21.1974
+              "start_sec": 21.0402,
+              "end_sec": 21.165,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 21.0402,
+              "micro_end_sec": 21.165,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -2606,20 +2809,20 @@
           "start_absolute_slot": 160,
           "end_absolute_slot_exclusive": 168,
           "available_slots": 8,
-          "start_sec": 20.1974,
-          "end_sec": 21.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 20.1665,
+          "end_sec": 21.164900000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 0.875,
           "diffsinger": {
-            "offset": "20.197400",
+            "offset": "20.166500",
             "text": "어제의 상처까지",
             "original_text": "어제의 상처까지",
             "ph_seq": "eo jh e ui s a ng ch eo kk a jh i",
-            "ph_dur": "0.250000 0.029605 0.095395 0.125000 0.021226 0.068396 0.035378 0.029605 0.095395 0.029605 0.095395 0.029605 0.095395",
+            "ph_dur": "0.249600 0.029558 0.095242 0.124800 0.021192 0.068287 0.035321 0.029558 0.095242 0.029558 0.095242 0.029558 0.095242",
             "ph_num": "1 2 1 3 2 2 2",
             "note_seq": "D4 C4 C4 D4 C4 C4 C4",
-            "note_dur": "0.250000 0.125000 0.125000 0.125000 0.125000 0.125000 0.125000",
+            "note_dur": "0.249600 0.124800 0.124800 0.124800 0.124800 0.124800 0.124800",
             "note_slur": "0 0 0 0 0 0 0"
           }
         },
@@ -2673,7 +2876,7 @@
             {
               "index": 4,
               "form": "어",
-              "tag": "EF",
+              "tag": "EC",
               "start": 7,
               "length": 1,
               "end": 8,
@@ -2759,7 +2962,7 @@
                 {
                   "index": 4,
                   "form": "어",
-                  "tag": "EF",
+                  "tag": "EC",
                   "start": 7,
                   "length": 1,
                   "end": 8,
@@ -2805,8 +3008,14 @@
               "is_slur": false,
               "start_absolute_slot": 168,
               "end_absolute_slot_exclusive": 170,
-              "start_sec": 21.1974,
-              "end_sec": 21.4474
+              "start_sec": 21.165,
+              "end_sec": 21.4146,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 21.15876,
+              "micro_end_sec": 21.40836,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "듬",
@@ -2830,8 +3039,14 @@
               "is_slur": false,
               "start_absolute_slot": 170,
               "end_absolute_slot_exclusive": 171,
-              "start_sec": 21.4474,
-              "end_sec": 21.5724
+              "start_sec": 21.4146,
+              "end_sec": 21.5394,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 21.40836,
+              "micro_end_sec": 21.53316,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "위",
@@ -2855,8 +3070,14 @@
               "is_slur": false,
               "start_absolute_slot": 171,
               "end_absolute_slot_exclusive": 173,
-              "start_sec": 21.5724,
-              "end_sec": 21.8224
+              "start_sec": 21.5394,
+              "end_sec": 21.789,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 21.53316,
+              "micro_end_sec": 21.78276,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "에",
@@ -2880,8 +3101,14 @@
               "is_slur": false,
               "start_absolute_slot": 173,
               "end_absolute_slot_exclusive": 174,
-              "start_sec": 21.8224,
-              "end_sec": 21.9474
+              "start_sec": 21.789,
+              "end_sec": 21.913800000000002,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 21.789,
+              "micro_end_sec": 21.9138,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "묻",
@@ -2905,15 +3132,21 @@
               "is_slur": false,
               "start_absolute_slot": 174,
               "end_absolute_slot_exclusive": 175,
-              "start_sec": 21.9474,
-              "end_sec": 22.0724
+              "start_sec": 21.9138,
+              "end_sec": 22.0386,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 21.90756,
+              "micro_end_sec": 22.03236,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "어",
               "char_index": 7,
               "morpheme": "어",
               "is_word_start": true,
-              "pos": "EF",
+              "pos": "EC",
               "role": "function",
               "stress": 0.8,
               "phonology": {
@@ -2930,8 +3163,14 @@
               "is_slur": false,
               "start_absolute_slot": 175,
               "end_absolute_slot_exclusive": 176,
-              "start_sec": 22.0724,
-              "end_sec": 22.1974
+              "start_sec": 22.0386,
+              "end_sec": 22.1634,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 22.0386,
+              "micro_end_sec": 22.1634,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -2941,20 +3180,20 @@
           "start_absolute_slot": 168,
           "end_absolute_slot_exclusive": 176,
           "available_slots": 8,
-          "start_sec": 21.1974,
-          "end_sec": 22.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 21.165,
+          "end_sec": 22.163400000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 0.75,
           "diffsinger": {
-            "offset": "21.197400",
+            "offset": "21.165000",
             "text": "리드 뮈에 무더",
             "original_text": "리듬 위에 묻어",
             "ph_seq": "rx i d eu m ui e m u d eo",
-            "ph_dur": "0.059211 0.190789 0.029605 0.095395 0.059211 0.190789 0.125000 0.029605 0.095395 0.029605 0.095395",
+            "ph_dur": "0.059116 0.190484 0.029558 0.095242 0.059116 0.190484 0.124800 0.029558 0.095242 0.029558 0.095242",
             "ph_num": "2 2 2 1 2 2",
             "note_seq": "D4 C4 D4 C4 D4 A#3",
-            "note_dur": "0.250000 0.125000 0.250000 0.125000 0.125000 0.125000",
+            "note_dur": "0.249600 0.124800 0.249600 0.124800 0.124800 0.124800",
             "note_slur": "0 0 0 0 0 0"
           }
         }
@@ -3487,8 +3726,14 @@
               "is_slur": false,
               "start_absolute_slot": 176,
               "end_absolute_slot_exclusive": 178,
-              "start_sec": 22.1974,
-              "end_sec": 22.4474
+              "start_sec": 22.1634,
+              "end_sec": 22.413,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 22.15716,
+              "micro_end_sec": 22.40676,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "까",
@@ -3512,8 +3757,14 @@
               "is_slur": false,
               "start_absolute_slot": 178,
               "end_absolute_slot_exclusive": 179,
-              "start_sec": 22.4474,
-              "end_sec": 22.5724
+              "start_sec": 22.4131,
+              "end_sec": 22.5379,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 22.4131,
+              "micro_end_sec": 22.5379,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "지",
@@ -3537,8 +3788,14 @@
               "is_slur": false,
               "start_absolute_slot": 179,
               "end_absolute_slot_exclusive": 180,
-              "start_sec": 22.5724,
-              "end_sec": 22.6974
+              "start_sec": 22.5379,
+              "end_sec": 22.6627,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 22.5379,
+              "micro_end_sec": 22.6627,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "나",
@@ -3562,8 +3819,14 @@
               "is_slur": false,
               "start_absolute_slot": 180,
               "end_absolute_slot_exclusive": 181,
-              "start_sec": 22.6974,
-              "end_sec": 22.8224
+              "start_sec": 22.6627,
+              "end_sec": 22.7875,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 22.6627,
+              "micro_end_sec": 22.7875,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "를",
@@ -3587,8 +3850,14 @@
               "is_slur": false,
               "start_absolute_slot": 181,
               "end_absolute_slot_exclusive": 182,
-              "start_sec": 22.8224,
-              "end_sec": 22.9474
+              "start_sec": 22.7875,
+              "end_sec": 22.912300000000002,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 22.7875,
+              "micro_end_sec": 22.9123,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "믿",
@@ -3612,8 +3881,14 @@
               "is_slur": false,
               "start_absolute_slot": 182,
               "end_absolute_slot_exclusive": 183,
-              "start_sec": 22.9474,
-              "end_sec": 23.0724
+              "start_sec": 22.9123,
+              "end_sec": 23.0371,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 22.90606,
+              "micro_end_sec": 23.03086,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "고",
@@ -3637,8 +3912,14 @@
               "is_slur": false,
               "start_absolute_slot": 183,
               "end_absolute_slot_exclusive": 184,
-              "start_sec": 23.0724,
-              "end_sec": 23.1974
+              "start_sec": 23.0371,
+              "end_sec": 23.1619,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 23.0371,
+              "micro_end_sec": 23.1619,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -3648,20 +3929,20 @@
           "start_absolute_slot": 176,
           "end_absolute_slot_exclusive": 184,
           "available_slots": 8,
-          "start_sec": 22.1974,
-          "end_sec": 23.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 22.1634,
+          "end_sec": 23.161800000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 0.875,
           "diffsinger": {
-            "offset": "22.197400",
+            "offset": "22.163400",
             "text": "끋까지 나를 믿꼬",
             "original_text": "끝까지 나를 믿고",
             "ph_seq": "kk eu tcl kk a jh i n a rx eu l m i tcl kk o",
-            "ph_dur": "0.042453 0.136792 0.070755 0.029605 0.095395 0.029605 0.095395 0.029605 0.095395 0.023936 0.077128 0.023936 0.021226 0.068396 0.035378 0.029605 0.095395",
+            "ph_dur": "0.042385 0.136574 0.070641 0.029558 0.095242 0.029558 0.095242 0.029558 0.095242 0.023898 0.077004 0.023898 0.021192 0.068287 0.035321 0.029558 0.095242",
             "ph_num": "3 2 2 2 3 3 2",
             "note_seq": "D4 C4 C4 D4 C4 D4 C4",
-            "note_dur": "0.250000 0.125000 0.125000 0.125000 0.125000 0.125000 0.125000",
+            "note_dur": "0.249600 0.124800 0.124800 0.124800 0.124800 0.124800 0.124800",
             "note_slur": "0 0 0 0 0 0 0"
           }
         },
@@ -3847,8 +4128,14 @@
               "is_slur": false,
               "start_absolute_slot": 184,
               "end_absolute_slot_exclusive": 186,
-              "start_sec": 23.1974,
-              "end_sec": 23.4474
+              "start_sec": 23.1619,
+              "end_sec": 23.4115,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 23.15566,
+              "micro_end_sec": 23.40526,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "음",
@@ -3872,8 +4159,14 @@
               "is_slur": false,
               "start_absolute_slot": 186,
               "end_absolute_slot_exclusive": 187,
-              "start_sec": 23.4474,
-              "end_sec": 23.5724
+              "start_sec": 23.4115,
+              "end_sec": 23.5363,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 23.40526,
+              "micro_end_sec": 23.53006,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "장",
@@ -3897,8 +4190,14 @@
               "is_slur": false,
               "start_absolute_slot": 187,
               "end_absolute_slot_exclusive": 189,
-              "start_sec": 23.5724,
-              "end_sec": 23.8224
+              "start_sec": 23.5363,
+              "end_sec": 23.7859,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 23.53006,
+              "micro_end_sec": 23.77966,
+              "micro_duration_sec": 0.2496,
+              "snare_reference": null
             },
             {
               "text": "을",
@@ -3922,8 +4221,14 @@
               "is_slur": false,
               "start_absolute_slot": 189,
               "end_absolute_slot_exclusive": 190,
-              "start_sec": 23.8224,
-              "end_sec": 23.9474
+              "start_sec": 23.7859,
+              "end_sec": 23.910700000000002,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 23.7859,
+              "micro_end_sec": 23.9107,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "열",
@@ -3947,8 +4252,14 @@
               "is_slur": false,
               "start_absolute_slot": 190,
               "end_absolute_slot_exclusive": 191,
-              "start_sec": 23.9474,
-              "end_sec": 24.0724
+              "start_sec": 23.9107,
+              "end_sec": 24.0355,
+              "micro_offset_ms": -6.24,
+              "micro_offset_reason": "stress",
+              "micro_start_sec": 23.90446,
+              "micro_end_sec": 24.02926,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             },
             {
               "text": "어",
@@ -3972,8 +4283,14 @@
               "is_slur": false,
               "start_absolute_slot": 191,
               "end_absolute_slot_exclusive": 192,
-              "start_sec": 24.0724,
-              "end_sec": 24.1974
+              "start_sec": 24.0356,
+              "end_sec": 24.1604,
+              "micro_offset_ms": 0.0,
+              "micro_offset_reason": "none",
+              "micro_start_sec": 24.0356,
+              "micro_end_sec": 24.1604,
+              "micro_duration_sec": 0.1248,
+              "snare_reference": null
             }
           ],
           "unallocated_syllables": 0,
@@ -3983,20 +4300,20 @@
           "start_absolute_slot": 184,
           "end_absolute_slot_exclusive": 192,
           "available_slots": 8,
-          "start_sec": 23.1974,
-          "end_sec": 24.1974,
-          "allocated_duration_sec": 1.0,
+          "start_sec": 23.1619,
+          "end_sec": 24.160300000000003,
+          "allocated_duration_sec": 0.9984000000000037,
           "density": "normal",
           "density_ratio": 0.75,
           "diffsinger": {
-            "offset": "23.197400",
+            "offset": "23.161900",
             "text": "다음 장으 려러",
             "original_text": "다음 장을 열어",
             "ph_seq": "d a eu m jh a ng eu rx ieo rx eo",
-            "ph_dur": "0.059211 0.190789 0.095395 0.029605 0.042453 0.136792 0.070755 0.125000 0.029605 0.095395 0.029605 0.095395",
+            "ph_dur": "0.059116 0.190484 0.095242 0.029558 0.042385 0.136574 0.070641 0.124800 0.029558 0.095242 0.029558 0.095242",
             "ph_num": "2 2 3 1 2 2",
             "note_seq": "D4 C4 D4 C4 D4 A#3",
-            "note_dur": "0.250000 0.125000 0.250000 0.125000 0.125000 0.125000",
+            "note_dur": "0.249600 0.124800 0.249600 0.124800 0.124800 0.124800",
             "note_slur": "0 0 0 0 0 0"
           }
         }
@@ -4006,8 +4323,16 @@
   ],
   "warnings": [],
   "validation": {
-    "valid": true,
-    "errors": [],
+    "valid": false,
+    "errors": [
+      "segment end mismatch: bar009_seg01",
+      "segment end mismatch: bar010_seg01",
+      "segment end mismatch: bar010_seg02",
+      "segment end mismatch: bar011_seg01",
+      "segment end mismatch: bar011_seg02",
+      "segment end mismatch: bar012_seg01",
+      "segment end mismatch: bar012_seg02"
+    ],
     "warnings": [],
     "diffsinger": {
       "valid": true,
