@@ -1,0 +1,1246 @@
+{
+  "metadata": {
+    "source_audio_file": "90_boombap.mp3",
+    "bpm": 91,
+    "time_signature": "4/4",
+    "language": "ko",
+    "slot_unit": "16th_note",
+    "verse_start_bar": 9,
+    "line_count": 4
+  },
+  "lines": [
+    {
+      "line_index": 1,
+      "bar": 9,
+      "original_text": "오늘도 난 이 도시 위를 달려가",
+      "segments": [
+        {
+          "segment_id": "bar009_seg01",
+          "text": "오늘도 난 이 도시 위를 달려가",
+          "start_slot_in_bar": 0,
+          "end_slot_in_bar_exclusive": 16,
+          "syllables": [
+            {
+              "text": "오",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "오",
+                "onset": "ㅇ",
+                "vowel": "ㅗ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 0,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 1,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 128,
+              "end_absolute_slot_exclusive": 129,
+              "start_sec": 21.1802,
+              "end_sec": 21.345035164835163
+            },
+            {
+              "text": "늘",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "늘",
+                "onset": "ㄴ",
+                "vowel": "ㅡ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 1,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 2,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 129,
+              "end_absolute_slot_exclusive": 130,
+              "start_sec": 21.345,
+              "end_sec": 21.509835164835163
+            },
+            {
+              "text": "도",
+              "syllable_index": 2,
+              "char_index": 2,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "도",
+                "onset": "ㄷ",
+                "vowel": "ㅗ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 2,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 3,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 130,
+              "end_absolute_slot_exclusive": 131,
+              "start_sec": 21.5098,
+              "end_sec": 21.674635164835163
+            },
+            {
+              "text": "난",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "난",
+                "onset": "ㄴ",
+                "vowel": "ㅏ",
+                "coda": "ㄴ"
+              },
+              "start_slot_in_bar": 3,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 4,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 131,
+              "end_absolute_slot_exclusive": 132,
+              "start_sec": 21.6747,
+              "end_sec": 21.839535164835166
+            },
+            {
+              "text": "이",
+              "syllable_index": 4,
+              "char_index": 6,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "이",
+                "onset": "ㅇ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 4,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 5,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 132,
+              "end_absolute_slot_exclusive": 133,
+              "start_sec": 21.8395,
+              "end_sec": 22.004335164835165
+            },
+            {
+              "text": "도",
+              "syllable_index": 5,
+              "char_index": 8,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "도",
+                "onset": "ㄷ",
+                "vowel": "ㅗ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 5,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 6,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 133,
+              "end_absolute_slot_exclusive": 134,
+              "start_sec": 22.0043,
+              "end_sec": 22.169135164835165
+            },
+            {
+              "text": "시",
+              "syllable_index": 6,
+              "char_index": 9,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "시",
+                "onset": "ㅅ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 6,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 7,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 134,
+              "end_absolute_slot_exclusive": 135,
+              "start_sec": 22.1692,
+              "end_sec": 22.334035164835164
+            },
+            {
+              "text": "위",
+              "syllable_index": 7,
+              "char_index": 11,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "위",
+                "onset": "ㅇ",
+                "vowel": "ㅟ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 7,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 8,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 135,
+              "end_absolute_slot_exclusive": 136,
+              "start_sec": 22.334,
+              "end_sec": 22.498835164835164
+            },
+            {
+              "text": "를",
+              "syllable_index": 8,
+              "char_index": 12,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "를",
+                "onset": "ㄹ",
+                "vowel": "ㅡ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 8,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 10,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 136,
+              "end_absolute_slot_exclusive": 138,
+              "start_sec": 22.4989,
+              "end_sec": 22.828570329670328
+            },
+            {
+              "text": "달",
+              "syllable_index": 9,
+              "char_index": 14,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "달",
+                "onset": "ㄷ",
+                "vowel": "ㅏ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 10,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 12,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 138,
+              "end_absolute_slot_exclusive": 140,
+              "start_sec": 22.8285,
+              "end_sec": 23.158170329670327
+            },
+            {
+              "text": "려",
+              "syllable_index": 10,
+              "char_index": 15,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "려",
+                "onset": "ㄹ",
+                "vowel": "ㅕ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 12,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 14,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 140,
+              "end_absolute_slot_exclusive": 142,
+              "start_sec": 23.1582,
+              "end_sec": 23.48787032967033
+            },
+            {
+              "text": "가",
+              "syllable_index": 11,
+              "char_index": 16,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "가",
+                "onset": "ㄱ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 14,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 16,
+              "midi_note": 58,
+              "is_slur": false,
+              "start_absolute_slot": 142,
+              "end_absolute_slot_exclusive": 144,
+              "start_sec": 23.4879,
+              "end_sec": 23.81757032967033
+            }
+          ]
+        }
+      ],
+      "rests": []
+    },
+    {
+      "line_index": 2,
+      "bar": 10,
+      "original_text": "조용한 밤을 깨우며 더 높이 올라가",
+      "segments": [
+        {
+          "segment_id": "bar010_seg01",
+          "text": "조용한 밤을 깨우며",
+          "start_slot_in_bar": 0,
+          "end_slot_in_bar_exclusive": 8,
+          "syllables": [
+            {
+              "text": "조",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "조",
+                "onset": "ㅈ",
+                "vowel": "ㅗ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 0,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 1,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 144,
+              "end_absolute_slot_exclusive": 145,
+              "start_sec": 23.8175,
+              "end_sec": 23.982335164835163
+            },
+            {
+              "text": "용",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "용",
+                "onset": "ㅇ",
+                "vowel": "ㅛ",
+                "coda": "ㅇ"
+              },
+              "start_slot_in_bar": 1,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 2,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 145,
+              "end_absolute_slot_exclusive": 146,
+              "start_sec": 23.9824,
+              "end_sec": 24.147235164835163
+            },
+            {
+              "text": "한",
+              "syllable_index": 2,
+              "char_index": 2,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "한",
+                "onset": "ㅎ",
+                "vowel": "ㅏ",
+                "coda": "ㄴ"
+              },
+              "start_slot_in_bar": 2,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 3,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 146,
+              "end_absolute_slot_exclusive": 147,
+              "start_sec": 24.1472,
+              "end_sec": 24.312035164835166
+            },
+            {
+              "text": "밤",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "밤",
+                "onset": "ㅂ",
+                "vowel": "ㅏ",
+                "coda": "ㅁ"
+              },
+              "start_slot_in_bar": 3,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 4,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 147,
+              "end_absolute_slot_exclusive": 148,
+              "start_sec": 24.312,
+              "end_sec": 24.476835164835165
+            },
+            {
+              "text": "을",
+              "syllable_index": 4,
+              "char_index": 5,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "을",
+                "onset": "ㅇ",
+                "vowel": "ㅡ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 4,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 5,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 148,
+              "end_absolute_slot_exclusive": 149,
+              "start_sec": 24.4769,
+              "end_sec": 24.641735164835165
+            },
+            {
+              "text": "깨",
+              "syllable_index": 5,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "깨",
+                "onset": "ㄲ",
+                "vowel": "ㅐ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 5,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 6,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 149,
+              "end_absolute_slot_exclusive": 150,
+              "start_sec": 24.6417,
+              "end_sec": 24.806535164835164
+            },
+            {
+              "text": "우",
+              "syllable_index": 6,
+              "char_index": 8,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "우",
+                "onset": "ㅇ",
+                "vowel": "ㅜ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 6,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 7,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 150,
+              "end_absolute_slot_exclusive": 151,
+              "start_sec": 24.8065,
+              "end_sec": 24.971335164835164
+            },
+            {
+              "text": "며",
+              "syllable_index": 7,
+              "char_index": 9,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "며",
+                "onset": "ㅁ",
+                "vowel": "ㅕ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 7,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 8,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 151,
+              "end_absolute_slot_exclusive": 152,
+              "start_sec": 24.9714,
+              "end_sec": 25.136235164835163
+            }
+          ]
+        },
+        {
+          "segment_id": "bar010_seg02",
+          "text": "더 높이 올라가",
+          "start_slot_in_bar": 8,
+          "end_slot_in_bar_exclusive": 16,
+          "syllables": [
+            {
+              "text": "더",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "더",
+                "onset": "ㄷ",
+                "vowel": "ㅓ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 8,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 9,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 152,
+              "end_absolute_slot_exclusive": 153,
+              "start_sec": 25.1362,
+              "end_sec": 25.301035164835163
+            },
+            {
+              "text": "높",
+              "syllable_index": 1,
+              "char_index": 2,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "높",
+                "onset": "ㄴ",
+                "vowel": "ㅗ",
+                "coda": "ㅍ"
+              },
+              "start_slot_in_bar": 9,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 10,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 153,
+              "end_absolute_slot_exclusive": 154,
+              "start_sec": 25.3011,
+              "end_sec": 25.465935164835166
+            },
+            {
+              "text": "이",
+              "syllable_index": 2,
+              "char_index": 3,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "이",
+                "onset": "ㅇ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 10,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 11,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 154,
+              "end_absolute_slot_exclusive": 155,
+              "start_sec": 25.4659,
+              "end_sec": 25.630735164835166
+            },
+            {
+              "text": "올",
+              "syllable_index": 3,
+              "char_index": 5,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "올",
+                "onset": "ㅇ",
+                "vowel": "ㅗ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 11,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 12,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 155,
+              "end_absolute_slot_exclusive": 156,
+              "start_sec": 25.6307,
+              "end_sec": 25.795535164835165
+            },
+            {
+              "text": "라",
+              "syllable_index": 4,
+              "char_index": 6,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "라",
+                "onset": "ㄹ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 12,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 14,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 156,
+              "end_absolute_slot_exclusive": 158,
+              "start_sec": 25.7956,
+              "end_sec": 26.12527032967033
+            },
+            {
+              "text": "가",
+              "syllable_index": 5,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "가",
+                "onset": "ㄱ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 14,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 16,
+              "midi_note": 58,
+              "is_slur": false,
+              "start_absolute_slot": 158,
+              "end_absolute_slot_exclusive": 160,
+              "start_sec": 26.1252,
+              "end_sec": 26.454870329670328
+            }
+          ]
+        }
+      ],
+      "rests": []
+    },
+    {
+      "line_index": 3,
+      "bar": 11,
+      "original_text": "어제의 상처까지 리듬 위에 묻어",
+      "segments": [
+        {
+          "segment_id": "bar011_seg01",
+          "text": "어제의 상처까지",
+          "start_slot_in_bar": 0,
+          "end_slot_in_bar_exclusive": 8,
+          "syllables": [
+            {
+              "text": "어",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "어",
+                "onset": "ㅇ",
+                "vowel": "ㅓ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 0,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 1,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 160,
+              "end_absolute_slot_exclusive": 161,
+              "start_sec": 26.4549,
+              "end_sec": 26.619735164835163
+            },
+            {
+              "text": "제",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "제",
+                "onset": "ㅈ",
+                "vowel": "ㅔ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 1,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 2,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 161,
+              "end_absolute_slot_exclusive": 162,
+              "start_sec": 26.6197,
+              "end_sec": 26.784535164835166
+            },
+            {
+              "text": "의",
+              "syllable_index": 2,
+              "char_index": 2,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "의",
+                "onset": "ㅇ",
+                "vowel": "ㅢ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 2,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 3,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 162,
+              "end_absolute_slot_exclusive": 163,
+              "start_sec": 26.7846,
+              "end_sec": 26.949435164835165
+            },
+            {
+              "text": "상",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "상",
+                "onset": "ㅅ",
+                "vowel": "ㅏ",
+                "coda": "ㅇ"
+              },
+              "start_slot_in_bar": 3,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 4,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 163,
+              "end_absolute_slot_exclusive": 164,
+              "start_sec": 26.9494,
+              "end_sec": 27.114235164835165
+            },
+            {
+              "text": "처",
+              "syllable_index": 4,
+              "char_index": 5,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "처",
+                "onset": "ㅊ",
+                "vowel": "ㅓ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 4,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 5,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 164,
+              "end_absolute_slot_exclusive": 165,
+              "start_sec": 27.1142,
+              "end_sec": 27.279035164835165
+            },
+            {
+              "text": "까",
+              "syllable_index": 5,
+              "char_index": 6,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "까",
+                "onset": "ㄲ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 5,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 6,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 165,
+              "end_absolute_slot_exclusive": 166,
+              "start_sec": 27.2791,
+              "end_sec": 27.443935164835164
+            },
+            {
+              "text": "지",
+              "syllable_index": 6,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "지",
+                "onset": "ㅈ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 6,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 8,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 166,
+              "end_absolute_slot_exclusive": 168,
+              "start_sec": 27.4439,
+              "end_sec": 27.773570329670328
+            }
+          ]
+        },
+        {
+          "segment_id": "bar011_seg02",
+          "text": "리듬 위에 묻어",
+          "start_slot_in_bar": 8,
+          "end_slot_in_bar_exclusive": 16,
+          "syllables": [
+            {
+              "text": "리",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "리",
+                "onset": "ㄹ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 8,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 9,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 168,
+              "end_absolute_slot_exclusive": 169,
+              "start_sec": 27.7736,
+              "end_sec": 27.938435164835163
+            },
+            {
+              "text": "듬",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "듬",
+                "onset": "ㄷ",
+                "vowel": "ㅡ",
+                "coda": "ㅁ"
+              },
+              "start_slot_in_bar": 9,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 10,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 169,
+              "end_absolute_slot_exclusive": 170,
+              "start_sec": 27.9384,
+              "end_sec": 28.103235164835166
+            },
+            {
+              "text": "위",
+              "syllable_index": 2,
+              "char_index": 3,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "위",
+                "onset": "ㅇ",
+                "vowel": "ㅟ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 10,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 11,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 170,
+              "end_absolute_slot_exclusive": 171,
+              "start_sec": 28.1032,
+              "end_sec": 28.268035164835165
+            },
+            {
+              "text": "에",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "에",
+                "onset": "ㅇ",
+                "vowel": "ㅔ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 11,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 12,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 171,
+              "end_absolute_slot_exclusive": 172,
+              "start_sec": 28.2681,
+              "end_sec": 28.432935164835165
+            },
+            {
+              "text": "묻",
+              "syllable_index": 4,
+              "char_index": 6,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "묻",
+                "onset": "ㅁ",
+                "vowel": "ㅜ",
+                "coda": "ㄷ"
+              },
+              "start_slot_in_bar": 12,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 14,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 172,
+              "end_absolute_slot_exclusive": 174,
+              "start_sec": 28.4329,
+              "end_sec": 28.76257032967033
+            },
+            {
+              "text": "어",
+              "syllable_index": 5,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "어",
+                "onset": "ㅇ",
+                "vowel": "ㅓ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 14,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 16,
+              "midi_note": 58,
+              "is_slur": false,
+              "start_absolute_slot": 174,
+              "end_absolute_slot_exclusive": 176,
+              "start_sec": 28.7626,
+              "end_sec": 29.092270329670328
+            }
+          ]
+        }
+      ],
+      "rests": []
+    },
+    {
+      "line_index": 4,
+      "bar": 12,
+      "original_text": "끝까지 나를 믿고 다음 장을 열어",
+      "segments": [
+        {
+          "segment_id": "bar012_seg01",
+          "text": "끝까지 나를 믿고",
+          "start_slot_in_bar": 0,
+          "end_slot_in_bar_exclusive": 8,
+          "syllables": [
+            {
+              "text": "끝",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "끝",
+                "onset": "ㄲ",
+                "vowel": "ㅡ",
+                "coda": "ㅌ"
+              },
+              "start_slot_in_bar": 0,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 1,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 176,
+              "end_absolute_slot_exclusive": 177,
+              "start_sec": 29.0923,
+              "end_sec": 29.257135164835166
+            },
+            {
+              "text": "까",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "까",
+                "onset": "ㄲ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 1,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 2,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 177,
+              "end_absolute_slot_exclusive": 178,
+              "start_sec": 29.2571,
+              "end_sec": 29.421935164835165
+            },
+            {
+              "text": "지",
+              "syllable_index": 2,
+              "char_index": 2,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "지",
+                "onset": "ㅈ",
+                "vowel": "ㅣ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 2,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 3,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 178,
+              "end_absolute_slot_exclusive": 179,
+              "start_sec": 29.4219,
+              "end_sec": 29.586735164835165
+            },
+            {
+              "text": "나",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "나",
+                "onset": "ㄴ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 3,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 4,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 179,
+              "end_absolute_slot_exclusive": 180,
+              "start_sec": 29.5868,
+              "end_sec": 29.751635164835164
+            },
+            {
+              "text": "를",
+              "syllable_index": 4,
+              "char_index": 5,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "를",
+                "onset": "ㄹ",
+                "vowel": "ㅡ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 4,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 5,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 180,
+              "end_absolute_slot_exclusive": 181,
+              "start_sec": 29.7516,
+              "end_sec": 29.916435164835164
+            },
+            {
+              "text": "믿",
+              "syllable_index": 5,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "믿",
+                "onset": "ㅁ",
+                "vowel": "ㅣ",
+                "coda": "ㄷ"
+              },
+              "start_slot_in_bar": 5,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 6,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 181,
+              "end_absolute_slot_exclusive": 182,
+              "start_sec": 29.9164,
+              "end_sec": 30.081235164835164
+            },
+            {
+              "text": "고",
+              "syllable_index": 6,
+              "char_index": 8,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "고",
+                "onset": "ㄱ",
+                "vowel": "ㅗ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 6,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 8,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 182,
+              "end_absolute_slot_exclusive": 184,
+              "start_sec": 30.0813,
+              "end_sec": 30.410970329670327
+            }
+          ]
+        },
+        {
+          "segment_id": "bar012_seg02",
+          "text": "다음 장을 열어",
+          "start_slot_in_bar": 8,
+          "end_slot_in_bar_exclusive": 16,
+          "syllables": [
+            {
+              "text": "다",
+              "syllable_index": 0,
+              "char_index": 0,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "다",
+                "onset": "ㄷ",
+                "vowel": "ㅏ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 8,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 9,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 184,
+              "end_absolute_slot_exclusive": 185,
+              "start_sec": 30.4109,
+              "end_sec": 30.575735164835166
+            },
+            {
+              "text": "음",
+              "syllable_index": 1,
+              "char_index": 1,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "음",
+                "onset": "ㅇ",
+                "vowel": "ㅡ",
+                "coda": "ㅁ"
+              },
+              "start_slot_in_bar": 9,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 10,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 185,
+              "end_absolute_slot_exclusive": 186,
+              "start_sec": 30.5758,
+              "end_sec": 30.740635164835165
+            },
+            {
+              "text": "장",
+              "syllable_index": 2,
+              "char_index": 3,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "장",
+                "onset": "ㅈ",
+                "vowel": "ㅏ",
+                "coda": "ㅇ"
+              },
+              "start_slot_in_bar": 10,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 11,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 186,
+              "end_absolute_slot_exclusive": 187,
+              "start_sec": 30.7406,
+              "end_sec": 30.905435164835165
+            },
+            {
+              "text": "을",
+              "syllable_index": 3,
+              "char_index": 4,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "을",
+                "onset": "ㅇ",
+                "vowel": "ㅡ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 11,
+              "duration_slots": 1,
+              "end_slot_in_bar_exclusive": 12,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 187,
+              "end_absolute_slot_exclusive": 188,
+              "start_sec": 30.9054,
+              "end_sec": 31.070235164835164
+            },
+            {
+              "text": "열",
+              "syllable_index": 4,
+              "char_index": 6,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "열",
+                "onset": "ㅇ",
+                "vowel": "ㅕ",
+                "coda": "ㄹ"
+              },
+              "start_slot_in_bar": 12,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 14,
+              "midi_note": 62,
+              "is_slur": false,
+              "start_absolute_slot": 188,
+              "end_absolute_slot_exclusive": 190,
+              "start_sec": 31.0703,
+              "end_sec": 31.399970329670328
+            },
+            {
+              "text": "어",
+              "syllable_index": 5,
+              "char_index": 7,
+              "pos": "NNG",
+              "stress": 1.0,
+              "phonology": {
+                "char": "어",
+                "onset": "ㅇ",
+                "vowel": "ㅓ",
+                "coda": ""
+              },
+              "start_slot_in_bar": 14,
+              "duration_slots": 2,
+              "end_slot_in_bar_exclusive": 16,
+              "midi_note": 58,
+              "is_slur": false,
+              "start_absolute_slot": 190,
+              "end_absolute_slot_exclusive": 192,
+              "start_sec": 31.4,
+              "end_sec": 31.729670329670327
+            }
+          ]
+        }
+      ],
+      "rests": []
+    }
+  ],
+  "warnings": []
+}
