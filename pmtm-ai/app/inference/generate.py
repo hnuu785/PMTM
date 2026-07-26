@@ -21,6 +21,7 @@ def parse_args():
         help="LoRA adapter directory path (default: models/grpo_rap_qwen). Set to 'none' to run the base model only.",
     )
     p.add_argument("--artist", help="Artist style name")
+    p.add_argument("--topic", default=None, help="Target topic (e.g. 자신감/성공, 사랑, 이별, 삶/성찰)")
     p.add_argument("--bpm", type=float, help="Track BPM")
     p.add_argument("--energy", type=float, help="Energy score (0-1)")
     p.add_argument("--danceability", type=float, help="Danceability score (0-1)")
@@ -51,21 +52,22 @@ def parse_args():
 
 
 def build_prompt(args) -> str:
-    return build_lyric_user_prompt(bpm=args.bpm, bars=args.bars)
+    return build_lyric_user_prompt(bpm=args.bpm, bars=args.bars, topic=getattr(args, "topic", None))
 
 
 def build_messages(args) -> list[dict[str, str]]:
+    topic = getattr(args, "topic", None)
     if args.bpm is None:
         # Default prompt
         return [
             {
                 "role": "user",
-                "content": build_lyric_user_prompt(bpm=None, bars=args.bars)
+                "content": build_lyric_user_prompt(bpm=None, bars=args.bars, topic=topic)
             }
         ]
 
     # Full structured API style messages
-    return build_lyric_messages(bpm=args.bpm, bars=args.bars)
+    return build_lyric_messages(bpm=args.bpm, bars=args.bars, topic=topic)
 
 
 def should_use_chat_template(base_model: str, prompt_format: str) -> bool:
@@ -126,7 +128,11 @@ def build_model(base_model: str, adapter_path: Path | None):
     # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    tokenizer_path = str(adapter_path) if adapter_path else base_model
+    tokenizer_path = (
+        str(adapter_path)
+        if adapter_path and (adapter_path / "tokenizer_config.json").exists()
+        else base_model
+    )
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token

@@ -13,6 +13,7 @@ PROMPT_FORMATS = ("auto", "chat", "raw")
 def parse_args():
     p = argparse.ArgumentParser(description="PMTM API lyric generation CLI")
     p.add_argument("--bpm", type=float, required=True, help="Track BPM")
+    p.add_argument("--topic", default=None, help="Target topic (e.g. 자신감/성공, 사랑, 이별, 삶/성찰)")
     p.add_argument("--genre", default="Korean hip-hop", help="Target genre")
     p.add_argument("--mood", default="confident", help="Target mood")
     p.add_argument("--adapter", default=None, help="Optional LoRA adapter directory path")
@@ -46,11 +47,11 @@ def parse_args():
 
 
 def build_prompt(args) -> str:
-    return build_lyric_user_prompt(bpm=args.bpm, bars=args.bars)
+    return build_lyric_user_prompt(bpm=args.bpm, bars=args.bars, topic=getattr(args, "topic", None))
 
 
 def build_messages(args) -> list[dict[str, str]]:
-    return build_lyric_messages(bpm=args.bpm, bars=args.bars)
+    return build_lyric_messages(bpm=args.bpm, bars=args.bars, topic=getattr(args, "topic", None))
 
 
 def should_use_chat_template(base_model: str, prompt_format: str) -> bool:

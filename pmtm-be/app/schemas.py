@@ -6,6 +6,7 @@ LyricModel = str
 
 class LyricGenerateRequest(BaseModel):
     bpm: int = Field(..., ge=40, le=220)
+    topic: str | None = Field(default=None, description="Target lyric topic")
     llm: LyricModel = "qwen-local"
 
 

@@ -9,12 +9,12 @@
 우리가 목표로 잡은 좋은 랩 벌스는 아래 조건을 만족하는 8줄 랩 벌스다.
 
 - 라임이 자연스럽다.
-- 줄 단위 호흡이 일정하�### 1. `prepared_dataset_v3.jsonl` 생성
+- 줄 단위 호흡이 일정하�### 1. `prepared_dataset.jsonl` 생성
 
 새 SFT 데이터셋을 만들었다.
 
-- 파일: `pmtm-ai/data/prepared_dataset_v3.jsonl`
-- 생성기: `pmtm-ai/app/training/prepare_dataset_v3.py`
+- 파일: `pmtm-ai/data/prepared_dataset.jsonl`
+- 생성기: `pmtm-ai/app/training/prepare_dataset.py`
 - 후보 8줄 chunk: 5,954개
 - 최종 샘플: 2,868개
 - 메시지 구조: `user -> assistant`
@@ -47,10 +47,10 @@
 `pmtm-ai/app/training/sft_qwen.py`의 SFT 입력을 아래로 바꿨다.
 
 ```python
-DATA_PATH = str(DATA_DIR / "prepared_dataset_v3.jsonl")
+DATA_PATH = str(DATA_DIR / "prepared_dataset.jsonl")
 ```
 
-`run_training.py`도 SFT 데이터 준비 단계에서 `prepared_dataset_v3.jsonl`을 확인하고, 없으면 `prepare_dataset_v3.py`를 실행하도록 바꿨다.
+`run_training.py`도 SFT 데이터 준비 단계에서 `prepared_dataset.jsonl`을 확인하고, 없으면 `prepare_dataset.py`를 실행하도록 바꿨다.
 
 변경 이유:
 
@@ -71,7 +71,7 @@ DATA_PATH = str(DATA_DIR / "prepared_dataset_v3.jsonl")
 변경한 경로:
 
 - `pmtm-ai/app/lyric_prompts.py`
-- `pmtm-ai/app/training/prepare_dataset_v3.py`
+- `pmtm-ai/app/training/prepare_dataset.py`
 - `pmtm-ai/app/training/grpo_qwen.py`
 - `pmtm-ai/app/inference/generate_for_api.py`
 - `pmtm-ai/app/inference/generate.py`
@@ -139,8 +139,8 @@ a small progression across the verse
 
 `run_training.py`는 현재 변경 방향과 맞는다.
 
-- SFT stage는 `prepared_dataset_v3.jsonl`을 사용한다.
-- 파일이 없으면 `prepare_dataset_v3.py`로 생성한다.
+- SFT stage는 `prepared_dataset.jsonl`을 사용한다.
+- 파일이 없으면 `prepare_dataset.py`로 생성한다.
 - reward sanity check는 GRPO와 같은 user-only prompt를 쓴다.
 - eval도 `build_api_messages(bpm=90)`, `build_api_messages(bpm=95)`를 사용한다.
 
@@ -205,8 +205,8 @@ a small progression across the verse
 
 `run_training.py`는 현재 변경 방향과 맞는다.
 
-- SFT stage는 `prepared_dataset_v3.jsonl`을 사용한다.
-- 파일이 없으면 `prepare_dataset_v3.py`로 생성한다.
+- SFT stage는 `prepared_dataset.jsonl`을 사용한다.
+- 파일이 없으면 `prepare_dataset.py`로 생성한다.
 - reward sanity check는 GRPO와 같은 user-only prompt를 쓴다.
 - eval도 `build_api_messages(bpm=90)`, `build_api_messages(bpm=95)`를 사용한다.
 
@@ -273,13 +273,13 @@ SFT 샘플은 “프롬프트 -> 정답 출력” 쌍이다. 프롬프트가 높
 
 ### 5. 같은 user prompt가 반복되는 것은 무조건 문제는 아니다
 
-`prepared_dataset_v3.jsonl`은 assistant 가사 chunk 완전 중복은 제거되어 있다. 같은 BPM prompt에 여러 답변이 붙는 구조는 “같은 요청에 대한 다양한 정답”으로 볼 수 있다.
+`prepared_dataset.jsonl`은 assistant 가사 chunk 완전 중복은 제거되어 있다. 같은 BPM prompt에 여러 답변이 붙는 구조는 “같은 요청에 대한 다양한 정답”으로 볼 수 있다.
 
 다만 prompt가 너무 단조로우면 조건 학습이 약해질 수 있다. 향후 `flow density`, `rhyme level`, `repetition level` 같은 신뢰 가능한 라벨을 만들 수 있다면 prompt를 더 세분화할 수 있다.
 
 ### 6. 현재 단계에서 가장 효과가 큰 수정은 데이터 품질이다
 
-모델 구조를 바꾸기 전에, SFT 데이터가 좋은 벌스 후보로 정제되어야 한다. 현재 변경의 핵심도 모델 변경이 아니라 `prepared_dataset_v3` 생성과 prompt 정합성 확보였다.
+모델 구조를 바꾸기 전에, SFT 데이터가 좋은 벌스 후보로 정제되어야 한다. 현재 변경의 핵심도 모델 변경이 아니라 `prepared_dataset` 생성과 prompt 정합성 확보였다.
 
 ## 남은 선택지
 
