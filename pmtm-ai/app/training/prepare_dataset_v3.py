@@ -30,11 +30,30 @@ MAX_REPEATED_TRIGRAMS = 1
 
 
 
+ADLIB_PAREN_RE = re.compile(
+    r"\s*\((?:yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey|billi|milli|heyy?)\)\s*",
+    re.IGNORECASE,
+)
+ADLIB_END_RE = re.compile(
+    r"(?:[\s,\.!\?]+(?:\([^\)]+\)|yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey))+[\s,\.!\?]*$",
+    re.IGNORECASE,
+)
+ONLY_ADLIB_RE = re.compile(
+    r"^(?:[\s,\.!\?\(\)]|(?:yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey))+$",
+    re.IGNORECASE,
+)
+
+
 def clean_lines(lyrics: str) -> list[str]:
     cleaned = []
     for line in lyrics.split("\n"):
         line = line.strip()
-        if not line or re.match(r"^\[.*\]$", line):
+        if not line or re.match(r"^\[.*\]$", line) or ONLY_ADLIB_RE.match(line):
+            continue
+        line = ADLIB_PAREN_RE.sub(" ", line).strip()
+        line = ADLIB_END_RE.sub("", line).strip()
+        line = re.sub(r"\s+", " ", line).strip()
+        if not line or ONLY_ADLIB_RE.match(line):
             continue
         cleaned.append(line)
     return cleaned
