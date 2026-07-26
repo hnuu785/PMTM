@@ -2,6 +2,11 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+## Project Environment Guidelines
+
+- When running Python code in `pmtm-ai`, `pmtm-be`, or `pmtm-svs`, activate the `.venv` virtual environment and use the `python3` command.
+- When running Python code in `Retrieval-based-Voice-Conversion-WebUI`, activate the `venv` virtual environment and use the `python` command.
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
