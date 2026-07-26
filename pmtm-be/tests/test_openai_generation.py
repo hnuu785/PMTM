@@ -82,7 +82,7 @@ class BeatGenerationTests(unittest.TestCase):
         self.assertIn("rhymeAnalysis", response.json())
         self.assertIn("librosa tempo 분석값을 BPM으로 사용했습니다.", response.json()["notes"])
         analyze.assert_called_once()
-        generate.assert_called_once_with(92, "qwen-local")
+        generate.assert_called_once_with(92, "qwen-local", topic=None)
         self.assertFalse(Path(analyze.call_args.args[0]).exists())
 
     def test_generate_from_beat_rejects_non_audio_file(self):
@@ -520,8 +520,7 @@ class OpenAIGenerationTests(unittest.TestCase):
         generate.assert_called_once_with(
             90,
             main.EXP_005_SFT_ADAPTER,
-            genre="Korean hip-hop",
-            mood="confident",
+            topic=None,
             bars=None,
         )
         self.assertIn("exp-005 SFT", notes[0])
@@ -534,8 +533,7 @@ class OpenAIGenerationTests(unittest.TestCase):
         generate.assert_called_once_with(
             90,
             main.EXP_005_GRPO_ADAPTER,
-            genre="Korean hip-hop",
-            mood="confident",
+            topic=None,
             bars=None,
         )
         self.assertIn("exp-005 GRPO", notes[0])
@@ -548,8 +546,7 @@ class OpenAIGenerationTests(unittest.TestCase):
         generate.assert_called_once_with(
             90,
             main.EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
-            genre="Korean hip-hop",
-            mood="confident",
+            topic=None,
             bars=None,
         )
         self.assertIn("checkpoint-450", notes[0])

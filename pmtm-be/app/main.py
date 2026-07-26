@@ -129,7 +129,7 @@ def get_available_models() -> list[dict]:
 @app.post("/api/v1/lyrics/generate", response_model=LyricGenerateResponse)
 def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
     bpm = payload.bpm
-    lyrics, notes = _generate_verse_for_model(bpm, payload.llm)
+    lyrics, notes = _generate_verse_for_model(bpm, payload.llm, topic=payload.topic)
     lyric_lines = _extract_lyric_lines(lyrics)
 
     return LyricGenerateResponse(
@@ -146,6 +146,7 @@ def generate_lyrics(payload: LyricGenerateRequest) -> LyricGenerateResponse:
 async def generate_lyrics_from_beat(
     llm: LyricModel = Form("qwen-local"),
     bpm: float | None = Form(None),
+    topic: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> LyricGenerateResponse:
     if bpm and bpm > 0:
@@ -160,7 +161,7 @@ async def generate_lyrics_from_beat(
             except FileNotFoundError:
                 pass
 
-    lyrics, notes = _generate_verse_for_model(analyzed_bpm, llm)
+    lyrics, notes = _generate_verse_for_model(analyzed_bpm, llm, topic=topic)
     notes = ["librosa tempo 분석값을 BPM으로 사용했습니다.", *notes]
     lyric_lines = _extract_lyric_lines(lyrics)
 
@@ -325,22 +326,21 @@ def _generate_verse_for_model(
     bpm: int,
     llm: LyricModel,
     *,
-    genre: str = "Korean hip-hop",
-    mood: str = "confident",
+    topic: str | None = None,
     bars: int | None = None,
 ) -> tuple[str, list[str]]:
     if llm == "openai":
-        return _generate_openai_verse(bpm, genre=genre, mood=mood, bars=bars), [
+        return _generate_openai_verse(bpm, topic=topic, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",
             "OpenAI Responses API를 사용했습니다.",
         ]
     if llm == "qwen-exp-005-sft":
-        return _generate_qwen_verse(bpm, EXP_005_SFT_ADAPTER, genre=genre, mood=mood, bars=bars), [
+        return _generate_qwen_verse(bpm, EXP_005_SFT_ADAPTER, topic=topic, bars=bars), [
             "exp-005 SFT LoRA 어댑터 생성 결과입니다.",
             "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/sft_rap_qwen 어댑터를 적용했습니다.",
         ]
     if llm == "qwen-exp-005-grpo":
-        return _generate_qwen_verse(bpm, EXP_005_GRPO_ADAPTER, genre=genre, mood=mood, bars=bars), [
+        return _generate_qwen_verse(bpm, EXP_005_GRPO_ADAPTER, topic=topic, bars=bars), [
             "exp-005 GRPO LoRA 어댑터 생성 결과입니다.",
             "Qwen/Qwen2.5-3B-Instruct 베이스 모델에 exp-005/grpo_rap_qwen 어댑터를 적용했습니다.",
         ]
@@ -348,8 +348,7 @@ def _generate_verse_for_model(
         return _generate_qwen_verse(
             bpm,
             EXP_005_GRPO_CHECKPOINT_450_ADAPTER,
-            genre=genre,
-            mood=mood,
+            topic=topic,
             bars=bars,
         ), [
             "exp-005 GRPO checkpoint-450 LoRA 어댑터 생성 결과입니다.",
@@ -363,11 +362,11 @@ def _generate_verse_for_model(
             raise HTTPException(status_code=400, detail=f"Model adapter config not found: {llm}")
 
         display_name = llm.replace("models/", "").replace("outputs/", "")
-        return _generate_qwen_verse(bpm, llm, genre=genre, mood=mood, bars=bars), [
+        return _generate_qwen_verse(bpm, llm, topic=topic, bars=bars), [
             f"{display_name} LoRA 어댑터 생성 결과입니다.",
             f"Qwen/Qwen2.5-3B-Instruct 베이스 모델에 {display_name} 어댑터를 적용했습니다.",
         ]
-    return _generate_qwen_verse(bpm, genre=genre, mood=mood, bars=bars), [
+    return _generate_qwen_verse(bpm, topic=topic, bars=bars), [
         "Qwen/Qwen2.5-3B-Instruct 베이스 모델 생성 결과입니다.",
         "LoRA 어댑터를 사용하지 않은 Qwen Instruct 추론입니다.",
     ]
@@ -878,8 +877,7 @@ def _generate_qwen_verse(
     bpm: int,
     adapter: str | None = None,
     *,
-    genre: str = "Korean hip-hop",
-    mood: str = "confident",
+    topic: str | None = None,
     bars: int | None = None,
 ) -> str:
     project_root = Path(__file__).resolve().parents[2]
@@ -901,11 +899,9 @@ def _generate_qwen_verse(
             "app.inference.generate_for_api",
             "--bpm",
             str(bpm),
-            "--genre",
-            genre,
-            "--mood",
-            mood,
         ]
+        if topic:
+            command.extend(["--topic", topic])
         if bars is not None:
             command.extend(["--bars", str(bars)])
         command.extend(["--max-new-tokens", "512"])
@@ -945,8 +941,7 @@ def _generate_qwen_verse(
 def _generate_openai_verse(
     bpm: int,
     *,
-    genre: str = "Korean hip-hop",
-    mood: str = "confident",
+    topic: str | None = None,
     bars: int = 8,
 ) -> str:
     bars = TARGET_LYRIC_BARS
@@ -956,7 +951,7 @@ def _generate_openai_verse(
             detail="OPENAI_API_KEY is not configured.",
         )
 
-    payload = _build_openai_payload(bpm, genre=genre, mood=mood, bars=bars)
+    payload = _build_openai_payload(bpm, topic=topic, bars=bars)
     data = _request_openai_response(payload)
 
     generated = _extract_openai_text(data)
@@ -972,11 +967,11 @@ def _generate_openai_verse(
 def _build_openai_payload(
     bpm: int,
     *,
-    genre: str = "Korean hip-hop",
-    mood: str = "confident",
+    topic: str | None = None,
     bars: int = 8,
 ) -> dict:
     bars = TARGET_LYRIC_BARS
+    topic_clause = f" 주제는 '{topic}'이며," if topic else ""
     payload: dict = {
         "model": settings.openai_model,
         "instructions": (
@@ -985,7 +980,8 @@ def _build_openai_payload(
             "Do not include title, explanation, numbering, or markdown."
         ),
         "input": (
-            f"BPM {bpm}, 장르 {genre}, 분위기 {mood}에 맞는 한국어 랩 {bars}마디 벌스를 써줘. "
+            f"한국어 랩 가사를 작성해 주세요.{topic_clause} "
+            f"BPM {bpm} 박자에 맞춰 정확히 {bars}마디 벌스를 써줘. "
             "각 줄은 한 마디처럼 호흡이 맞아야 하고, 전체 가사의 대부분은 한국어여야 해."
         ),
         "max_output_tokens": 500,

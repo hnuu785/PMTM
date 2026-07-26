@@ -100,6 +100,15 @@ const DEFAULT_LLM_OPTIONS: Array<{ value: string; label: string; detail: string 
     detail: "gpt-5-mini",
   },
 ];
+const TOPIC_OPTIONS = [
+  { value: "", label: "전체 (자율)" },
+  { value: "자신감/성공", label: "자신감/성공" },
+  { value: "삶/성찰", label: "삶/성찰" },
+  { value: "사랑", label: "사랑" },
+  { value: "이별", label: "이별" },
+  { value: "유흥/파티", label: "유흥/파티" },
+  { value: "비판/디스", label: "비판/디스" },
+];
 
 export default function Home() {
   const [mode, setMode] = useState<GenerateMode>("beat");
@@ -107,6 +116,7 @@ export default function Home() {
   const [beatAnalysis, setBeatAnalysis] = useState<BeatAnalysis | null>(null);
   const [firstBarStartSec, setFirstBarStartSec] = useState("0");
   const [bpm, setBpm] = useState("90");
+  const [topic, setTopic] = useState("");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
   const [llmOptions, setLlmOptions] = useState<Array<{ value: string; label: string; detail: string }>>(
     DEFAULT_LLM_OPTIONS,
@@ -359,6 +369,9 @@ export default function Home() {
     const body = new FormData();
     body.append("beat", beatFile as File);
     body.append("llm", llm);
+    if (topic) {
+      body.append("topic", topic);
+    }
     if (beatAnalysis?.tempo) {
       body.append("bpm", String(Math.round(beatAnalysis.tempo)));
     }
@@ -423,7 +436,7 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ bpm: parsedBpm, llm }),
+      body: JSON.stringify({ bpm: parsedBpm, llm, topic: topic || undefined }),
     });
   }
 
@@ -594,6 +607,26 @@ export default function Home() {
                     </div>
                   </>
                 )}
+
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-semibold text-[#d8b993]">가사 주제</legend>
+                  <div className="flex flex-wrap gap-1.5 rounded-sm border border-[#f5b950]/25 bg-black/25 p-1.5">
+                    {TOPIC_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setTopic(opt.value)}
+                        className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${
+                          topic === opt.value
+                            ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
+                            : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
 
                 <fieldset className="space-y-2">
                   <legend className="text-sm font-semibold text-[#d8b993]">LLM</legend>
