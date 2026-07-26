@@ -144,3 +144,35 @@ cd flow-a
   직접 사용하는 방식은 이번 병합 범위에 포함하지 않았다.
 - DiffSinger 보이스뱅크가 없어도 두 JSON 결과는 만들 수 있지만 합성 보컬은
   만들 수 없다.
+
+## 공식 통합 검증 결과
+
+Flow-C의 공식 검증 입력은 다음 Flow-B Beat Analysis 결과다.
+
+```text
+branch: feat/flow-b
+commit: fa93d1ee08afdf856ef2cdb475f8b37c0d130651
+path: flow/beat/outputs/90_boombap_advanced_analysis.json
+lyrics: flow-a/input/lyrics/example-8bars.txt
+verse start: bar 1
+genre: boom_bap
+```
+
+결과는 다음 위치에 저장한다.
+
+```text
+flow-a/output/flow-c-flow-b-90-boombap/
+  flow-plan.json
+  score.ds
+```
+
+검증 결과:
+
+```text
+8 bars
+34 accepted snare events
+2 syllables with snare micro offset
+43 syllables with stress micro offset
+8 DiffSinger sections
+timeline and duration validation passed
+```

@@ -1,0 +1,6707 @@
+{
+  "version": 2,
+  "metadata": {
+    "sourceAudio": "90_boombap.mp3",
+    "bpm": 90.0,
+    "timeSignature": "4/4",
+    "genre": "boom_bap",
+    "voicebank": "potg",
+    "gridResolution": 16,
+    "slotDurationSec": 0.1654,
+    "verseStartBar": 1,
+    "snareConfidenceMin": 0.65,
+    "snareEventCount": 34,
+    "microOffsetRules": {
+      "normal": 0.0,
+      "stress": 0.06,
+      "snare": 0.08
+    },
+    "microOffsetMaxMs": 15.0,
+    "beatAnalysisSource": {
+      "branch": "feat/flow-b",
+      "commit": "fa93d1ee08afdf856ef2cdb475f8b37c0d130651",
+      "path": "flow/beat/outputs/90_boombap_advanced_analysis.json"
+    }
+  },
+  "bars": [
+    {
+      "bar": 1,
+      "lineIndex": 1,
+      "originalText": "나는 비트 위를 달려",
+      "startSec": 0.0697,
+      "endSec": 2.7161,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "나는 비트 위를 달려",
+          "pronunciation": "나는 비트 위를 달려",
+          "rhyme": {
+            "surfaceTail": "달려",
+            "exact": "ㅏㄹ-ㅕØ",
+            "vowel": "ㅏ-ㅕ",
+            "family": "A/L-EO/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "나",
+              "tag": "NP",
+              "start": 0,
+              "end": 1,
+              "isContent": false,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "는",
+              "tag": "JX",
+              "start": 1,
+              "end": 2,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "비트",
+              "tag": "NNG",
+              "start": 3,
+              "end": 5,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "위",
+              "tag": "NNG",
+              "start": 6,
+              "end": 7,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 4,
+              "form": "를",
+              "tag": "JKO",
+              "start": 7,
+              "end": 8,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 5,
+              "form": "달리",
+              "tag": "VV",
+              "start": 9,
+              "end": 11,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 6,
+              "form": "어",
+              "tag": "EC",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "나는",
+              "start": 0,
+              "end": 2,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "비트",
+              "start": 3,
+              "end": 5,
+              "morphemeIds": [
+                2
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "위를",
+              "start": 6,
+              "end": 8,
+              "morphemeIds": [
+                3,
+                4
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "달려",
+              "start": 9,
+              "end": 11,
+              "morphemeIds": [
+                5,
+                6
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "나",
+              "pronounced": "나",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "는",
+              "pronounced": "는",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "비",
+              "pronounced": "비",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "트",
+              "pronounced": "트",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "위",
+              "pronounced": "위",
+              "morphemeId": 3,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "달",
+              "pronounced": "달",
+              "morphemeId": 5,
+              "eojeolId": 3
+            },
+            {
+              "operation": "match",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "려",
+              "pronounced": "려",
+              "morphemeId": 5,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "나",
+              "pronounced": "나",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NP",
+              "role": "other",
+              "stress": 0.9,
+              "stressReasons": [
+                "other",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 0,
+              "durationSlots": 2,
+              "gridStartSec": 0.0697,
+              "gridEndSec": 0.4005,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 0.0697,
+              "snareReference": null,
+              "finalEndSec": 0.4005,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "n",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "는",
+              "pronounced": "는",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JX",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 2,
+              "absoluteSlot": 2,
+              "durationSlots": 1,
+              "gridStartSec": 0.4005,
+              "gridEndSec": 0.5659,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 0.4005,
+              "snareReference": null,
+              "finalEndSec": 0.5659,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "n",
+                "eu",
+                "n"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "비",
+              "pronounced": "비",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 3,
+              "durationSlots": 3,
+              "gridStartSec": 0.566,
+              "gridEndSec": 1.0622,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 0.575924,
+              "snareReference": null,
+              "finalEndSec": 1.072124,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "b",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.136455,
+                0.359745
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "트",
+              "pronounced": "트",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 6,
+              "absoluteSlot": 6,
+              "durationSlots": 2,
+              "gridStartSec": 1.0623,
+              "gridEndSec": 1.3931,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 1.072224,
+              "snareReference": null,
+              "finalEndSec": 1.403024,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "t",
+                "eu"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "위",
+              "pronounced": "위",
+              "morphemeId": 3,
+              "eojeolId": 2,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 8,
+              "absoluteSlot": 8,
+              "durationSlots": 2,
+              "gridStartSec": 1.3932,
+              "gridEndSec": 1.724,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 1.403124,
+              "snareReference": null,
+              "finalEndSec": 1.7241,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "ui"
+              ],
+              "phonemeDurations": [
+                0.320976
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 10,
+              "durationSlots": 1,
+              "gridStartSec": 1.7241,
+              "gridEndSec": 1.8895,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 1.7241,
+              "snareReference": null,
+              "finalEndSec": 1.8895,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.009924,
+              "phonemes": [
+                "rx",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "달",
+              "pronounced": "달",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 11,
+              "absoluteSlot": 11,
+              "durationSlots": 2,
+              "gridStartSec": 1.8895,
+              "gridEndSec": 2.2203,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 1.899424,
+              "snareReference": null,
+              "finalEndSec": 2.230224,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "d",
+                "a",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "려",
+              "pronounced": "려",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.25,
+              "stressReasons": [
+                "content",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": false,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 13,
+              "absoluteSlot": 13,
+              "durationSlots": 3,
+              "gridStartSec": 2.2204,
+              "gridEndSec": 2.7166,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 2.230324,
+              "snareReference": null,
+              "finalEndSec": 2.7161,
+              "finalDurationSec": 0.485776,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "ieo"
+              ],
+              "phonemeDurations": [
+                0.133588,
+                0.352188
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "나",
+          "pronounced": "나",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NP",
+          "role": "other",
+          "stress": 0.9,
+          "stressReasons": [
+            "other",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 0,
+          "durationSlots": 2,
+          "gridStartSec": 0.0697,
+          "gridEndSec": 0.4005,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 0.0697,
+          "snareReference": null,
+          "finalEndSec": 0.4005,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "n",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "는",
+          "pronounced": "는",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JX",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 2,
+          "absoluteSlot": 2,
+          "durationSlots": 1,
+          "gridStartSec": 0.4005,
+          "gridEndSec": 0.5659,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 0.4005,
+          "snareReference": null,
+          "finalEndSec": 0.5659,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "n",
+            "eu",
+            "n"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "비",
+          "pronounced": "비",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 3,
+          "durationSlots": 3,
+          "gridStartSec": 0.566,
+          "gridEndSec": 1.0622,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 0.575924,
+          "snareReference": null,
+          "finalEndSec": 1.072124,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "b",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.136455,
+            0.359745
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "트",
+          "pronounced": "트",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 6,
+          "absoluteSlot": 6,
+          "durationSlots": 2,
+          "gridStartSec": 1.0623,
+          "gridEndSec": 1.3931,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 1.072224,
+          "snareReference": null,
+          "finalEndSec": 1.403024,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "t",
+            "eu"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "위",
+          "pronounced": "위",
+          "morphemeId": 3,
+          "eojeolId": 2,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 8,
+          "absoluteSlot": 8,
+          "durationSlots": 2,
+          "gridStartSec": 1.3932,
+          "gridEndSec": 1.724,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 1.403124,
+          "snareReference": null,
+          "finalEndSec": 1.7241,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "ui"
+          ],
+          "phonemeDurations": [
+            0.320976
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "를",
+          "pronounced": "를",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 10,
+          "durationSlots": 1,
+          "gridStartSec": 1.7241,
+          "gridEndSec": 1.8895,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 1.7241,
+          "snareReference": null,
+          "finalEndSec": 1.8895,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.009924,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "달",
+          "pronounced": "달",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 11,
+          "absoluteSlot": 11,
+          "durationSlots": 2,
+          "gridStartSec": 1.8895,
+          "gridEndSec": 2.2203,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 1.899424,
+          "snareReference": null,
+          "finalEndSec": 2.230224,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "d",
+            "a",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "려",
+          "pronounced": "려",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.25,
+          "stressReasons": [
+            "content",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": false,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 13,
+          "absoluteSlot": 13,
+          "durationSlots": 3,
+          "gridStartSec": 2.2204,
+          "gridEndSec": 2.7166,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 2.230324,
+          "snareReference": null,
+          "finalEndSec": 2.7161,
+          "finalDurationSec": 0.485776,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "ieo"
+          ],
+          "phonemeDurations": [
+            0.133588,
+            0.352188
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 0.5659,
+          "endSec": 0.575924,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 1.072124,
+          "endSec": 1.072224,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 1.403024,
+          "endSec": 1.403124,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 1.8895,
+          "endSec": 1.899424,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 2.230224,
+          "endSec": 2.230324,
+          "durationSec": 0.0001
+        }
+      ]
+    },
+    {
+      "bar": 2,
+      "lineIndex": 2,
+      "originalText": "고개를 들고 앞을 봐",
+      "startSec": 2.7167,
+      "endSec": 5.3631,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "고개를 들고 앞을 봐",
+          "pronunciation": "고개를 들고 아플 봐",
+          "rhyme": {
+            "surfaceTail": "플봐",
+            "exact": "ㅡㄹ-ㅘØ",
+            "vowel": "ㅡ-ㅘ",
+            "family": "EU/L-A/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "고개",
+              "tag": "NNG",
+              "start": 0,
+              "end": 2,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "를",
+              "tag": "JKO",
+              "start": 2,
+              "end": 3,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "들",
+              "tag": "VV",
+              "start": 4,
+              "end": 5,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "고",
+              "tag": "EC",
+              "start": 5,
+              "end": 6,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 4,
+              "form": "앞",
+              "tag": "NNG",
+              "start": 7,
+              "end": 8,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 5,
+              "form": "을",
+              "tag": "JKO",
+              "start": 8,
+              "end": 9,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 6,
+              "form": "보",
+              "tag": "VV",
+              "start": 10,
+              "end": 11,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 7,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "고개를",
+              "start": 0,
+              "end": 3,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "들고",
+              "start": 4,
+              "end": 6,
+              "morphemeIds": [
+                2,
+                3
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "앞을",
+              "start": 7,
+              "end": 9,
+              "morphemeIds": [
+                4,
+                5
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "봐",
+              "start": 10,
+              "end": 11,
+              "morphemeIds": [
+                6,
+                7
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "개",
+              "pronounced": "개",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "들",
+              "pronounced": "들",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 3,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "앞",
+              "pronounced": "아",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "을",
+              "pronounced": "플",
+              "morphemeId": 5,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "봐",
+              "pronounced": "봐",
+              "morphemeId": 6,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 16,
+              "durationSlots": 3,
+              "gridStartSec": 2.7167,
+              "gridEndSec": 3.2129,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 2.726624,
+              "snareReference": null,
+              "finalEndSec": 3.222824,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0002,
+              "phonemes": [
+                "g",
+                "o"
+              ],
+              "phonemeDurations": [
+                0.136455,
+                0.359745
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "개",
+              "pronounced": "개",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 19,
+              "durationSlots": 2,
+              "gridStartSec": 3.2131,
+              "gridEndSec": 3.5439,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 3.223024,
+              "snareReference": null,
+              "finalEndSec": 3.5439,
+              "finalDurationSec": 0.320876,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "g",
+                "e"
+              ],
+              "phonemeDurations": [
+                0.088241,
+                0.232635
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 5,
+              "absoluteSlot": 21,
+              "durationSlots": 1,
+              "gridStartSec": 3.5439,
+              "gridEndSec": 3.7093,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 3.5439,
+              "snareReference": null,
+              "finalEndSec": 3.7093,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "rx",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "들",
+              "pronounced": "들",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 6,
+              "absoluteSlot": 22,
+              "durationSlots": 3,
+              "gridStartSec": 3.7094,
+              "gridEndSec": 4.2056,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 3.719324,
+              "snareReference": null,
+              "finalEndSec": 4.2057,
+              "finalDurationSec": 0.486376,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "d",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.107003,
+                0.282098,
+                0.097275
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 3,
+              "eojeolId": 1,
+              "pos": "EC",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 9,
+              "absoluteSlot": 25,
+              "durationSlots": 1,
+              "gridStartSec": 4.2057,
+              "gridEndSec": 4.3711,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 4.2057,
+              "snareReference": null,
+              "finalEndSec": 4.3711,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "g",
+                "o"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "앞",
+              "pronounced": "아",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 26,
+              "durationSlots": 2,
+              "gridStartSec": 4.3712,
+              "gridEndSec": 4.702,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 4.381124,
+              "snareReference": null,
+              "finalEndSec": 4.711924,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.003308,
+              "phonemes": [
+                "a"
+              ],
+              "phonemeDurations": [
+                0.3308
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "을",
+              "pronounced": "플",
+              "morphemeId": 5,
+              "eojeolId": 2,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 28,
+              "durationSlots": 1,
+              "gridStartSec": 4.702,
+              "gridEndSec": 4.8674,
+              "microOffsetMs": 13.232,
+              "microOffsetReason": "snare",
+              "finalStartSec": 4.715232,
+              "snareReference": {
+                "confidence": 0.724,
+                "originalTimeSec": 4.7485,
+                "snappedTimeSec": 4.702
+              },
+              "finalEndSec": 4.877424,
+              "finalDurationSec": 0.162192,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "p",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.035682,
+                0.094071,
+                0.032439
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "봐",
+              "pronounced": "봐",
+              "morphemeId": 6,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.3,
+              "stressReasons": [
+                "content",
+                "eojeol_start",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": true,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 13,
+              "absoluteSlot": 29,
+              "durationSlots": 3,
+              "gridStartSec": 4.8675,
+              "gridEndSec": 5.3637,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 4.877424,
+              "snareReference": null,
+              "finalEndSec": 5.3631,
+              "finalDurationSec": 0.485676,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "b",
+                "oa"
+              ],
+              "phonemeDurations": [
+                0.133561,
+                0.352115
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "고",
+          "pronounced": "고",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 16,
+          "durationSlots": 3,
+          "gridStartSec": 2.7167,
+          "gridEndSec": 3.2129,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 2.726624,
+          "snareReference": null,
+          "finalEndSec": 3.222824,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0002,
+          "phonemes": [
+            "g",
+            "o"
+          ],
+          "phonemeDurations": [
+            0.136455,
+            0.359745
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "개",
+          "pronounced": "개",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 19,
+          "durationSlots": 2,
+          "gridStartSec": 3.2131,
+          "gridEndSec": 3.5439,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 3.223024,
+          "snareReference": null,
+          "finalEndSec": 3.5439,
+          "finalDurationSec": 0.320876,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "g",
+            "e"
+          ],
+          "phonemeDurations": [
+            0.088241,
+            0.232635
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "를",
+          "pronounced": "를",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 5,
+          "absoluteSlot": 21,
+          "durationSlots": 1,
+          "gridStartSec": 3.5439,
+          "gridEndSec": 3.7093,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 3.5439,
+          "snareReference": null,
+          "finalEndSec": 3.7093,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "들",
+          "pronounced": "들",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 6,
+          "absoluteSlot": 22,
+          "durationSlots": 3,
+          "gridStartSec": 3.7094,
+          "gridEndSec": 4.2056,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 3.719324,
+          "snareReference": null,
+          "finalEndSec": 4.2057,
+          "finalDurationSec": 0.486376,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "d",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.107003,
+            0.282098,
+            0.097275
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "고",
+          "pronounced": "고",
+          "morphemeId": 3,
+          "eojeolId": 1,
+          "pos": "EC",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 9,
+          "absoluteSlot": 25,
+          "durationSlots": 1,
+          "gridStartSec": 4.2057,
+          "gridEndSec": 4.3711,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 4.2057,
+          "snareReference": null,
+          "finalEndSec": 4.3711,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "g",
+            "o"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "앞",
+          "pronounced": "아",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 26,
+          "durationSlots": 2,
+          "gridStartSec": 4.3712,
+          "gridEndSec": 4.702,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 4.381124,
+          "snareReference": null,
+          "finalEndSec": 4.711924,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.003308,
+          "phonemes": [
+            "a"
+          ],
+          "phonemeDurations": [
+            0.3308
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "을",
+          "pronounced": "플",
+          "morphemeId": 5,
+          "eojeolId": 2,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 28,
+          "durationSlots": 1,
+          "gridStartSec": 4.702,
+          "gridEndSec": 4.8674,
+          "microOffsetMs": 13.232,
+          "microOffsetReason": "snare",
+          "finalStartSec": 4.715232,
+          "snareReference": {
+            "confidence": 0.724,
+            "originalTimeSec": 4.7485,
+            "snappedTimeSec": 4.702
+          },
+          "finalEndSec": 4.877424,
+          "finalDurationSec": 0.162192,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "p",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.035682,
+            0.094071,
+            0.032439
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "봐",
+          "pronounced": "봐",
+          "morphemeId": 6,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.3,
+          "stressReasons": [
+            "content",
+            "eojeol_start",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": true,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 13,
+          "absoluteSlot": 29,
+          "durationSlots": 3,
+          "gridStartSec": 4.8675,
+          "gridEndSec": 5.3637,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 4.877424,
+          "snareReference": null,
+          "finalEndSec": 5.3631,
+          "finalDurationSec": 0.485676,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "b",
+            "oa"
+          ],
+          "phonemeDurations": [
+            0.133561,
+            0.352115
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 2.7167,
+          "endSec": 2.726624,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 3.222824,
+          "endSec": 3.223024,
+          "durationSec": 0.0002
+        },
+        {
+          "startSec": 3.7093,
+          "endSec": 3.719324,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 4.3711,
+          "endSec": 4.381124,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 4.711924,
+          "endSec": 4.715232,
+          "durationSec": 0.003308
+        }
+      ]
+    },
+    {
+      "bar": 3,
+      "lineIndex": 3,
+      "originalText": "작은 불씨 크게 번져",
+      "startSec": 5.3638,
+      "endSec": 8.0102,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "작은 불씨 크게 번져",
+          "pronunciation": "자근 불씨 크게 번저",
+          "rhyme": {
+            "surfaceTail": "번저",
+            "exact": "ㅓㄴ-ㅓØ",
+            "vowel": "ㅓ-ㅓ",
+            "family": "EO/N-EO/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "작",
+              "tag": "VA",
+              "start": 0,
+              "end": 1,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "은",
+              "tag": "ETM",
+              "start": 1,
+              "end": 2,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "불씨",
+              "tag": "NNG",
+              "start": 3,
+              "end": 5,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "크",
+              "tag": "VA",
+              "start": 6,
+              "end": 7,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 4,
+              "form": "게",
+              "tag": "EC",
+              "start": 7,
+              "end": 8,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 5,
+              "form": "번지",
+              "tag": "VV",
+              "start": 9,
+              "end": 11,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 6,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "작은",
+              "start": 0,
+              "end": 2,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "불씨",
+              "start": 3,
+              "end": 5,
+              "morphemeIds": [
+                2
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "크게",
+              "start": 6,
+              "end": 8,
+              "morphemeIds": [
+                3,
+                4
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "번져",
+              "start": 9,
+              "end": 11,
+              "morphemeIds": [
+                5,
+                6
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "substitute",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "작",
+              "pronounced": "자",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "은",
+              "pronounced": "근",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "불",
+              "pronounced": "불",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "씨",
+              "pronounced": "씨",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "크",
+              "pronounced": "크",
+              "morphemeId": 3,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "게",
+              "pronounced": "게",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "번",
+              "pronounced": "번",
+              "morphemeId": 5,
+              "eojeolId": 3
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "져",
+              "pronounced": "저",
+              "morphemeId": 5,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "작",
+              "pronounced": "자",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "VA",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 32,
+              "durationSlots": 3,
+              "gridStartSec": 5.3638,
+              "gridEndSec": 5.86,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 5.373724,
+              "snareReference": null,
+              "finalEndSec": 5.8601,
+              "finalDurationSec": 0.486376,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "jh",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.133753,
+                0.352623
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "은",
+              "pronounced": "근",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "ETM",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 35,
+              "durationSlots": 1,
+              "gridStartSec": 5.8601,
+              "gridEndSec": 6.0255,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 5.8601,
+              "snareReference": null,
+              "finalEndSec": 6.0255,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "g",
+                "eu",
+                "n"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "불",
+              "pronounced": "불",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 4,
+              "absoluteSlot": 36,
+              "durationSlots": 2,
+              "gridStartSec": 6.0256,
+              "gridEndSec": 6.3564,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 6.035524,
+              "snareReference": null,
+              "finalEndSec": 6.366324,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "b",
+                "u",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "씨",
+              "pronounced": "씨",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 6,
+              "absoluteSlot": 38,
+              "durationSlots": 2,
+              "gridStartSec": 6.3565,
+              "gridEndSec": 6.6873,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 6.366424,
+              "snareReference": null,
+              "finalEndSec": 6.697224,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "s",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "크",
+              "pronounced": "크",
+              "morphemeId": 3,
+              "eojeolId": 2,
+              "pos": "VA",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 8,
+              "absoluteSlot": 40,
+              "durationSlots": 2,
+              "gridStartSec": 6.6873,
+              "gridEndSec": 7.0181,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 6.697224,
+              "snareReference": null,
+              "finalEndSec": 7.0182,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "k",
+                "eu"
+              ],
+              "phonemeDurations": [
+                0.088268,
+                0.232708
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "게",
+              "pronounced": "게",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "EC",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 42,
+              "durationSlots": 1,
+              "gridStartSec": 7.0182,
+              "gridEndSec": 7.1836,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 7.0182,
+              "snareReference": null,
+              "finalEndSec": 7.1836,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "g",
+                "e"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "번",
+              "pronounced": "번",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 11,
+              "absoluteSlot": 43,
+              "durationSlots": 2,
+              "gridStartSec": 7.1837,
+              "gridEndSec": 7.5145,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 7.193624,
+              "snareReference": null,
+              "finalEndSec": 7.524424,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "b",
+                "eo",
+                "n"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "져",
+              "pronounced": "저",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.25,
+              "stressReasons": [
+                "content",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": false,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 13,
+              "absoluteSlot": 45,
+              "durationSlots": 3,
+              "gridStartSec": 7.5146,
+              "gridEndSec": 8.0108,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 7.524524,
+              "snareReference": null,
+              "finalEndSec": 8.0102,
+              "finalDurationSec": 0.485676,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "jh",
+                "eo"
+              ],
+              "phonemeDurations": [
+                0.133561,
+                0.352115
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "작",
+          "pronounced": "자",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "VA",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 32,
+          "durationSlots": 3,
+          "gridStartSec": 5.3638,
+          "gridEndSec": 5.86,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 5.373724,
+          "snareReference": null,
+          "finalEndSec": 5.8601,
+          "finalDurationSec": 0.486376,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "jh",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.133753,
+            0.352623
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "은",
+          "pronounced": "근",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "ETM",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 35,
+          "durationSlots": 1,
+          "gridStartSec": 5.8601,
+          "gridEndSec": 6.0255,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 5.8601,
+          "snareReference": null,
+          "finalEndSec": 6.0255,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "g",
+            "eu",
+            "n"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "불",
+          "pronounced": "불",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 4,
+          "absoluteSlot": 36,
+          "durationSlots": 2,
+          "gridStartSec": 6.0256,
+          "gridEndSec": 6.3564,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 6.035524,
+          "snareReference": null,
+          "finalEndSec": 6.366324,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "b",
+            "u",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "씨",
+          "pronounced": "씨",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 6,
+          "absoluteSlot": 38,
+          "durationSlots": 2,
+          "gridStartSec": 6.3565,
+          "gridEndSec": 6.6873,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 6.366424,
+          "snareReference": null,
+          "finalEndSec": 6.697224,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "s",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "크",
+          "pronounced": "크",
+          "morphemeId": 3,
+          "eojeolId": 2,
+          "pos": "VA",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 8,
+          "absoluteSlot": 40,
+          "durationSlots": 2,
+          "gridStartSec": 6.6873,
+          "gridEndSec": 7.0181,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 6.697224,
+          "snareReference": null,
+          "finalEndSec": 7.0182,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "k",
+            "eu"
+          ],
+          "phonemeDurations": [
+            0.088268,
+            0.232708
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "게",
+          "pronounced": "게",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "EC",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 42,
+          "durationSlots": 1,
+          "gridStartSec": 7.0182,
+          "gridEndSec": 7.1836,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 7.0182,
+          "snareReference": null,
+          "finalEndSec": 7.1836,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "g",
+            "e"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "번",
+          "pronounced": "번",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 11,
+          "absoluteSlot": 43,
+          "durationSlots": 2,
+          "gridStartSec": 7.1837,
+          "gridEndSec": 7.5145,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 7.193624,
+          "snareReference": null,
+          "finalEndSec": 7.524424,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "b",
+            "eo",
+            "n"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "져",
+          "pronounced": "저",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.25,
+          "stressReasons": [
+            "content",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": false,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 13,
+          "absoluteSlot": 45,
+          "durationSlots": 3,
+          "gridStartSec": 7.5146,
+          "gridEndSec": 8.0108,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 7.524524,
+          "snareReference": null,
+          "finalEndSec": 8.0102,
+          "finalDurationSec": 0.485676,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "jh",
+            "eo"
+          ],
+          "phonemeDurations": [
+            0.133561,
+            0.352115
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 5.3638,
+          "endSec": 5.373724,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 6.0255,
+          "endSec": 6.035524,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 6.366324,
+          "endSec": 6.366424,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 7.1836,
+          "endSec": 7.193624,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 7.524424,
+          "endSec": 7.524524,
+          "durationSec": 0.0001
+        }
+      ]
+    },
+    {
+      "bar": 4,
+      "lineIndex": 4,
+      "originalText": "흔들림 없이 길을 가",
+      "startSec": 8.0109,
+      "endSec": 10.6573,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "흔들림 없이 길을 가",
+          "pronunciation": "흔들림 업씨 기를 가",
+          "rhyme": {
+            "surfaceTail": "를가",
+            "exact": "ㅡㄹ-ㅏØ",
+            "vowel": "ㅡ-ㅏ",
+            "family": "EU/L-A/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "흔들리",
+              "tag": "VV",
+              "start": 0,
+              "end": 3,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "ᆷ",
+              "tag": "ETN",
+              "start": 2,
+              "end": 3,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "없이",
+              "tag": "MAG",
+              "start": 4,
+              "end": 6,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "길",
+              "tag": "NNG",
+              "start": 7,
+              "end": 8,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 4,
+              "form": "을",
+              "tag": "JKO",
+              "start": 8,
+              "end": 9,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 5,
+              "form": "가",
+              "tag": "VV",
+              "start": 10,
+              "end": 11,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 6,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "흔들림",
+              "start": 0,
+              "end": 3,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "없이",
+              "start": 4,
+              "end": 6,
+              "morphemeIds": [
+                2
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "길을",
+              "start": 7,
+              "end": 9,
+              "morphemeIds": [
+                3,
+                4
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "가",
+              "start": 10,
+              "end": 11,
+              "morphemeIds": [
+                5,
+                6
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "흔",
+              "pronounced": "흔",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "들",
+              "pronounced": "들",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "림",
+              "pronounced": "림",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "없",
+              "pronounced": "업",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "이",
+              "pronounced": "씨",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "길",
+              "pronounced": "기",
+              "morphemeId": 3,
+              "eojeolId": 2
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "을",
+              "pronounced": "를",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "가",
+              "pronounced": "가",
+              "morphemeId": 5,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "흔",
+              "pronounced": "흔",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 48,
+              "durationSlots": 2,
+              "gridStartSec": 8.0109,
+              "gridEndSec": 8.3417,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 8.020824,
+              "snareReference": null,
+              "finalEndSec": 8.351624,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "hh",
+                "eu",
+                "n"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "들",
+              "pronounced": "들",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 2,
+              "absoluteSlot": 50,
+              "durationSlots": 2,
+              "gridStartSec": 8.3418,
+              "gridEndSec": 8.6726,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 8.351724,
+              "snareReference": null,
+              "finalEndSec": 8.682524,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "d",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "림",
+              "pronounced": "림",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 4,
+              "absoluteSlot": 52,
+              "durationSlots": 2,
+              "gridStartSec": 8.6727,
+              "gridEndSec": 9.0035,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 8.682624,
+              "snareReference": null,
+              "finalEndSec": 9.013424,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "i",
+                "m"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "없",
+              "pronounced": "업",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 6,
+              "absoluteSlot": 54,
+              "durationSlots": 2,
+              "gridStartSec": 9.0035,
+              "gridEndSec": 9.3343,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 9.013424,
+              "snareReference": null,
+              "finalEndSec": 9.344224,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "eo",
+                "pcl"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "이",
+              "pronounced": "씨",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 8,
+              "absoluteSlot": 56,
+              "durationSlots": 2,
+              "gridStartSec": 9.3344,
+              "gridEndSec": 9.6652,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 9.344324,
+              "snareReference": null,
+              "finalEndSec": 9.675124,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "s",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "길",
+              "pronounced": "기",
+              "morphemeId": 3,
+              "eojeolId": 2,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 58,
+              "durationSlots": 2,
+              "gridStartSec": 9.6653,
+              "gridEndSec": 9.9961,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 9.675224,
+              "snareReference": null,
+              "finalEndSec": 10.006024,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.003408,
+              "phonemes": [
+                "g",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "을",
+              "pronounced": "를",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 60,
+              "durationSlots": 1,
+              "gridStartSec": 9.9962,
+              "gridEndSec": 10.1616,
+              "microOffsetMs": 13.232,
+              "microOffsetReason": "snare",
+              "finalStartSec": 10.009432,
+              "snareReference": {
+                "confidence": 0.6764,
+                "originalTimeSec": 10.0775,
+                "snappedTimeSec": 9.9962
+              },
+              "finalEndSec": 10.171524,
+              "finalDurationSec": 0.162092,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.03566,
+                0.094013,
+                0.032419
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "가",
+              "pronounced": "가",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.3,
+              "stressReasons": [
+                "content",
+                "eojeol_start",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": true,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 13,
+              "absoluteSlot": 61,
+              "durationSlots": 3,
+              "gridStartSec": 10.1616,
+              "gridEndSec": 10.6578,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 10.171524,
+              "snareReference": null,
+              "finalEndSec": 10.6573,
+              "finalDurationSec": 0.485776,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "g",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.133588,
+                0.352188
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "흔",
+          "pronounced": "흔",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 48,
+          "durationSlots": 2,
+          "gridStartSec": 8.0109,
+          "gridEndSec": 8.3417,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 8.020824,
+          "snareReference": null,
+          "finalEndSec": 8.351624,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "hh",
+            "eu",
+            "n"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "들",
+          "pronounced": "들",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 2,
+          "absoluteSlot": 50,
+          "durationSlots": 2,
+          "gridStartSec": 8.3418,
+          "gridEndSec": 8.6726,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 8.351724,
+          "snareReference": null,
+          "finalEndSec": 8.682524,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "d",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "림",
+          "pronounced": "림",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 4,
+          "absoluteSlot": 52,
+          "durationSlots": 2,
+          "gridStartSec": 8.6727,
+          "gridEndSec": 9.0035,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 8.682624,
+          "snareReference": null,
+          "finalEndSec": 9.013424,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "i",
+            "m"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "없",
+          "pronounced": "업",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 6,
+          "absoluteSlot": 54,
+          "durationSlots": 2,
+          "gridStartSec": 9.0035,
+          "gridEndSec": 9.3343,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 9.013424,
+          "snareReference": null,
+          "finalEndSec": 9.344224,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "eo",
+            "pcl"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "이",
+          "pronounced": "씨",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 8,
+          "absoluteSlot": 56,
+          "durationSlots": 2,
+          "gridStartSec": 9.3344,
+          "gridEndSec": 9.6652,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 9.344324,
+          "snareReference": null,
+          "finalEndSec": 9.675124,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "s",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "길",
+          "pronounced": "기",
+          "morphemeId": 3,
+          "eojeolId": 2,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 58,
+          "durationSlots": 2,
+          "gridStartSec": 9.6653,
+          "gridEndSec": 9.9961,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 9.675224,
+          "snareReference": null,
+          "finalEndSec": 10.006024,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.003408,
+          "phonemes": [
+            "g",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "을",
+          "pronounced": "를",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 60,
+          "durationSlots": 1,
+          "gridStartSec": 9.9962,
+          "gridEndSec": 10.1616,
+          "microOffsetMs": 13.232,
+          "microOffsetReason": "snare",
+          "finalStartSec": 10.009432,
+          "snareReference": {
+            "confidence": 0.6764,
+            "originalTimeSec": 10.0775,
+            "snappedTimeSec": 9.9962
+          },
+          "finalEndSec": 10.171524,
+          "finalDurationSec": 0.162092,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.03566,
+            0.094013,
+            0.032419
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "가",
+          "pronounced": "가",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.3,
+          "stressReasons": [
+            "content",
+            "eojeol_start",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": true,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 13,
+          "absoluteSlot": 61,
+          "durationSlots": 3,
+          "gridStartSec": 10.1616,
+          "gridEndSec": 10.6578,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 10.171524,
+          "snareReference": null,
+          "finalEndSec": 10.6573,
+          "finalDurationSec": 0.485776,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "g",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.133588,
+            0.352188
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 8.0109,
+          "endSec": 8.020824,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 8.351624,
+          "endSec": 8.351724,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 8.682524,
+          "endSec": 8.682624,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 9.344224,
+          "endSec": 9.344324,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 9.675124,
+          "endSec": 9.675224,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 10.006024,
+          "endSec": 10.009432,
+          "durationSec": 0.003408
+        }
+      ]
+    },
+    {
+      "bar": 5,
+      "lineIndex": 5,
+      "originalText": "다시 박자 위에 올라",
+      "startSec": 10.658,
+      "endSec": 13.3044,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "다시 박자 위에 올라",
+          "pronunciation": "다시 박짜 위에 올라",
+          "rhyme": {
+            "surfaceTail": "올라",
+            "exact": "ㅗㄹ-ㅏØ",
+            "vowel": "ㅗ-ㅏ",
+            "family": "O/L-A/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "다시",
+              "tag": "MAG",
+              "start": 0,
+              "end": 2,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "박자",
+              "tag": "NNG",
+              "start": 3,
+              "end": 5,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 2,
+              "form": "위",
+              "tag": "NNG",
+              "start": 6,
+              "end": 7,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "에",
+              "tag": "JKB",
+              "start": 7,
+              "end": 8,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 4,
+              "form": "오르",
+              "tag": "VV",
+              "start": 9,
+              "end": 10,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 5,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "다시",
+              "start": 0,
+              "end": 2,
+              "morphemeIds": [
+                0
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "박자",
+              "start": 3,
+              "end": 5,
+              "morphemeIds": [
+                1
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "위에",
+              "start": 6,
+              "end": 8,
+              "morphemeIds": [
+                2,
+                3
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "올라",
+              "start": 9,
+              "end": 11,
+              "morphemeIds": [
+                4,
+                5
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "다",
+              "pronounced": "다",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "시",
+              "pronounced": "시",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "박",
+              "pronounced": "박",
+              "morphemeId": 1,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "자",
+              "pronounced": "짜",
+              "morphemeId": 1,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "위",
+              "pronounced": "위",
+              "morphemeId": 2,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "에",
+              "pronounced": "에",
+              "morphemeId": 3,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "올",
+              "pronounced": "올",
+              "morphemeId": 4,
+              "eojeolId": 3
+            },
+            {
+              "operation": "match",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "라",
+              "pronounced": "라",
+              "morphemeId": 5,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "다",
+              "pronounced": "다",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 64,
+              "durationSlots": 3,
+              "gridStartSec": 10.658,
+              "gridEndSec": 11.1542,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 10.667924,
+              "snareReference": null,
+              "finalEndSec": 11.164124,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "d",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.136455,
+                0.359745
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "시",
+              "pronounced": "시",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 67,
+              "durationSlots": 2,
+              "gridStartSec": 11.1543,
+              "gridEndSec": 11.4851,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 11.164224,
+              "snareReference": null,
+              "finalEndSec": 11.495024,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "sc",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "박",
+              "pronounced": "박",
+              "morphemeId": 1,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 5,
+              "absoluteSlot": 69,
+              "durationSlots": 2,
+              "gridStartSec": 11.4852,
+              "gridEndSec": 11.816,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 11.495124,
+              "snareReference": null,
+              "finalEndSec": 11.825924,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "b",
+                "a",
+                "kcl"
+              ],
+              "phonemeDurations": [
+                0.072776,
+                0.191864,
+                0.06616
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "자",
+              "pronounced": "짜",
+              "morphemeId": 1,
+              "eojeolId": 1,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 7,
+              "absoluteSlot": 71,
+              "durationSlots": 2,
+              "gridStartSec": 11.8161,
+              "gridEndSec": 12.1469,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 11.826024,
+              "snareReference": null,
+              "finalEndSec": 12.156824,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "jj",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "위",
+              "pronounced": "위",
+              "morphemeId": 2,
+              "eojeolId": 2,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 9,
+              "absoluteSlot": 73,
+              "durationSlots": 2,
+              "gridStartSec": 12.1469,
+              "gridEndSec": 12.4777,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 12.156824,
+              "snareReference": null,
+              "finalEndSec": 12.4778,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "ui"
+              ],
+              "phonemeDurations": [
+                0.320976
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "에",
+              "pronounced": "에",
+              "morphemeId": 3,
+              "eojeolId": 2,
+              "pos": "JKB",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 11,
+              "absoluteSlot": 75,
+              "durationSlots": 1,
+              "gridStartSec": 12.4778,
+              "gridEndSec": 12.6432,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 12.4778,
+              "snareReference": null,
+              "finalEndSec": 12.6432,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "e"
+              ],
+              "phonemeDurations": [
+                0.1654
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "올",
+              "pronounced": "올",
+              "morphemeId": 4,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 76,
+              "durationSlots": 2,
+              "gridStartSec": 12.6433,
+              "gridEndSec": 12.9741,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 12.653224,
+              "snareReference": null,
+              "finalEndSec": 12.9741,
+              "finalDurationSec": 0.320876,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "o",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.088241,
+                0.232635
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "라",
+              "pronounced": "라",
+              "morphemeId": 5,
+              "eojeolId": 3,
+              "pos": "EF",
+              "role": "function",
+              "stress": 0.8,
+              "stressReasons": [
+                "function",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": false,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 14,
+              "absoluteSlot": 78,
+              "durationSlots": 2,
+              "gridStartSec": 12.9741,
+              "gridEndSec": 13.3049,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 12.9741,
+              "snareReference": null,
+              "finalEndSec": 13.3044,
+              "finalDurationSec": 0.3303,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.090832,
+                0.239468
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "다",
+          "pronounced": "다",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 64,
+          "durationSlots": 3,
+          "gridStartSec": 10.658,
+          "gridEndSec": 11.1542,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 10.667924,
+          "snareReference": null,
+          "finalEndSec": 11.164124,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "d",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.136455,
+            0.359745
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "시",
+          "pronounced": "시",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 67,
+          "durationSlots": 2,
+          "gridStartSec": 11.1543,
+          "gridEndSec": 11.4851,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 11.164224,
+          "snareReference": null,
+          "finalEndSec": 11.495024,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "sc",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "박",
+          "pronounced": "박",
+          "morphemeId": 1,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 5,
+          "absoluteSlot": 69,
+          "durationSlots": 2,
+          "gridStartSec": 11.4852,
+          "gridEndSec": 11.816,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 11.495124,
+          "snareReference": null,
+          "finalEndSec": 11.825924,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "b",
+            "a",
+            "kcl"
+          ],
+          "phonemeDurations": [
+            0.072776,
+            0.191864,
+            0.06616
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "자",
+          "pronounced": "짜",
+          "morphemeId": 1,
+          "eojeolId": 1,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 7,
+          "absoluteSlot": 71,
+          "durationSlots": 2,
+          "gridStartSec": 11.8161,
+          "gridEndSec": 12.1469,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 11.826024,
+          "snareReference": null,
+          "finalEndSec": 12.156824,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "jj",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "위",
+          "pronounced": "위",
+          "morphemeId": 2,
+          "eojeolId": 2,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 9,
+          "absoluteSlot": 73,
+          "durationSlots": 2,
+          "gridStartSec": 12.1469,
+          "gridEndSec": 12.4777,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 12.156824,
+          "snareReference": null,
+          "finalEndSec": 12.4778,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "ui"
+          ],
+          "phonemeDurations": [
+            0.320976
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "에",
+          "pronounced": "에",
+          "morphemeId": 3,
+          "eojeolId": 2,
+          "pos": "JKB",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 11,
+          "absoluteSlot": 75,
+          "durationSlots": 1,
+          "gridStartSec": 12.4778,
+          "gridEndSec": 12.6432,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 12.4778,
+          "snareReference": null,
+          "finalEndSec": 12.6432,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "e"
+          ],
+          "phonemeDurations": [
+            0.1654
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "올",
+          "pronounced": "올",
+          "morphemeId": 4,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 76,
+          "durationSlots": 2,
+          "gridStartSec": 12.6433,
+          "gridEndSec": 12.9741,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 12.653224,
+          "snareReference": null,
+          "finalEndSec": 12.9741,
+          "finalDurationSec": 0.320876,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "o",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.088241,
+            0.232635
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "라",
+          "pronounced": "라",
+          "morphemeId": 5,
+          "eojeolId": 3,
+          "pos": "EF",
+          "role": "function",
+          "stress": 0.8,
+          "stressReasons": [
+            "function",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": false,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 14,
+          "absoluteSlot": 78,
+          "durationSlots": 2,
+          "gridStartSec": 12.9741,
+          "gridEndSec": 13.3049,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 12.9741,
+          "snareReference": null,
+          "finalEndSec": 13.3044,
+          "finalDurationSec": 0.3303,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.090832,
+            0.239468
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 10.658,
+          "endSec": 10.667924,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 11.164124,
+          "endSec": 11.164224,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 11.495024,
+          "endSec": 11.495124,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 11.825924,
+          "endSec": 11.826024,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 12.6432,
+          "endSec": 12.653224,
+          "durationSec": 0.010024
+        }
+      ]
+    },
+    {
+      "bar": 6,
+      "lineIndex": 6,
+      "originalText": "숨을 고르고 말을 해",
+      "startSec": 13.305,
+      "endSec": 15.9514,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "숨을 고르고 말을 해",
+          "pronunciation": "수믈 고르고 마를 해",
+          "rhyme": {
+            "surfaceTail": "를해",
+            "exact": "ㅡㄹ-ㅐØ",
+            "vowel": "ㅡ-ㅐ",
+            "family": "EU/L-AE/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "숨",
+              "tag": "NNG",
+              "start": 0,
+              "end": 1,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "을",
+              "tag": "JKO",
+              "start": 1,
+              "end": 2,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "고르",
+              "tag": "VV",
+              "start": 3,
+              "end": 5,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "고",
+              "tag": "EC",
+              "start": 5,
+              "end": 6,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 4,
+              "form": "말",
+              "tag": "NNG",
+              "start": 7,
+              "end": 8,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 5,
+              "form": "을",
+              "tag": "JKO",
+              "start": 8,
+              "end": 9,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 6,
+              "form": "하",
+              "tag": "VV",
+              "start": 10,
+              "end": 11,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 7,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "숨을",
+              "start": 0,
+              "end": 2,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "고르고",
+              "start": 3,
+              "end": 6,
+              "morphemeIds": [
+                2,
+                3
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "말을",
+              "start": 7,
+              "end": 9,
+              "morphemeIds": [
+                4,
+                5
+              ]
+            },
+            {
+              "id": 3,
+              "surface": "해",
+              "start": 10,
+              "end": 11,
+              "morphemeIds": [
+                6,
+                7
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "substitute",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "숨",
+              "pronounced": "수",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "을",
+              "pronounced": "믈",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "르",
+              "pronounced": "르",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 3,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "말",
+              "pronounced": "마",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "을",
+              "pronounced": "를",
+              "morphemeId": 5,
+              "eojeolId": 2
+            },
+            {
+              "operation": "match",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "해",
+              "pronounced": "해",
+              "morphemeId": 6,
+              "eojeolId": 3
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "숨",
+              "pronounced": "수",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 80,
+              "durationSlots": 3,
+              "gridStartSec": 13.305,
+              "gridEndSec": 13.8012,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 13.314924,
+              "snareReference": null,
+              "finalEndSec": 13.8014,
+              "finalDurationSec": 0.486476,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "sc",
+                "u"
+              ],
+              "phonemeDurations": [
+                0.133781,
+                0.352695
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "을",
+              "pronounced": "믈",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 83,
+              "durationSlots": 1,
+              "gridStartSec": 13.8014,
+              "gridEndSec": 13.9668,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 13.8014,
+              "snareReference": null,
+              "finalEndSec": 13.9668,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.009924,
+              "phonemes": [
+                "m",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 4,
+              "absoluteSlot": 84,
+              "durationSlots": 3,
+              "gridStartSec": 13.9668,
+              "gridEndSec": 14.463,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 13.976724,
+              "snareReference": null,
+              "finalEndSec": 14.472924,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "g",
+                "o"
+              ],
+              "phonemeDurations": [
+                0.136455,
+                0.359745
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "르",
+              "pronounced": "르",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 7,
+              "absoluteSlot": 87,
+              "durationSlots": 2,
+              "gridStartSec": 14.4631,
+              "gridEndSec": 14.7939,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 14.473024,
+              "snareReference": null,
+              "finalEndSec": 14.794,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "eu"
+              ],
+              "phonemeDurations": [
+                0.088268,
+                0.232708
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "고",
+              "pronounced": "고",
+              "morphemeId": 3,
+              "eojeolId": 1,
+              "pos": "EC",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 9,
+              "absoluteSlot": 89,
+              "durationSlots": 1,
+              "gridStartSec": 14.794,
+              "gridEndSec": 14.9594,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 14.794,
+              "snareReference": null,
+              "finalEndSec": 14.9594,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "g",
+                "o"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "말",
+              "pronounced": "마",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 90,
+              "durationSlots": 2,
+              "gridStartSec": 14.9595,
+              "gridEndSec": 15.2903,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 14.969424,
+              "snareReference": null,
+              "finalEndSec": 15.2903,
+              "finalDurationSec": 0.320876,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "m",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.088241,
+                0.232635
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "을",
+              "pronounced": "를",
+              "morphemeId": 5,
+              "eojeolId": 2,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 92,
+              "durationSlots": 1,
+              "gridStartSec": 15.2903,
+              "gridEndSec": 15.4557,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 15.2903,
+              "snareReference": null,
+              "finalEndSec": 15.4557,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "rx",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "해",
+              "pronounced": "해",
+              "morphemeId": 6,
+              "eojeolId": 3,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.3,
+              "stressReasons": [
+                "content",
+                "eojeol_start",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": true,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 13,
+              "absoluteSlot": 93,
+              "durationSlots": 3,
+              "gridStartSec": 15.4558,
+              "gridEndSec": 15.952,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 15.465724,
+              "snareReference": null,
+              "finalEndSec": 15.9514,
+              "finalDurationSec": 0.485676,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "hh",
+                "e"
+              ],
+              "phonemeDurations": [
+                0.133561,
+                0.352115
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "숨",
+          "pronounced": "수",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 80,
+          "durationSlots": 3,
+          "gridStartSec": 13.305,
+          "gridEndSec": 13.8012,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 13.314924,
+          "snareReference": null,
+          "finalEndSec": 13.8014,
+          "finalDurationSec": 0.486476,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "sc",
+            "u"
+          ],
+          "phonemeDurations": [
+            0.133781,
+            0.352695
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "을",
+          "pronounced": "믈",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 83,
+          "durationSlots": 1,
+          "gridStartSec": 13.8014,
+          "gridEndSec": 13.9668,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 13.8014,
+          "snareReference": null,
+          "finalEndSec": 13.9668,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.009924,
+          "phonemes": [
+            "m",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "고",
+          "pronounced": "고",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 4,
+          "absoluteSlot": 84,
+          "durationSlots": 3,
+          "gridStartSec": 13.9668,
+          "gridEndSec": 14.463,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 13.976724,
+          "snareReference": null,
+          "finalEndSec": 14.472924,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "g",
+            "o"
+          ],
+          "phonemeDurations": [
+            0.136455,
+            0.359745
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "르",
+          "pronounced": "르",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 7,
+          "absoluteSlot": 87,
+          "durationSlots": 2,
+          "gridStartSec": 14.4631,
+          "gridEndSec": 14.7939,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 14.473024,
+          "snareReference": null,
+          "finalEndSec": 14.794,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "eu"
+          ],
+          "phonemeDurations": [
+            0.088268,
+            0.232708
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "고",
+          "pronounced": "고",
+          "morphemeId": 3,
+          "eojeolId": 1,
+          "pos": "EC",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 9,
+          "absoluteSlot": 89,
+          "durationSlots": 1,
+          "gridStartSec": 14.794,
+          "gridEndSec": 14.9594,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 14.794,
+          "snareReference": null,
+          "finalEndSec": 14.9594,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "g",
+            "o"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "말",
+          "pronounced": "마",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 90,
+          "durationSlots": 2,
+          "gridStartSec": 14.9595,
+          "gridEndSec": 15.2903,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 14.969424,
+          "snareReference": null,
+          "finalEndSec": 15.2903,
+          "finalDurationSec": 0.320876,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "m",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.088241,
+            0.232635
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "을",
+          "pronounced": "를",
+          "morphemeId": 5,
+          "eojeolId": 2,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 92,
+          "durationSlots": 1,
+          "gridStartSec": 15.2903,
+          "gridEndSec": 15.4557,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 15.2903,
+          "snareReference": null,
+          "finalEndSec": 15.4557,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "해",
+          "pronounced": "해",
+          "morphemeId": 6,
+          "eojeolId": 3,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.3,
+          "stressReasons": [
+            "content",
+            "eojeol_start",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": true,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 13,
+          "absoluteSlot": 93,
+          "durationSlots": 3,
+          "gridStartSec": 15.4558,
+          "gridEndSec": 15.952,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 15.465724,
+          "snareReference": null,
+          "finalEndSec": 15.9514,
+          "finalDurationSec": 0.485676,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "hh",
+            "e"
+          ],
+          "phonemeDurations": [
+            0.133561,
+            0.352115
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 13.305,
+          "endSec": 13.314924,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 13.9668,
+          "endSec": 13.976724,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 14.472924,
+          "endSec": 14.473024,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 14.9594,
+          "endSec": 14.969424,
+          "durationSec": 0.010024
+        },
+        {
+          "startSec": 15.4557,
+          "endSec": 15.465724,
+          "durationSec": 0.010024
+        }
+      ]
+    },
+    {
+      "bar": 7,
+      "lineIndex": 7,
+      "originalText": "오늘보다 멀리 날아",
+      "startSec": 15.9521,
+      "endSec": 18.5985,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "오늘보다 멀리 날아",
+          "pronunciation": "오늘보다 멀리 나라",
+          "rhyme": {
+            "surfaceTail": "나라",
+            "exact": "ㅏØ-ㅏØ",
+            "vowel": "ㅏ-ㅏ",
+            "family": "A/OPEN-A/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "오늘",
+              "tag": "NNG",
+              "start": 0,
+              "end": 2,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "보다",
+              "tag": "JKB",
+              "start": 2,
+              "end": 4,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "멀리",
+              "tag": "MAG",
+              "start": 5,
+              "end": 7,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "날",
+              "tag": "VV",
+              "start": 8,
+              "end": 9,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 4,
+              "form": "어",
+              "tag": "EF",
+              "start": 9,
+              "end": 10,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "오늘보다",
+              "start": 0,
+              "end": 4,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "멀리",
+              "start": 5,
+              "end": 7,
+              "morphemeIds": [
+                2
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "날아",
+              "start": 8,
+              "end": 10,
+              "morphemeIds": [
+                3,
+                4
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "오",
+              "pronounced": "오",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "늘",
+              "pronounced": "늘",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "보",
+              "pronounced": "보",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "다",
+              "pronounced": "다",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "멀",
+              "pronounced": "멀",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "리",
+              "pronounced": "리",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "날",
+              "pronounced": "나",
+              "morphemeId": 3,
+              "eojeolId": 2
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "아",
+              "pronounced": "라",
+              "morphemeId": 4,
+              "eojeolId": 2
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "오",
+              "pronounced": "오",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 96,
+              "durationSlots": 3,
+              "gridStartSec": 15.9521,
+              "gridEndSec": 16.4483,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 15.962024,
+              "snareReference": null,
+              "finalEndSec": 16.458224,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "o"
+              ],
+              "phonemeDurations": [
+                0.4962
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "늘",
+              "pronounced": "늘",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 99,
+              "durationSlots": 2,
+              "gridStartSec": 16.4484,
+              "gridEndSec": 16.7792,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 16.458324,
+              "snareReference": null,
+              "finalEndSec": 16.7793,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "n",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.070615,
+                0.186166,
+                0.064195
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "보",
+              "pronounced": "보",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JKB",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 5,
+              "absoluteSlot": 101,
+              "durationSlots": 1,
+              "gridStartSec": 16.7793,
+              "gridEndSec": 16.9447,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 16.7793,
+              "snareReference": null,
+              "finalEndSec": 16.9447,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "b",
+                "o"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "다",
+              "pronounced": "다",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JKB",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 6,
+              "absoluteSlot": 102,
+              "durationSlots": 1,
+              "gridStartSec": 16.9448,
+              "gridEndSec": 17.1102,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 16.9448,
+              "snareReference": null,
+              "finalEndSec": 17.1102,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.009924,
+              "phonemes": [
+                "d",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "멀",
+              "pronounced": "멀",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 7,
+              "absoluteSlot": 103,
+              "durationSlots": 3,
+              "gridStartSec": 17.1102,
+              "gridEndSec": 17.6064,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 17.120124,
+              "snareReference": null,
+              "finalEndSec": 17.616324,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "m",
+                "eo",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.109164,
+                0.287796,
+                0.09924
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "리",
+              "pronounced": "리",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "MAG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 10,
+              "absoluteSlot": 106,
+              "durationSlots": 2,
+              "gridStartSec": 17.6065,
+              "gridEndSec": 17.9373,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 17.616424,
+              "snareReference": null,
+              "finalEndSec": 17.947224,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "rx",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "날",
+              "pronounced": "나",
+              "morphemeId": 3,
+              "eojeolId": 2,
+              "pos": "VV",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 108,
+              "durationSlots": 2,
+              "gridStartSec": 17.9374,
+              "gridEndSec": 18.2682,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 17.947324,
+              "snareReference": null,
+              "finalEndSec": 18.2683,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "n",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.088268,
+                0.232708
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "아",
+              "pronounced": "라",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "EF",
+              "role": "function",
+              "stress": 0.8,
+              "stressReasons": [
+                "function",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": false,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 14,
+              "absoluteSlot": 110,
+              "durationSlots": 2,
+              "gridStartSec": 18.2683,
+              "gridEndSec": 18.5991,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 18.2683,
+              "snareReference": null,
+              "finalEndSec": 18.5985,
+              "finalDurationSec": 0.3302,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "rx",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.090805,
+                0.239395
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "오",
+          "pronounced": "오",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 96,
+          "durationSlots": 3,
+          "gridStartSec": 15.9521,
+          "gridEndSec": 16.4483,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 15.962024,
+          "snareReference": null,
+          "finalEndSec": 16.458224,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "o"
+          ],
+          "phonemeDurations": [
+            0.4962
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "늘",
+          "pronounced": "늘",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 99,
+          "durationSlots": 2,
+          "gridStartSec": 16.4484,
+          "gridEndSec": 16.7792,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 16.458324,
+          "snareReference": null,
+          "finalEndSec": 16.7793,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "n",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.070615,
+            0.186166,
+            0.064195
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "보",
+          "pronounced": "보",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JKB",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 5,
+          "absoluteSlot": 101,
+          "durationSlots": 1,
+          "gridStartSec": 16.7793,
+          "gridEndSec": 16.9447,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 16.7793,
+          "snareReference": null,
+          "finalEndSec": 16.9447,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "b",
+            "o"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "다",
+          "pronounced": "다",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JKB",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 6,
+          "absoluteSlot": 102,
+          "durationSlots": 1,
+          "gridStartSec": 16.9448,
+          "gridEndSec": 17.1102,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 16.9448,
+          "snareReference": null,
+          "finalEndSec": 17.1102,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.009924,
+          "phonemes": [
+            "d",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "멀",
+          "pronounced": "멀",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 7,
+          "absoluteSlot": 103,
+          "durationSlots": 3,
+          "gridStartSec": 17.1102,
+          "gridEndSec": 17.6064,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 17.120124,
+          "snareReference": null,
+          "finalEndSec": 17.616324,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "m",
+            "eo",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.109164,
+            0.287796,
+            0.09924
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "리",
+          "pronounced": "리",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "MAG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 10,
+          "absoluteSlot": 106,
+          "durationSlots": 2,
+          "gridStartSec": 17.6065,
+          "gridEndSec": 17.9373,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 17.616424,
+          "snareReference": null,
+          "finalEndSec": 17.947224,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "rx",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "날",
+          "pronounced": "나",
+          "morphemeId": 3,
+          "eojeolId": 2,
+          "pos": "VV",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 108,
+          "durationSlots": 2,
+          "gridStartSec": 17.9374,
+          "gridEndSec": 18.2682,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 17.947324,
+          "snareReference": null,
+          "finalEndSec": 18.2683,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "n",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.088268,
+            0.232708
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "아",
+          "pronounced": "라",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "EF",
+          "role": "function",
+          "stress": 0.8,
+          "stressReasons": [
+            "function",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": false,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 14,
+          "absoluteSlot": 110,
+          "durationSlots": 2,
+          "gridStartSec": 18.2683,
+          "gridEndSec": 18.5991,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 18.2683,
+          "snareReference": null,
+          "finalEndSec": 18.5985,
+          "finalDurationSec": 0.3302,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "rx",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.090805,
+            0.239395
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 15.9521,
+          "endSec": 15.962024,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 16.458224,
+          "endSec": 16.458324,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 16.9447,
+          "endSec": 16.9448,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 17.1102,
+          "endSec": 17.120124,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 17.616324,
+          "endSec": 17.616424,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 17.947224,
+          "endSec": 17.947324,
+          "durationSec": 0.0001
+        }
+      ]
+    },
+    {
+      "bar": 8,
+      "lineIndex": 8,
+      "originalText": "마지막까지 나를 믿어",
+      "startSec": 18.5992,
+      "endSec": 21.2456,
+      "segments": [
+        {
+          "segmentIndex": 1,
+          "originalText": "마지막까지 나를 믿어",
+          "pronunciation": "마지막까지 나를 미더",
+          "rhyme": {
+            "surfaceTail": "미더",
+            "exact": "ㅣØ-ㅓØ",
+            "vowel": "ㅣ-ㅓ",
+            "family": "I/OPEN-EO/OPEN"
+          },
+          "morphemes": [
+            {
+              "id": 0,
+              "form": "마지막",
+              "tag": "NNG",
+              "start": 0,
+              "end": 3,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 1,
+              "form": "까지",
+              "tag": "JX",
+              "start": 3,
+              "end": 5,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 2,
+              "form": "나",
+              "tag": "NP",
+              "start": 6,
+              "end": 7,
+              "isContent": false,
+              "isFunction": false
+            },
+            {
+              "id": 3,
+              "form": "를",
+              "tag": "JKO",
+              "start": 7,
+              "end": 8,
+              "isContent": false,
+              "isFunction": true
+            },
+            {
+              "id": 4,
+              "form": "믿",
+              "tag": "VV-R",
+              "start": 9,
+              "end": 10,
+              "isContent": true,
+              "isFunction": false
+            },
+            {
+              "id": 5,
+              "form": "어",
+              "tag": "EF",
+              "start": 10,
+              "end": 11,
+              "isContent": false,
+              "isFunction": true
+            }
+          ],
+          "eojeols": [
+            {
+              "id": 0,
+              "surface": "마지막까지",
+              "start": 0,
+              "end": 5,
+              "morphemeIds": [
+                0,
+                1
+              ]
+            },
+            {
+              "id": 1,
+              "surface": "나를",
+              "start": 6,
+              "end": 8,
+              "morphemeIds": [
+                2,
+                3
+              ]
+            },
+            {
+              "id": 2,
+              "surface": "믿어",
+              "start": 9,
+              "end": 11,
+              "morphemeIds": [
+                4,
+                5
+              ]
+            }
+          ],
+          "alignment": [
+            {
+              "operation": "match",
+              "originalIndex": 0,
+              "pronouncedIndex": 0,
+              "original": "마",
+              "pronounced": "마",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 1,
+              "pronouncedIndex": 1,
+              "original": "지",
+              "pronounced": "지",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 2,
+              "pronouncedIndex": 2,
+              "original": "막",
+              "pronounced": "막",
+              "morphemeId": 0,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 3,
+              "pronouncedIndex": 3,
+              "original": "까",
+              "pronounced": "까",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 4,
+              "pronouncedIndex": 4,
+              "original": "지",
+              "pronounced": "지",
+              "morphemeId": 1,
+              "eojeolId": 0
+            },
+            {
+              "operation": "match",
+              "originalIndex": 5,
+              "pronouncedIndex": 5,
+              "original": "나",
+              "pronounced": "나",
+              "morphemeId": 2,
+              "eojeolId": 1
+            },
+            {
+              "operation": "match",
+              "originalIndex": 6,
+              "pronouncedIndex": 6,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 3,
+              "eojeolId": 1
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 7,
+              "pronouncedIndex": 7,
+              "original": "믿",
+              "pronounced": "미",
+              "morphemeId": 4,
+              "eojeolId": 2
+            },
+            {
+              "operation": "substitute",
+              "originalIndex": 8,
+              "pronouncedIndex": 8,
+              "original": "어",
+              "pronounced": "더",
+              "morphemeId": 5,
+              "eojeolId": 2
+            }
+          ],
+          "startSlotInBar": 0,
+          "endSlotInBarExclusive": 16,
+          "placements": [
+            {
+              "sourceIndex": 0,
+              "original": "마",
+              "pronounced": "마",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 0,
+              "absoluteSlot": 112,
+              "durationSlots": 3,
+              "gridStartSec": 18.5992,
+              "gridEndSec": 19.0954,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 18.609124,
+              "snareReference": null,
+              "finalEndSec": 19.105324,
+              "finalDurationSec": 0.4962,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "m",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.136455,
+                0.359745
+              ]
+            },
+            {
+              "sourceIndex": 1,
+              "original": "지",
+              "pronounced": "지",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 3,
+              "absoluteSlot": 115,
+              "durationSlots": 2,
+              "gridStartSec": 19.0955,
+              "gridEndSec": 19.4263,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 19.105424,
+              "snareReference": null,
+              "finalEndSec": 19.436224,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "jh",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 2,
+              "original": "막",
+              "pronounced": "막",
+              "morphemeId": 0,
+              "eojeolId": 0,
+              "pos": "NNG",
+              "role": "content",
+              "stress": 1.0,
+              "stressReasons": [
+                "content"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 5,
+              "absoluteSlot": 117,
+              "durationSlots": 2,
+              "gridStartSec": 19.4264,
+              "gridEndSec": 19.7572,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 19.436324,
+              "snareReference": null,
+              "finalEndSec": 19.7573,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "m",
+                "a",
+                "kcl"
+              ],
+              "phonemeDurations": [
+                0.070615,
+                0.186166,
+                0.064195
+              ]
+            },
+            {
+              "sourceIndex": 3,
+              "original": "까",
+              "pronounced": "까",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JX",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 7,
+              "absoluteSlot": 119,
+              "durationSlots": 1,
+              "gridStartSec": 19.7573,
+              "gridEndSec": 19.9227,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 19.7573,
+              "snareReference": null,
+              "finalEndSec": 19.9227,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "kk",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 4,
+              "original": "지",
+              "pronounced": "지",
+              "morphemeId": 1,
+              "eojeolId": 0,
+              "pos": "JX",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 8,
+              "absoluteSlot": 120,
+              "durationSlots": 1,
+              "gridStartSec": 19.9227,
+              "gridEndSec": 20.0881,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 19.9227,
+              "snareReference": null,
+              "finalEndSec": 20.0881,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.0001,
+              "phonemes": [
+                "jh",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.045485,
+                0.119915
+              ]
+            },
+            {
+              "sourceIndex": 5,
+              "original": "나",
+              "pronounced": "나",
+              "morphemeId": 2,
+              "eojeolId": 1,
+              "pos": "NP",
+              "role": "other",
+              "stress": 0.9,
+              "stressReasons": [
+                "other",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 9,
+              "absoluteSlot": 121,
+              "durationSlots": 2,
+              "gridStartSec": 20.0882,
+              "gridEndSec": 20.419,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 20.0882,
+              "snareReference": null,
+              "finalEndSec": 20.419,
+              "finalDurationSec": 0.3308,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "n",
+                "a"
+              ],
+              "phonemeDurations": [
+                0.09097,
+                0.23983
+              ]
+            },
+            {
+              "sourceIndex": 6,
+              "original": "를",
+              "pronounced": "를",
+              "morphemeId": 3,
+              "eojeolId": 1,
+              "pos": "JKO",
+              "role": "function",
+              "stress": 0.55,
+              "stressReasons": [
+                "function"
+              ],
+              "isWordStart": false,
+              "midiNote": 60,
+              "segmentIndex": 1,
+              "slotInBar": 11,
+              "absoluteSlot": 123,
+              "durationSlots": 1,
+              "gridStartSec": 20.419,
+              "gridEndSec": 20.5844,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 20.419,
+              "snareReference": null,
+              "finalEndSec": 20.5844,
+              "finalDurationSec": 0.1654,
+              "restAfterSec": 0.010024,
+              "phonemes": [
+                "rx",
+                "eu",
+                "l"
+              ],
+              "phonemeDurations": [
+                0.036388,
+                0.095932,
+                0.03308
+              ]
+            },
+            {
+              "sourceIndex": 7,
+              "original": "믿",
+              "pronounced": "미",
+              "morphemeId": 4,
+              "eojeolId": 2,
+              "pos": "VV-R",
+              "role": "content",
+              "stress": 1.15,
+              "stressReasons": [
+                "content",
+                "eojeol_start"
+              ],
+              "isWordStart": true,
+              "midiNote": 62,
+              "segmentIndex": 1,
+              "slotInBar": 12,
+              "absoluteSlot": 124,
+              "durationSlots": 2,
+              "gridStartSec": 20.5845,
+              "gridEndSec": 20.9153,
+              "microOffsetMs": 9.924,
+              "microOffsetReason": "stress",
+              "finalStartSec": 20.594424,
+              "snareReference": null,
+              "finalEndSec": 20.9154,
+              "finalDurationSec": 0.320976,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "m",
+                "i"
+              ],
+              "phonemeDurations": [
+                0.088268,
+                0.232708
+              ]
+            },
+            {
+              "sourceIndex": 8,
+              "original": "어",
+              "pronounced": "더",
+              "morphemeId": 5,
+              "eojeolId": 2,
+              "pos": "EF",
+              "role": "function",
+              "stress": 0.8,
+              "stressReasons": [
+                "function",
+                "phrase_final_rhyme"
+              ],
+              "isWordStart": false,
+              "midiNote": 58,
+              "segmentIndex": 1,
+              "slotInBar": 14,
+              "absoluteSlot": 126,
+              "durationSlots": 2,
+              "gridStartSec": 20.9154,
+              "gridEndSec": 21.2462,
+              "microOffsetMs": 0.0,
+              "microOffsetReason": "none",
+              "finalStartSec": 20.9154,
+              "snareReference": null,
+              "finalEndSec": 21.2456,
+              "finalDurationSec": 0.3302,
+              "restAfterSec": 0.0,
+              "phonemes": [
+                "d",
+                "eo"
+              ],
+              "phonemeDurations": [
+                0.090805,
+                0.239395
+              ]
+            }
+          ]
+        }
+      ],
+      "placements": [
+        {
+          "sourceIndex": 0,
+          "original": "마",
+          "pronounced": "마",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 0,
+          "absoluteSlot": 112,
+          "durationSlots": 3,
+          "gridStartSec": 18.5992,
+          "gridEndSec": 19.0954,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 18.609124,
+          "snareReference": null,
+          "finalEndSec": 19.105324,
+          "finalDurationSec": 0.4962,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "m",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.136455,
+            0.359745
+          ]
+        },
+        {
+          "sourceIndex": 1,
+          "original": "지",
+          "pronounced": "지",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 3,
+          "absoluteSlot": 115,
+          "durationSlots": 2,
+          "gridStartSec": 19.0955,
+          "gridEndSec": 19.4263,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 19.105424,
+          "snareReference": null,
+          "finalEndSec": 19.436224,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "jh",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 2,
+          "original": "막",
+          "pronounced": "막",
+          "morphemeId": 0,
+          "eojeolId": 0,
+          "pos": "NNG",
+          "role": "content",
+          "stress": 1.0,
+          "stressReasons": [
+            "content"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 5,
+          "absoluteSlot": 117,
+          "durationSlots": 2,
+          "gridStartSec": 19.4264,
+          "gridEndSec": 19.7572,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 19.436324,
+          "snareReference": null,
+          "finalEndSec": 19.7573,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "m",
+            "a",
+            "kcl"
+          ],
+          "phonemeDurations": [
+            0.070615,
+            0.186166,
+            0.064195
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "original": "까",
+          "pronounced": "까",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JX",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 7,
+          "absoluteSlot": 119,
+          "durationSlots": 1,
+          "gridStartSec": 19.7573,
+          "gridEndSec": 19.9227,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 19.7573,
+          "snareReference": null,
+          "finalEndSec": 19.9227,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "kk",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "original": "지",
+          "pronounced": "지",
+          "morphemeId": 1,
+          "eojeolId": 0,
+          "pos": "JX",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 8,
+          "absoluteSlot": 120,
+          "durationSlots": 1,
+          "gridStartSec": 19.9227,
+          "gridEndSec": 20.0881,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 19.9227,
+          "snareReference": null,
+          "finalEndSec": 20.0881,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.0001,
+          "phonemes": [
+            "jh",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.045485,
+            0.119915
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "original": "나",
+          "pronounced": "나",
+          "morphemeId": 2,
+          "eojeolId": 1,
+          "pos": "NP",
+          "role": "other",
+          "stress": 0.9,
+          "stressReasons": [
+            "other",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 9,
+          "absoluteSlot": 121,
+          "durationSlots": 2,
+          "gridStartSec": 20.0882,
+          "gridEndSec": 20.419,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 20.0882,
+          "snareReference": null,
+          "finalEndSec": 20.419,
+          "finalDurationSec": 0.3308,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "n",
+            "a"
+          ],
+          "phonemeDurations": [
+            0.09097,
+            0.23983
+          ]
+        },
+        {
+          "sourceIndex": 6,
+          "original": "를",
+          "pronounced": "를",
+          "morphemeId": 3,
+          "eojeolId": 1,
+          "pos": "JKO",
+          "role": "function",
+          "stress": 0.55,
+          "stressReasons": [
+            "function"
+          ],
+          "isWordStart": false,
+          "midiNote": 60,
+          "segmentIndex": 1,
+          "slotInBar": 11,
+          "absoluteSlot": 123,
+          "durationSlots": 1,
+          "gridStartSec": 20.419,
+          "gridEndSec": 20.5844,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 20.419,
+          "snareReference": null,
+          "finalEndSec": 20.5844,
+          "finalDurationSec": 0.1654,
+          "restAfterSec": 0.010024,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ],
+          "phonemeDurations": [
+            0.036388,
+            0.095932,
+            0.03308
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "original": "믿",
+          "pronounced": "미",
+          "morphemeId": 4,
+          "eojeolId": 2,
+          "pos": "VV-R",
+          "role": "content",
+          "stress": 1.15,
+          "stressReasons": [
+            "content",
+            "eojeol_start"
+          ],
+          "isWordStart": true,
+          "midiNote": 62,
+          "segmentIndex": 1,
+          "slotInBar": 12,
+          "absoluteSlot": 124,
+          "durationSlots": 2,
+          "gridStartSec": 20.5845,
+          "gridEndSec": 20.9153,
+          "microOffsetMs": 9.924,
+          "microOffsetReason": "stress",
+          "finalStartSec": 20.594424,
+          "snareReference": null,
+          "finalEndSec": 20.9154,
+          "finalDurationSec": 0.320976,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "m",
+            "i"
+          ],
+          "phonemeDurations": [
+            0.088268,
+            0.232708
+          ]
+        },
+        {
+          "sourceIndex": 8,
+          "original": "어",
+          "pronounced": "더",
+          "morphemeId": 5,
+          "eojeolId": 2,
+          "pos": "EF",
+          "role": "function",
+          "stress": 0.8,
+          "stressReasons": [
+            "function",
+            "phrase_final_rhyme"
+          ],
+          "isWordStart": false,
+          "midiNote": 58,
+          "segmentIndex": 1,
+          "slotInBar": 14,
+          "absoluteSlot": 126,
+          "durationSlots": 2,
+          "gridStartSec": 20.9154,
+          "gridEndSec": 21.2462,
+          "microOffsetMs": 0.0,
+          "microOffsetReason": "none",
+          "finalStartSec": 20.9154,
+          "snareReference": null,
+          "finalEndSec": 21.2456,
+          "finalDurationSec": 0.3302,
+          "restAfterSec": 0.0,
+          "phonemes": [
+            "d",
+            "eo"
+          ],
+          "phonemeDurations": [
+            0.090805,
+            0.239395
+          ]
+        }
+      ],
+      "rests": [
+        {
+          "startSec": 18.5992,
+          "endSec": 18.609124,
+          "durationSec": 0.009924
+        },
+        {
+          "startSec": 19.105324,
+          "endSec": 19.105424,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 19.436224,
+          "endSec": 19.436324,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 20.0881,
+          "endSec": 20.0882,
+          "durationSec": 0.0001
+        },
+        {
+          "startSec": 20.5844,
+          "endSec": 20.594424,
+          "durationSec": 0.010024
+        }
+      ]
+    }
+  ]
+}
