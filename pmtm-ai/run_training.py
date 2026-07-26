@@ -56,6 +56,7 @@ os.chdir(PROJECT_ROOT)
 
 
 def check_gpu():
+    # pyrefly: ignore [missing-import]
     import torch
 
     print("=" * 60)
@@ -159,8 +160,11 @@ def reward_sanity_check():
     print("=" * 60)
 
     import pandas as pd
+    # pyrefly: ignore [missing-import]
     import torch
+    # pyrefly: ignore [missing-import]
     from peft import PeftModel
+    # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
     from app.training.grpo_qwen import MODEL_ID, SFT_PATH, build_prompts, rhyme_reward
@@ -288,8 +292,11 @@ def run_eval():
     print("[D] 생성 평가")
     print("=" * 60)
 
+    # pyrefly: ignore [missing-import]
     import torch
+    # pyrefly: ignore [missing-import]
     from peft import PeftModel
+    # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
     GRPO_PATH = str(MODELS_DIR / "grpo_rap_qwen")
