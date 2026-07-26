@@ -8,6 +8,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.demo_pipeline import DEMO_JOB_TIMEOUT_SECONDS, DEMO_STATUS_KEY_PREFIX, mix_demo_audio
 from app.flow_adapter import build_flow_plan, write_diffsinger_ds, write_flow_plan
+from app.rvc_adapter import render_rvc
 from app.schemas import DemoStatus
 from app.utils.redis import update_redis_status
 
@@ -82,6 +83,7 @@ def run_guide_demo_generation(
     bpm: int,
     first_bar_start_sec: float,
     voicebank_id: str,
+    rvc_model_id: str | None = None,
 ) -> None:
     import redis
 
@@ -130,6 +132,22 @@ def run_guide_demo_generation(
         render_diffsinger(score_path, raw_vocal_path, voicebank_id)
         _fit_vocal_to_duration(raw_vocal_path, vocal_path, render_duration_sec)
 
+        rvc_applied_note = None
+        if rvc_model_id:
+            _set_status(
+                redis_client,
+                job_id,
+                "converting_rvc",
+                progress=0.68,
+                bpm=bpm,
+                lyrics=lyrics,
+                voicebank=voicebank_id,
+            )
+            rvc_vocal_path = work_path / "vocal_rvc.wav"
+            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id)
+            vocal_path = rvc_vocal_path
+            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}"
+
         _set_status(
             redis_client,
             job_id,
@@ -140,6 +158,15 @@ def run_guide_demo_generation(
             voicebank=voicebank_id,
         )
         output_path = mix_demo_audio(work_path / "beat_segment.wav", vocal_path, work_path)
+        notes = [
+            "편집된 8줄을 1줄=1마디로 렌더링했습니다.",
+            f"첫 마디 시작: {first_bar_start_sec:.3f}초",
+            f"DiffSinger 보이스뱅크: {profile.label}",
+        ]
+        if rvc_applied_note:
+            notes.append(rvc_applied_note)
+        notes.append(f"데모 파일: {output_path.name}")
+
         _set_status(
             redis_client,
             job_id,
@@ -148,12 +175,7 @@ def run_guide_demo_generation(
             bpm=bpm,
             lyrics=lyrics,
             voicebank=voicebank_id,
-            notes=[
-                "편집된 8줄을 1줄=1마디로 렌더링했습니다.",
-                f"첫 마디 시작: {first_bar_start_sec:.3f}초",
-                f"DiffSinger 보이스뱅크: {profile.label}",
-                f"데모 파일: {output_path.name}",
-            ],
+            notes=notes,
             audio_url=f"/api/v1/demos/{job_id}/audio",
             vocal_url=f"/api/v1/demos/{job_id}/vocal",
             flow_plan_url=f"/api/v1/demos/{job_id}/flow-plan",

@@ -39,8 +39,8 @@ flowchart TD
 ```mermaid
 flowchart LR
     RawCSV["data/merged_final_dataset_analyzed.csv<br/>artist, lyrics, audio features, rhyme_density"]
-    Prepare["prepare_dataset_v3.py<br/>clean_lines → make_chunks<br/>8마디 SFT 샘플 생성"]
-    Jsonl["data/prepared_dataset_v3.jsonl<br/>{ messages }"]
+    Prepare["prepare_dataset.py<br/>clean_lines → make_chunks<br/>8마디 SFT 샘플 생성"]
+    Jsonl["data/prepared_dataset.jsonl<br/>{ messages }"]
 
     Base["MODEL_ID<br/>Qwen/Qwen2.5-3B-Instruct 기본값"]
     SFTTrain["sft_qwen.py<br/>4-bit NF4 + LoRA<br/>Trainer"]

@@ -33,6 +33,7 @@ SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
 # 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
 GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(8~16음절), 트랩(6~14음절)
+GRPO_TOPICS: list[str | None] = [None, "자신감/성공", "삶/성찰", "사랑", "이별"]
 
 
 @dataclass
@@ -221,13 +222,12 @@ def _latest_checkpoint(output_dir: str) -> str | None:
 
 
 def build_prompts(df=None) -> list[list[dict[str, str]]]:
-    """GRPO_BPMS의 대표 BPM으로 프롬프트를 생성한다.
-    학습 길이는 max_steps로 제어하므로 프롬프트 수는 최소한으로 유지한다.
-    """
-    return [
-        build_messages(bpm=bpm, bars=None)
-        for bpm in GRPO_BPMS
-    ]
+    """GRPO_BPMS 및 대표 TOPIC 조합으로 프롬프트를 생성한다."""
+    prompts = []
+    for bpm in GRPO_BPMS:
+        for topic in GRPO_TOPICS:
+            prompts.append(build_messages(bpm=bpm, bars=None, topic=topic))
+    return prompts
 
 
 

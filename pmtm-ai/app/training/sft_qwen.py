@@ -18,7 +18,7 @@ from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR
 
-DATA_PATH = str(DATA_DIR / "prepared_dataset_v3.jsonl")
+DATA_PATH = str(DATA_DIR / "prepared_dataset.jsonl")
 OUTPUT_DIR = str(OUTPUTS_DIR / "sft_qwen")
 SAVE_DIR = str(MODELS_DIR / "sft_rap_qwen")
 MAX_LENGTH = 768
@@ -89,7 +89,7 @@ def train_sft():
 
     raw = Dataset.from_json(DATA_PATH)
     if "messages" not in raw.column_names:
-        raise ValueError("prepared_dataset_v3.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset_v3.py.")
+        raise ValueError("prepared_dataset.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset.py.")
 
     split = raw.train_test_split(test_size=EVAL_RATIO, seed=SEED)
     train_raw, eval_raw = split["train"], split["test"]

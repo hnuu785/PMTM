@@ -15,7 +15,7 @@ from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
 from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
-OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
+OUTPUT_PATH = DATA_DIR / "prepared_dataset.jsonl"
 
 MIN_RHYME_SCORE = 0.35
 MIN_KOREAN_RATIO = 0.35
@@ -30,11 +30,30 @@ MAX_REPEATED_TRIGRAMS = 1
 
 
 
+ADLIB_PAREN_RE = re.compile(
+    r"\s*\((?:yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey|billi|milli|heyy?)\)\s*",
+    re.IGNORECASE,
+)
+ADLIB_END_RE = re.compile(
+    r"(?:[\s,\.!\?]+(?:\([^\)]+\)|yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey))+[\s,\.!\?]*$",
+    re.IGNORECASE,
+)
+ONLY_ADLIB_RE = re.compile(
+    r"^(?:[\s,\.!\?\(\)]|(?:yeah|uh|ah|oh|ay|ye|ooh|woah|skrrt|skrt|yah|ey))+$",
+    re.IGNORECASE,
+)
+
+
 def clean_lines(lyrics: str) -> list[str]:
     cleaned = []
     for line in lyrics.split("\n"):
         line = line.strip()
-        if not line or re.match(r"^\[.*\]$", line):
+        if not line or re.match(r"^\[.*\]$", line) or ONLY_ADLIB_RE.match(line):
+            continue
+        line = ADLIB_PAREN_RE.sub(" ", line).strip()
+        line = ADLIB_END_RE.sub("", line).strip()
+        line = re.sub(r"\s+", " ", line).strip()
+        if not line or ONLY_ADLIB_RE.match(line):
             continue
         cleaned.append(line)
     return cleaned
@@ -135,7 +154,7 @@ def rejection_reason(features: dict[str, float | int]) -> str | None:
     return None
 
 
-def build_record(lines: list[str], genre: str, bpm: float) -> dict:
+def build_record(lines: list[str], genre: str, bpm: float, topic: str | None = None) -> dict:
     formatted_lines = []
     for i, line in enumerate(lines, 1):
         syllables = count_syllables(line)
@@ -147,6 +166,7 @@ def build_record(lines: list[str], genre: str, bpm: float) -> dict:
         "messages": build_messages(
             bpm=bpm,
             bars=len(lines),
+            topic=topic,
             assistant=assistant_content
         )
     }
@@ -160,6 +180,7 @@ def prepare() -> tuple[list[dict], Counter]:
     with DATA_PATH.open(encoding="utf-8-sig", newline="") as fp:
         for row in csv.DictReader(fp):
             lyrics = row.get("lyrics", "")
+            topic = row.get("topic_primary", "").strip() or None
             try:
                 bpm = float(row.get("bpm", "0") or 0)
             except ValueError:
@@ -192,8 +213,9 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats["syllable_mismatch"] += 1
                     continue
 
-
-                records.append(build_record(chunk, genre, bpm))
+                # ~15% 확률(7개 중 1개)로 topic을 생략하여 일반 프롬프트 대응력 유지
+                sample_topic = topic if (len(records) % 7 != 0) else None
+                records.append(build_record(chunk, genre, bpm, topic=sample_topic))
 
     stats["kept"] = len(records)
     return records, stats
