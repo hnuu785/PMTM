@@ -115,12 +115,12 @@ def prepare_dataset():
     print("=" * 60)
     print("[B1] SFT 데이터셋 준비")
     print("=" * 60)
-    out = DATA_DIR / "prepared_dataset_v3.jsonl"
+    out = DATA_DIR / "prepared_dataset.jsonl"
     if out.exists():
         n = sum(1 for _ in out.open(encoding="utf-8"))
         print(f"이미 존재: {out} ({n} samples)")
     else:
-        from app.training.prepare_dataset_v3 import main as prep_main
+        from app.training.prepare_dataset import main as prep_main
 
         prep_main()
     assert out.exists(), "SFT 데이터 생성 실패"

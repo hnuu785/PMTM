@@ -15,7 +15,7 @@ from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
 from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
-OUTPUT_PATH = DATA_DIR / "prepared_dataset_v3.jsonl"
+OUTPUT_PATH = DATA_DIR / "prepared_dataset.jsonl"
 
 MIN_RHYME_SCORE = 0.35
 MIN_KOREAN_RATIO = 0.35

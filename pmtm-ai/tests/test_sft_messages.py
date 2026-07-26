@@ -10,7 +10,7 @@ else:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.training.prepare_dataset_v3 import build_record
+from app.training.prepare_dataset import build_record
 from app.training.sft_qwen import _tokenize_messages
 
 
