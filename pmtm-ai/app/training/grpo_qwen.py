@@ -33,7 +33,15 @@ SAVE_DIR = str(MODELS_DIR / "grpo_rap_qwen")
 SMOKE_OUTPUT_DIR = str(OUTPUTS_DIR / "grpo_qwen_smoke")
 # 실질적으로 2종류의 프롬프트 텍스트(붐뱁/트랩)만 생성되므로 대표 BPM 2개를 명시
 GRPO_BPMS: list[float] = [90.0, 140.0]  # 붐뱁(8~16음절), 트랩(6~14음절)
-GRPO_TOPICS: list[str | None] = [None, "자신감/성공", "삶/성찰", "사랑", "이별"]
+GRPO_TOPICS: list[str | None] = [
+    None,
+    "자신감/성공",
+    "삶/성찰",
+    "사랑",
+    "이별",
+    "유흥/파티",
+    "비판/디스",
+]
 
 
 @dataclass
@@ -322,18 +330,23 @@ def rhyme_reward(completions, prompts=None, **kwargs):
             continue
             
         bpm = None
+        genre = None
         if prompts and idx < len(prompts):
             p_text = str(prompts[idx])
             m = re.search(r"BPM:\s*(\d+(?:\.\d+)?)", p_text) or re.search(r"bpm[=:]\s*(\d+(?:\.\d+)?)", p_text)
             if m:
                 bpm = float(m.group(1))
+            elif "트랩" in p_text:
+                genre = "트랩"
+            elif "붐뱁" in p_text:
+                genre = "붐뱁"
 
         # 1) 공백/특수문자를 제거한 정규화 문장 기반으로 중복 줄 수 계산
         norm_lines = [re.sub(r"[^\w]", "", line) for line in lines if line.strip()]
         dup_count = (len(norm_lines) - len(set(norm_lines))) if norm_lines else 0
         
-        # 2) 전체 생성 라인의 평균 라임 점수 계산 (BPM 정보 반영)
-        rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
+        # 2) 전체 생성 라인의 평균 라임 점수 계산 (BPM/장르 정보 반영)
+        rhyme_score = calculate_rhyme_density(lines, bpm=bpm, genre=genre)
 
         # 3) 중복 줄 수에 따른 단계별 차감 페널티 (Subtractive Penalty Gradient)
         if dup_count == 0:
