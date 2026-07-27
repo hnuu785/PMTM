@@ -52,7 +52,7 @@ def validate_first_bar_start(value: float) -> float:
     return value
 
 
-def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voicebank_id: str) -> None:
+def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voicebank_id: str, genre: str = "boom_bap") -> None:
     profile = VOICEBANK_PROFILES[voicebank_id]
     build_flow_plan(
         lyrics,
@@ -60,6 +60,7 @@ def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voice
         first_bar_start_sec,
         voicebank_id,
         base_f0_hz=profile.base_f0_hz,
+        genre=genre,
     )
 
 
@@ -83,8 +84,10 @@ def run_guide_demo_generation(
     bpm: int,
     first_bar_start_sec: float,
     voicebank_id: str,
+    genre: str = "boom_bap",
     rvc_model_id: str | None = None,
 ) -> None:
+    # pyrefly: ignore [missing-import]
     import redis
 
     settings = get_settings()
@@ -109,6 +112,7 @@ def run_guide_demo_generation(
             first_bar_start_sec,
             voicebank_id,
             base_f0_hz=profile.base_f0_hz,
+            genre=genre,
         )
         flow_plan_path = work_path / "flow-plan.json"
         score_path = work_path / "score.ds"
@@ -340,6 +344,7 @@ def enqueue_guide_demo(
     first_bar_start_sec: float,
     voicebank_id: str,
 ) -> None:
+    # pyrefly: ignore [missing-import]
     from rq import Queue
 
     status_key = f"{DEMO_STATUS_KEY_PREFIX}{job_id}"

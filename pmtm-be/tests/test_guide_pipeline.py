@@ -127,7 +127,7 @@ class FlowAdapterTests(unittest.TestCase):
         ])
         plan = build_flow_plan(test_lyrics, 90, 0, "potg", base_f0_hz=190.0)
         bar0 = plan.bars[0]
-        self.assertIn("adaptive_hierarchical_13syl_5words", bar0.template)
+        self.assertIn("adaptive_hierarchical_boom_bap_13syl_5words", bar0.template)
         # Check that inter-word SPs are removed for legato flow (only lead & tail SP remain)
         sp_count = sum(1 for p in bar0.phonemes if p.symbol == "SP")
         self.assertEqual(sp_count, 2)
@@ -151,7 +151,7 @@ class FlowAdapterTests(unittest.TestCase):
         ])
         plan = build_flow_plan(dense_130bpm, 130, 0, "potg", base_f0_hz=190.0)
         bar0 = plan.bars[0]
-        self.assertIn("adaptive_hierarchical_13syl", bar0.template)
+        self.assertIn("13syl", bar0.template)
         # Ensure total duration matches bar duration
         self.assertAlmostEqual(
             sum(p.durationSec for p in bar0.phonemes),
@@ -202,6 +202,28 @@ class FlowAdapterTests(unittest.TestCase):
             len(sections[0]["f0_seq"].split()),
             len(sections[0]["energy"].split()),
         )
+
+    def test_kiwi_morpheme_stress_and_dynamic_pitch_cadence(self):
+        plan = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0)
+        bar0 = plan.bars[0]
+        self.assertIsNotNone(bar0.noteSeq)
+        self.assertIn("rest", bar0.noteSeq)
+        # Check phrase final cadence pitch drop (A#3 / MIDI 58)
+        self.assertEqual(bar0.noteSeq[-2], "A#3")
+
+
+    def test_genre_boom_bap_vs_trap_timing_modulation(self):
+        plan_bb = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0, genre="boom_bap")
+        plan_trap = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0, genre="trap")
+        self.assertEqual(plan_bb.genre, "boom_bap")
+        self.assertEqual(plan_trap.genre, "trap")
+        # Check template names reflect the genre
+        self.assertIn("boom_bap", plan_bb.bars[0].template)
+        self.assertIn("trap", plan_trap.bars[0].template)
+        # Compare phoneme durations between boom_bap (layback) and trap (early push)
+        dur_bb = [p.durationSec for p in plan_bb.bars[0].phonemes]
+        dur_trap = [p.durationSec for p in plan_trap.bars[0].phonemes]
+        self.assertNotEqual(dur_bb, dur_trap)
 
     def test_f0_curve_is_flat(self):
         from app.flow_adapter import _build_f0_curve
