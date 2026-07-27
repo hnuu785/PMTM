@@ -14,18 +14,11 @@ def parse_args():
     p = argparse.ArgumentParser(description="PMTM API lyric generation CLI")
     p.add_argument("--bpm", type=float, required=True, help="Track BPM")
     p.add_argument("--topic", default=None, help="Target topic (e.g. 자신감/성공, 사랑, 이별, 삶/성찰)")
-    p.add_argument("--genre", default="Korean hip-hop", help="Target genre")
-    p.add_argument("--mood", default="confident", help="Target mood")
     p.add_argument("--adapter", default=None, help="Optional LoRA adapter directory path")
     p.add_argument(
         "--base-model",
         default=MODEL_ID,
         help="Override base model id/path.",
-    )
-    p.add_argument(
-        "--tokenizer-model",
-        default=None,
-        help="Override tokenizer id/path. Useful when the base model cache lacks tokenizer files.",
     )
     p.add_argument("--bars", type=int, default=None, help="Target bar count (default: auto based on BPM)")
     p.add_argument("--max-new-tokens", type=int, default=400, help="Maximum generated tokens")
@@ -101,7 +94,7 @@ def build_model_input_text(tokenizer, base_model: str, prompt_format: str, promp
     )
 
 
-def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str | None):
+def build_model(base_model: str, adapter_path: Path | None):
     # pyrefly: ignore [missing-import]
     import torch
     # pyrefly: ignore [missing-import]
@@ -109,7 +102,11 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
     # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer_path = tokenizer_model or (str(adapter_path) if adapter_path else base_model)
+    tokenizer_path = (
+        str(adapter_path)
+        if adapter_path and (adapter_path / "tokenizer_config.json").exists()
+        else base_model
+    )
     tokenizer = AutoTokenizer.from_pretrained(
         tokenizer_path,
         trust_remote_code=True,
@@ -132,6 +129,7 @@ def build_model(base_model: str, adapter_path: Path | None, tokenizer_model: str
 
     model.eval()
     return tokenizer, model
+
 
 
 def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float, repetition_penalty: float = 1.1) -> str:
@@ -181,7 +179,7 @@ def main():
         raise FileNotFoundError(f"adapter not found: {adapter_path}")
 
     base_model = resolve_base_model(adapter_path, args.base_model)
-    tokenizer, model = build_model(base_model, adapter_path, args.tokenizer_model)
+    tokenizer, model = build_model(base_model, adapter_path)
     prompt = build_model_input_text(
         tokenizer,
         base_model,

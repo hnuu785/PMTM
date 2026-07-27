@@ -92,7 +92,7 @@ drive.mount("/content/drive")
 ```bash
 cd /content
 git clone <YOUR_REPO_URL>
-cd PMTM2/pmtm-ai
+cd PMTM/pmtm-ai
 pip install -r requirements.txt
 ```
 

@@ -30,7 +30,7 @@ class GrpoMessagesTests(unittest.TestCase):
     def test_build_prompts_outputs_chat_messages(self):
         prompts = build_prompts()
 
-        self.assertEqual(len(prompts), 2)
+        self.assertEqual(len(prompts), 14)
         
         # 1st prompt (bpm=90, 붐뱁)
         msg1 = prompts[0]
@@ -39,8 +39,8 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertIn("8~16 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
-        # 2nd prompt (bpm=140, 트랩)
-        msg2 = prompts[1]
+        # 140 BPM, 트랩 prompt (7th prompt in 2x7 combination)
+        msg2 = prompts[7]
         self.assertEqual([m["role"] for m in msg2], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", msg2[0]["content"])
         self.assertIn("6~14 범위 내로", msg2[0]["content"])
