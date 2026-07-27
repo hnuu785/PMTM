@@ -14,8 +14,6 @@ def parse_args():
     p = argparse.ArgumentParser(description="PMTM API lyric generation CLI")
     p.add_argument("--bpm", type=float, required=True, help="Track BPM")
     p.add_argument("--topic", default=None, help="Target topic (e.g. 자신감/성공, 사랑, 이별, 삶/성찰)")
-    p.add_argument("--genre", default="Korean hip-hop", help="Target genre")
-    p.add_argument("--mood", default="confident", help="Target mood")
     p.add_argument("--adapter", default=None, help="Optional LoRA adapter directory path")
     p.add_argument(
         "--base-model",

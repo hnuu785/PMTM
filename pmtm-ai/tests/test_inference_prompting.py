@@ -107,7 +107,7 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertIsNone(tokenizer.last_messages)
 
     def test_api_messages_request_eight_line_lyrics(self):
-        args = SimpleNamespace(bpm=90, genre="Korean hip-hop", mood="confident", bars=8)
+        args = SimpleNamespace(bpm=90, bars=8)
         messages = generate_for_api.build_messages(args)
 
         self.assertEqual([message["role"] for message in messages], ["user"])
