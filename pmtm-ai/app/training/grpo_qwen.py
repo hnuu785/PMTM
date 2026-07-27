@@ -473,7 +473,7 @@ def _build_grpo_trainer(
     return trainer, prompts
 
 
-def train_grpo(*, trace_finite: bool = False, max_steps: int = 200):
+def train_grpo(*, trace_finite: bool = False, max_steps: int = 120):
     best_cb = GrpoBestRewardCallback()
     callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback(), best_cb]
     if trace_finite:
