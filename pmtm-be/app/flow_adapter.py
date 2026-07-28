@@ -397,7 +397,7 @@ def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> 
     actual_bpm = bpm / 2.0 if bpm >= 115.0 else float(bpm)
 
     beat_duration = 60.0 / actual_bpm
-    beats_per_unit = 4 if bar_count == 8 else 2
+    beats_per_unit = 4
     bar_duration = beat_duration * beats_per_unit
     bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
     beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
@@ -422,10 +422,15 @@ def build_flow_plan(
     genre: str = "boom_bap",
 ) -> FlowPlan:
     lines = parse_eight_bar_lyrics(lyrics)
-    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(lines))
+    if len(lines) == 16:
+        bar_lines = [f"{lines[i]} {lines[i+1]}" for i in range(0, 16, 2)]
+    else:
+        bar_lines = lines
+
+    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(bar_lines))
     bars: list[FlowBar] = []
-    for index, line in enumerate(lines):
-        word_chunks, g2p_line = _extract_word_syllables_and_text(line)
+    for index, line_text in enumerate(bar_lines):
+        word_chunks, g2p_line = _extract_word_syllables_and_text(line_text)
         total_syllable_count = sum(len(w.syllables) for w in word_chunks)
         if total_syllable_count == 0:
             raise ValueError(f"{index + 1}마디에 합성 가능한 음절이 없습니다.")

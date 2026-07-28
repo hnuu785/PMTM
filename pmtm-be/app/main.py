@@ -241,13 +241,20 @@ async def generate_guide_demo(
     bpm: int = Form(...),
     firstBarStartSec: float = Form(...),
     voicebank: str = Form("potg"),
+    genre: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
     try:
         bpm_value = validate_guide_bpm(bpm)
         first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
         voicebank_id = validate_voicebank(voicebank)
-        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id)
+        lines = [
+            line.strip()
+            for line in lyrics.splitlines()
+            if line.strip() and not line.strip().lower().startswith("[verse")
+        ]
+        genre_value = genre.strip() if genre and genre.strip() else ("trap" if len(lines) == 16 else "boom_bap")
+        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id, genre=genre_value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -265,6 +272,7 @@ async def generate_guide_demo(
             bpm_value,
             first_bar_start_sec,
             voicebank_id,
+            genre=genre_value,
         )
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc

@@ -225,6 +225,17 @@ class FlowAdapterTests(unittest.TestCase):
         dur_trap = [p.durationSec for p in plan_trap.bars[0].phonemes]
         self.assertNotEqual(dur_bb, dur_trap)
 
+    def test_sixteen_lines_trap_pairs_two_lines_per_bar(self):
+        sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
+        plan = build_flow_plan(sixteen_bars, 120, 1.25, "potg", base_f0_hz=190.0, genre="trap")
+        # 16 lines should combine into 8 bars
+        self.assertEqual(plan.beatMap.barCount, 8)
+        self.assertEqual(len(plan.bars), 8)
+        self.assertEqual(plan.beatMap.beatsPerBar, 4)
+        # Bar 0 should contain text of both line 1 and line 2 (G2P transformed)
+        self.assertIn("나는 비트 위를 달려", plan.bars[0].text)
+        self.assertIn("고개를 들고", plan.bars[0].text)
+
     def test_f0_curve_is_flat(self):
         from app.flow_adapter import _build_f0_curve
         symbols = ["SP", "g", "a", "kcl", "SP"]
@@ -283,6 +294,33 @@ class GuideDemoApiTests(unittest.TestCase):
         self.assertEqual(enqueue.call_args.args[5], 92)
         self.assertEqual(enqueue.call_args.args[6], 3.25)
         self.assertEqual(enqueue.call_args.args[7], "rang")
+        self.assertEqual(enqueue.call_args.kwargs.get("genre"), "boom_bap")
+
+    def test_guide_demo_enqueues_sixteen_lines_as_trap(self):
+        client = TestClient(main.app)
+        redis_client = mock.Mock()
+        sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
+        with (
+            TemporaryDirectory() as storage_dir,
+            mock.patch.object(main, "DEMO_STORAGE_ROOT", Path(storage_dir)),
+            mock.patch.object(main, "_get_redis_client", return_value=redis_client),
+            mock.patch.object(main, "enqueue_guide_demo") as enqueue,
+        ):
+            response = client.post(
+                "/api/v1/guide-demos",
+                data={
+                    "lyrics": sixteen_bars,
+                    "bpm": "130",
+                    "firstBarStartSec": "1.0",
+                    "voicebank": "potg",
+                },
+                files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "queued")
+        enqueue.assert_called_once()
+        self.assertEqual(enqueue.call_args.kwargs.get("genre"), "trap")
 
     def test_guide_demo_rejects_seven_lines(self):
         client = TestClient(main.app)
