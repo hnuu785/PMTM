@@ -499,7 +499,18 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
         if bar.noteSeq is not None and bar.noteDur is not None:
             note_seq_list = bar.noteSeq
             note_dur_list = bar.noteDur
-            note_slur_list = [0] * len(note_seq_list)
+            note_slur_list = []
+            is_after_rest = True
+            for note in note_seq_list:
+                if note == "rest":
+                    note_slur_list.append(0)
+                    is_after_rest = True
+                else:
+                    if is_after_rest:
+                        note_slur_list.append(0)
+                        is_after_rest = False
+                    else:
+                        note_slur_list.append(1)
         else:
             note_seq_list = []
             note_dur_list = []
