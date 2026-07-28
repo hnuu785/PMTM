@@ -245,17 +245,6 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
             midi_note=midi_note,
         ))
 
-    # Apply phrase final cadence pitch drop (e.g. D3 / 58 for natural rap cadence ending)
-    if result:
-        last = result[-1]
-        result[-1] = SyllableLinguisticInfo(
-            text=last.text,
-            stress=last.stress + 0.2,
-            is_content=last.is_content,
-            is_word_start=last.is_word_start,
-            midi_note=58,
-        )
-
     return result
 
 

@@ -208,8 +208,8 @@ class FlowAdapterTests(unittest.TestCase):
         bar0 = plan.bars[0]
         self.assertIsNotNone(bar0.noteSeq)
         self.assertIn("rest", bar0.noteSeq)
-        # Check phrase final cadence pitch drop (A#3 / MIDI 58)
-        self.assertEqual(bar0.noteSeq[-2], "A#3")
+        # Check linguistic dynamic pitch notes are assigned
+        self.assertTrue(any(note in bar0.noteSeq for note in ("D4", "D#4", "C4")))
 
 
     def test_genre_boom_bap_vs_trap_timing_modulation(self):
