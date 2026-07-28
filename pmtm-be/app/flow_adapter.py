@@ -225,15 +225,12 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
         is_content = source["isContent"]
         is_word_start = source["isWordStart"]
 
-        # Default MIDI note pitch assignment
-        # Normal: C4 (60), Content word start: D4 (62), High Stress: D#4 (63)
-        # Normal: C4 (60), Content word start: D4 (62), High Stress: D#4 (63), Function word: B3 (59)
-        if is_content and is_word_start:
-            midi_note = 62
-        elif stress >= 1.2:
+        # MIDI note pitch assignment (Baseline C4 for normal/function words)
+        # Normal & Function words: C4 (60), Content word start: D4 (62), High Stress: D#4 (63)
+        if stress >= 1.2:
             midi_note = 63
-        elif not is_content:
-            midi_note = 59
+        elif is_content and is_word_start:
+            midi_note = 62
         else:
             midi_note = 60
 
