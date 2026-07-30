@@ -586,20 +586,12 @@ def _syllable_to_phonemes(syllable: str) -> list[str]:
 
 DEFAULT_MIN_DUR_SEC = 0.11
 ABSOLUTE_MIN_DUR_SEC = 0.08
+MIN_VOWEL_DUR_SEC = 0.085
 MAX_SYLLABLE_DUR_SEC = 0.30
 
 
 def _get_word_syllable_weights(syllable_count: int) -> list[float]:
-    if syllable_count == 1:
-        return [1.5]
-    elif syllable_count == 2:
-        return [2.0, 1.0]
-    elif syllable_count == 3:
-        return [2.0, 1.0, 1.0]
-    elif syllable_count == 4:
-        return [1.5, 1.0, 1.5, 1.0]
-    else:
-        return [2.0] + [1.0] * (syllable_count - 1)
+    return [1.0] * max(1, syllable_count)
 
 
 def _midi_note_to_name(midi_note: int) -> str:
@@ -621,8 +613,8 @@ def _allocate_word_hierarchical_durations(
 ) -> tuple[list[str], list[int], list[float], str, list[str], list[float]]:
     total_syllable_count = sum(len(w.syllables) for w in word_chunks)
 
-    if total_syllable_count <= 8:
-        lead_ratio, tail_ratio = 0.10, 0.12
+    if total_syllable_count <= 9:
+        lead_ratio, tail_ratio = 0.08, 0.22
     elif total_syllable_count <= 16:
         lead_ratio, tail_ratio = 0.06, 0.08
     else:
@@ -741,7 +733,24 @@ def _allocate_word_hierarchical_durations(
             ph_num.append(len(syl_phones))
             phone_weights = [_phoneme_weight(sym) for sym in syl_phones]
             pw_sum = sum(phone_weights)
-            durations.extend(dur * pw / pw_sum for pw in phone_weights)
+            syl_phone_durs = [dur * pw / pw_sum for pw in phone_weights]
+
+            # Enforce MIN_VOWEL_DUR_SEC (85ms) floor for vowels if needed
+            v_indices = [i for i, sym in enumerate(syl_phones) if sym in VOWEL_SYMBOLS]
+            if v_indices:
+                v_idx = v_indices[0]
+                if syl_phone_durs[v_idx] < MIN_VOWEL_DUR_SEC:
+                    target_v_dur = min(MIN_VOWEL_DUR_SEC, dur * 0.80)
+                    if target_v_dur > syl_phone_durs[v_idx]:
+                        diff = target_v_dur - syl_phone_durs[v_idx]
+                        other_indices = [i for i in range(len(syl_phones)) if i != v_idx]
+                        other_sum = sum(syl_phone_durs[i] for i in other_indices)
+                        if other_sum > 0:
+                            syl_phone_durs[v_idx] = target_v_dur
+                            for i in other_indices:
+                                syl_phone_durs[i] -= diff * (syl_phone_durs[i] / other_sum)
+
+            durations.extend(syl_phone_durs)
 
             midi_note = int(item["midi_note"])
             note_name = _midi_note_to_name(midi_note) if midi_note > 0 else "C4"
@@ -763,12 +772,21 @@ def _allocate_word_hierarchical_durations(
     return phonemes, ph_num, rounded_durations, template_name, note_seq, rounded_note_durs
 
 
+VOWEL_SYMBOLS = {
+    "a", "e", "eo", "eu", "i", "o", "u", "ia", "ie", "ieo", "io", "iu", "oa", "oe", "uo", "ui",
+    "a1", "a2", "a3", "a4", "e1", "e2", "e3", "e4", "eo1", "eo2", "eo3", "eo4", "eu1", "eu2", "eu3", "eu4",
+    "i1", "i2", "i3", "i4", "o1", "o2", "o3", "o4", "u1", "u2", "u3", "u4",
+    "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
+}
+CODA_SYMBOLS = {"ng", "l", "n", "m", "kcl", "tcl", "pcl", "cl", "K", "N", "M", "P"}
+
+
 def _phoneme_weight(symbol: str) -> float:
-    if symbol in {"a", "e", "eo", "eu", "i", "o", "u", "a1", "a2", "a3", "a4", "e1", "e2", "e3", "e4", "eo1", "eo2", "eo3", "eo4", "eu1", "eu2", "eu3", "eu4", "i1", "i2", "i3", "i4", "o1", "o2", "o3", "o4", "u1", "u2", "u3", "u4"}:
-        return 0.58
-    if symbol in {"K", "N", "M", "P", "cl"}:
-        return 0.18
-    return 0.24
+    if symbol in VOWEL_SYMBOLS:
+        return 0.68
+    if symbol in CODA_SYMBOLS:
+        return 0.14
+    return 0.18
 
 
 def _note_name_to_midi(note_name: str) -> int:

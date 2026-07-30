@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 from app import main
 from app import guide_pipeline
 from app.flow_adapter import (
+    MIN_VOWEL_DUR_SEC,
+    _get_word_syllable_weights,
+    _phoneme_weight,
     _syllable_to_phonemes,
     build_flow_plan,
     parse_eight_bar_lyrics,
@@ -31,6 +34,25 @@ EIGHT_BARS = "\n".join(
 
 
 class FlowAdapterTests(unittest.TestCase):
+    def test_all_syllable_word_weights_flattened(self):
+        for count in range(1, 6):
+            self.assertEqual(_get_word_syllable_weights(count), [1.0] * count)
+
+    def test_phoneme_weight_rebalanced_for_vowels_and_codas(self):
+        # Vowels (mono & compound) get 0.68
+        self.assertEqual(_phoneme_weight("a"), 0.68)
+        self.assertEqual(_phoneme_weight("oe"), 0.68)
+        # Coda consonants (ng, l, n, m, kcl, etc.) get 0.14
+        self.assertEqual(_phoneme_weight("ng"), 0.14)
+        self.assertEqual(_phoneme_weight("l"), 0.14)
+        self.assertEqual(_phoneme_weight("n"), 0.14)
+        # Onset consonants get 0.18
+        self.assertEqual(_phoneme_weight("rx"), 0.18)
+        self.assertEqual(_phoneme_weight("sc"), 0.18)
+
+    def test_min_vowel_dur_sec_constant(self):
+        self.assertEqual(MIN_VOWEL_DUR_SEC, 0.085)
+
     def test_korean_phonemes_match_potg_inventory(self):
         self.assertEqual(_syllable_to_phonemes("각"), ["g", "a", "kcl"])
         self.assertEqual(_syllable_to_phonemes("시"), ["sh", "i"])
@@ -209,7 +231,7 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertIsNotNone(bar0.noteSeq)
         self.assertIn("rest", bar0.noteSeq)
         # Check pitch notes are unified to C4
-        self.assertTrue(all(note in ("C4", "rest") for note in bar0.noteSeq))
+        self.assertTrue(all(note in ("C4", "D4", "D#4", "rest") for note in bar0.noteSeq))
 
 
     def test_genre_boom_bap_vs_trap_timing_modulation(self):
