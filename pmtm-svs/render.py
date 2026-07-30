@@ -9,7 +9,7 @@ import numpy as np
 import onnxruntime as ort
 
 # pyrefly: ignore [missing-import]
-from diffsinger_utau.voice_bank import PredAcoustic, PredDuration, PredVariance, PredVocoder
+from diffsinger_utau.voice_bank import PredAcoustic, PredDuration, PredPitch, PredVariance, PredVocoder
 # pyrefly: ignore [missing-import]
 from diffsinger_utau.voice_bank.commons.ds_reader import DSReader
 # pyrefly: ignore [missing-import]
@@ -65,6 +65,13 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
         except Exception as exc:
             print(f"Warning: Could not initialize PredDuration: {exc}", file=sys.stderr)
 
+    pitch_model = None
+    if (voice_bank_path / "dspitch").is_dir():
+        try:
+            pitch_model = PredPitch(reader.get_dspitch())
+        except Exception as exc:
+            print(f"Warning: Could not initialize PredPitch: {exc}", file=sys.stderr)
+
     rendered = []
 
     for index, section in enumerate(sections):
@@ -97,6 +104,15 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
                         section["ph_dur"] = " ".join(f"{v:.6f}" for v in scaled_dur)
             except Exception as exc:
                 print(f"Warning: Hybrid AI duration scaling failed for bar {index + 1}: {exc}", file=sys.stderr)
+
+        if pitch_model is not None:
+            try:
+                ai_f0 = pitch_model.predict(section, lang=lang, steps=variance_steps)
+                if ai_f0 is not None and len(ai_f0) > 0:
+                    section["f0_seq"] = " ".join(f"{float(v):.4f}" for v in ai_f0)
+                    section["f0_timestep"] = str(pitch_model.timestep)
+            except Exception as exc:
+                print(f"Warning: Pitch prediction failed for bar {index + 1}: {exc}", file=sys.stderr)
 
         predicted_variances = variance.predict(
             section,

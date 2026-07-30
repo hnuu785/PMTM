@@ -198,6 +198,7 @@ export default function FlowTestPage() {
     body.append("bpm", String(parsedBpm));
     body.append("firstBarStartSec", String(parsedStart));
     body.append("voicebank", voicebank);
+    body.append("genre", lineCount === 16 ? "trap" : "boom_bap");
 
     try {
       const response = await fetch(`${apiBaseUrl}/api/v1/guide-demos`, { method: "POST", body });
