@@ -83,20 +83,20 @@ ARPABET_VOWELS = {
     "ih", "iy", "ow", "oy", "uh", "uw"
 }
 ARPABET_TO_POTG = {
-    "aa": "aa", "ae": "ae", "ah": "ah", "ao": "ao", "aw": "aw",
-    "ax": "ax", "ay": "ay", "b": "b", "ch": "ch", "d": "d",
-    "dh": "dh", "dx": "dx", "eh": "eh", "er": "er", "ey": "ey",
-    "f": "f", "g": "g", "hh": "hh", "ih": "ih", "iy": "iy",
+    "aa": "a", "ae": "e", "ah": "eo", "ao": "o", "aw": "oa",
+    "ax": "eo", "ay": "a", "b": "b", "ch": "ch", "d": "d",
+    "dh": "d", "dx": "rx", "eh": "e", "er": "eo", "ey": "e",
+    "f": "p", "g": "g", "hh": "hh", "ih": "i", "iy": "i",
     "jh": "jh", "k": "k", "l": "l", "m": "m", "n": "n",
-    "ng": "ng", "ow": "ow", "oy": "oy", "p": "p", "r": "r",
-    "s": "s", "sh": "sh", "t": "t", "th": "th", "uh": "uh",
-    "uw": "uw", "v": "v", "w": "w", "y": "y", "z": "z", "zh": "zh"
+    "ng": "ng", "ow": "o", "oy": "oe", "p": "p", "r": "rx",
+    "s": "sc", "sh": "sh", "t": "t", "th": "sc", "uh": "u",
+    "uw": "u", "v": "b", "w": "w", "y": "i", "z": "sc", "zh": "jh"
 }
 LETTER_TO_POTG = {
-    "a": "a", "b": "b", "c": "k", "d": "d", "e": "e", "f": "f", "g": "g",
+    "a": "a", "b": "b", "c": "k", "d": "d", "e": "e", "f": "p", "g": "g",
     "h": "hh", "i": "i", "j": "jh", "k": "k", "l": "l", "m": "m", "n": "n",
-    "o": "o", "p": "p", "q": "k", "r": "r", "s": "s", "t": "t", "u": "u",
-    "v": "v", "w": "w", "x": "k", "y": "i", "z": "z"
+    "o": "o", "p": "p", "q": "k", "r": "rx", "s": "sc", "t": "t", "u": "u",
+    "v": "b", "w": "w", "x": "k", "y": "i", "z": "sc"
 }
 
 
@@ -282,8 +282,51 @@ class WordChunk:
     linguistics: list[SyllableLinguisticInfo] | None = None
 
 
+KOREAN_NUM_UNITS = ["", "십", "백", "천"]
+KOREAN_NUM_BIG_UNITS = ["", "만", "억", "조", "경"]
+KOREAN_NUM_DIGITS = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+
+
+def int_to_korean(num: int) -> str:
+    if num == 0:
+        return "영"
+    str_num = str(num)
+    groups = []
+    while str_num:
+        groups.append(str_num[-4:])
+        str_num = str_num[:-4]
+
+    group_parts = []
+    for g_idx, group in enumerate(groups):
+        part = ""
+        g_len = len(group)
+        for d_idx, digit_char in enumerate(group):
+            d = int(digit_char)
+            pos = g_len - 1 - d_idx
+            if d != 0:
+                if d == 1 and pos > 0:
+                    part += KOREAN_NUM_UNITS[pos]
+                else:
+                    part += KOREAN_NUM_DIGITS[d] + KOREAN_NUM_UNITS[pos]
+        if part:
+            if part == "일" and g_idx > 0:
+                part = KOREAN_NUM_BIG_UNITS[g_idx]
+            else:
+                part += KOREAN_NUM_BIG_UNITS[g_idx]
+        group_parts.append(part)
+
+    return "".join(reversed(group_parts))
+
+
+def convert_numbers_to_hangul(text: str) -> str:
+    def repl(match: re.Match[str]) -> str:
+        return int_to_korean(int(match.group(0)))
+    return re.sub(r"\d+", repl, text)
+
+
 def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
-    unsupported = re.sub(r"[가-힣a-zA-Z\s.,!?~'\"()\[\]{}:;·…-]", "", text)
+    text = convert_numbers_to_hangul(text)
+    unsupported = re.sub(r"[가-힣a-zA-Z0-9\s.,!?~'\"()\[\]{}:;·…-]", "", text)
     if unsupported:
         raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
     raw_words = text.strip().split()

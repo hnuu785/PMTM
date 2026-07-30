@@ -10,10 +10,12 @@ from app import main
 from app import guide_pipeline
 from app.flow_adapter import (
     MIN_VOWEL_DUR_SEC,
+    _english_word_to_syllables,
     _get_word_syllable_weights,
     _phoneme_weight,
     _syllable_to_phonemes,
     build_flow_plan,
+    convert_numbers_to_hangul,
     parse_eight_bar_lyrics,
     write_diffsinger_ds,
 )
@@ -52,6 +54,19 @@ class FlowAdapterTests(unittest.TestCase):
 
     def test_min_vowel_dur_sec_constant(self):
         self.assertEqual(MIN_VOWEL_DUR_SEC, 0.085)
+
+    def test_english_word_phoneme_mapping_to_potg(self):
+        # 'love' -> ['l', 'eo', 'b']
+        self.assertEqual(_english_word_to_syllables("love"), [["l", "eo", "b"]])
+        # 'beat' -> ['b', 'i', 't']
+        self.assertEqual(_english_word_to_syllables("beat"), [["b", "i", "t"]])
+
+    def test_korean_number_conversion(self):
+        self.assertEqual(convert_numbers_to_hangul("1 2 3"), "일 이 삼")
+        self.assertEqual(convert_numbers_to_hangul("10"), "십")
+        self.assertEqual(convert_numbers_to_hangul("100"), "백")
+        self.assertEqual(convert_numbers_to_hangul("1000"), "천")
+        self.assertEqual(convert_numbers_to_hangul("1234"), "천이백삼십사")
 
     def test_korean_phonemes_match_potg_inventory(self):
         self.assertEqual(_syllable_to_phonemes("각"), ["g", "a", "kcl"])
@@ -97,7 +112,7 @@ class FlowAdapterTests(unittest.TestCase):
         lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "I'm on my way to the future")
         plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
         self.assertEqual(len(plan.bars), 8)
-        self.assertIn("ay", [p.symbol for p in plan.bars[0].phonemes])
+        self.assertIn("a", [p.symbol for p in plan.bars[0].phonemes])
 
     def test_flow_plan_rejects_unsupported_characters(self):
         lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "나는 🚀 위를 달려")
