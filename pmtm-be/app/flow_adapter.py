@@ -187,7 +187,7 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
         eojeol = next((e for e in eojeols if e["start"] <= char_idx < e["end"]), None)
         tag = morpheme["tag"] if morpheme else None
         if tag and tag.startswith(CONTENT_POS_PREFIXES):
-            stress = 1.15
+            stress = 1.0
             is_content = True
         elif tag and tag.startswith(FUNCTION_POS_PREFIXES):
             stress = 0.65
@@ -198,7 +198,7 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
 
         is_word_start = bool(eojeol and char_idx == eojeol["start"])
         if is_word_start:
-            stress += 0.15
+            stress += 0.1
 
         sources.append({
             "sourceIndex": source_idx,
@@ -586,7 +586,7 @@ def _syllable_to_phonemes(syllable: str) -> list[str]:
 
 DEFAULT_MIN_DUR_SEC = 0.11
 ABSOLUTE_MIN_DUR_SEC = 0.08
-MAX_SYLLABLE_DUR_SEC = 0.60
+MAX_SYLLABLE_DUR_SEC = 0.30
 
 
 def _get_word_syllable_weights(syllable_count: int) -> list[float]:

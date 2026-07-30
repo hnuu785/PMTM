@@ -208,8 +208,8 @@ class FlowAdapterTests(unittest.TestCase):
         bar0 = plan.bars[0]
         self.assertIsNotNone(bar0.noteSeq)
         self.assertIn("rest", bar0.noteSeq)
-        # Check linguistic dynamic pitch notes are assigned
-        self.assertTrue(any(note in bar0.noteSeq for note in ("D4", "D#4", "C4")))
+        # Check pitch notes are unified to C4
+        self.assertTrue(all(note in ("C4", "rest") for note in bar0.noteSeq))
 
 
     def test_genre_boom_bap_vs_trap_timing_modulation(self):
