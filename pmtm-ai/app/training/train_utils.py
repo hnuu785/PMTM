@@ -49,8 +49,10 @@ def is_unsloth_available() -> bool:
     try:
         import unsloth  # noqa: F401
         return True
-    except ImportError:
+    except Exception as e:
+        print(f"[unsloth check failed]: {e}")
         return False
+
 
 
 def load_unsloth_model_and_tokenizer(
