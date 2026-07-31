@@ -41,6 +41,7 @@ from app.guide_pipeline import validate_guide_flow
 from app.guide_pipeline import validate_voicebank
 from app.rvc_adapter import list_rvc_models
 from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
+from app.schemas import InternalRhymeSpan
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
 from app.schemas import RvcModelResponse, VoicebankResponse
@@ -49,6 +50,8 @@ settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
 RHYME_GROUP_THRESHOLD = 0.50
 RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD = 0.50
+INTERNAL_RHYME_MIN_SYLLABLES = 3
+INTERNAL_RHYME_MAX_SYLLABLES = 4
 TARGET_LYRIC_BARS = 8
 EXP_005_SFT_ADAPTER = "models/exp-005/sft_rap_qwen"
 EXP_005_GRPO_ADAPTER = "models/exp-005/grpo_rap_qwen"
@@ -443,8 +446,14 @@ def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[Rhy
         if left_root != right_root:
             parents[right_root] = left_root
 
-    get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
-    
+    (
+        get_line_rhyme_score,
+        calculate_syllable_score,
+        get_phonemes,
+        calculate_line_scores,
+        vowel_groups,
+    ) = _load_rhyme_analysis_funcs()
+
     # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산 (BPM 정보 반영)
     scores, best_match_indexes = calculate_line_scores(clean_lines, bpm=bpm)
 
@@ -454,10 +463,19 @@ def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[Rhy
         if score >= RHYME_GROUP_THRESHOLD:
             union(i, i+1)
 
+    # 3) 한 줄 건너뛴 라임(ABAB 등)도 같은 그룹으로 병합.
+    #    calculate_line_scores가 이미 (i, i+2) 쌍을 점수에 반영하므로 그룹도 맞춰준다.
+    for i in range(line_count - 2):
+        score = get_line_rhyme_score(clean_lines[i], clean_lines[i+2])
+        if score >= RHYME_GROUP_THRESHOLD:
+            union(i, i+2)
+
     root_counts: dict[int, int] = {}
     for index in range(line_count):
         root = find(index)
         root_counts[root] = root_counts.get(root, 0) + 1
+
+    internal_rhymes = _detect_internal_rhymes(clean_lines, get_phonemes, vowel_groups)
 
     group_ids: dict[int, int] = {}
     next_group_id = 0
@@ -489,9 +507,11 @@ def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[Rhy
                 highlightStart=highlight_start,
                 highlightEnd=highlight_end,
                 highlightRanges=highlight_ranges,
+                internalRhymes=_drop_overlapping_spans(internal_rhymes[index], highlight_ranges),
             )
         )
 
+    _compact_internal_rhyme_groups(analyses)
     return analyses
 
 
@@ -507,11 +527,17 @@ def _load_rhyme_analysis_funcs():
         sys.path.insert(0, str(scoring_root))
 
     # pyrefly: ignore [missing-import]
-    from phonetics_utils import get_phonemes
+    from phonetics_utils import VOWEL_GROUPS, get_phonemes
     # pyrefly: ignore [missing-import]
     from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
 
-    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
+    return (
+        get_line_rhyme_score,
+        calculate_syllable_score,
+        get_phonemes,
+        calculate_line_scores,
+        VOWEL_GROUPS,
+    )
 
 
 
@@ -549,10 +575,12 @@ def _find_rhyme_highlight_ranges(
         if score >= RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD:
             ranges.append(syllable_ranges[-offset])
 
-    return [
-        RhymeHighlightRange(start=start, end=end)
-        for start, end in _merge_ranges(sorted(ranges))
-    ]
+    if not ranges:
+        return []
+
+    # 라임 꼬리는 한 덩어리로 읽히므로, 중간에 기준 미달인 음절이 있어도 이어서 표시한다.
+    # (예: '비'와 '다'만 통과해도 '비춘다'를 통째로 강조)
+    return [RhymeHighlightRange(start=min(r[0] for r in ranges), end=max(r[1] for r in ranges))]
 
 
 def _find_last_rhyme_token(line: str) -> re.Match[str] | None:
@@ -564,18 +592,112 @@ def _find_hangul_syllable_ranges(line: str) -> list[tuple[int, int]]:
     return [(match.start(), match.end()) for match in re.finditer(r"[가-힣]", line)]
 
 
-def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    if not ranges:
-        return []
+def _build_syllable_units(line: str, get_phonemes) -> list[tuple[int, int, dict]]:
+    """라인의 한글 음절을 (시작, 끝, 발음) 단위로 분해한다.
 
-    merged: list[tuple[int, int]] = [ranges[0]]
-    for start, end in ranges[1:]:
-        previous_start, previous_end = merged[-1]
-        if start <= previous_end:
-            merged[-1] = (previous_start, max(previous_end, end))
-        else:
-            merged.append((start, end))
-    return merged
+    음절 하나씩 get_phonemes에 넘겨 문자 위치와 발음 인덱스가 어긋나지 않도록 한다.
+    """
+    units: list[tuple[int, int, dict]] = []
+    for match in re.finditer(r"[가-힣]", line):
+        phonemes = get_phonemes(match.group(0))
+        if phonemes:
+            units.append((match.start(), match.end(), phonemes[0]))
+    return units
+
+
+def _vowel_key(phoneme: dict, vowel_groups) -> str:
+    """유사 모음을 하나의 대표값으로 묶는다. (VOWEL_GROUPS 기준)"""
+    vowel = phoneme["v"]
+    for group in vowel_groups:
+        if vowel in group:
+            return min(group)
+    return vowel
+
+
+def _detect_internal_rhymes(
+    lines: list[str],
+    get_phonemes,
+    vowel_groups,
+) -> list[list[InternalRhymeSpan]]:
+    """라인 끝이 아닌 위치를 포함해, 서로 다른 라인에 반복되는 모음 패턴을 찾는다.
+
+    같은 모음 패턴이 2개 이상의 라인에 나타날 때만 라임으로 인정하고,
+    긴 패턴이 짧은 패턴보다 우선해 음절을 선점한다.
+    """
+    units_per_line = [_build_syllable_units(line, get_phonemes) for line in lines]
+
+    # 모음 패턴 -> [(라인 인덱스, 시작 음절, 길이), ...]
+    candidates: dict[tuple[str, ...], list[tuple[int, int, int]]] = {}
+    for line_index, units in enumerate(units_per_line):
+        keys = [_vowel_key(unit[2], vowel_groups) for unit in units]
+        for size in range(INTERNAL_RHYME_MAX_SYLLABLES, INTERNAL_RHYME_MIN_SYLLABLES - 1, -1):
+            for position in range(len(units) - size + 1):
+                key = tuple(keys[position:position + size])
+                candidates.setdefault(key, []).append((line_index, position, size))
+
+    claimed: list[set[int]] = [set() for _ in lines]
+    spans_per_line: list[list[InternalRhymeSpan]] = [[] for _ in lines]
+    next_group_id = 0
+
+    for key in sorted(candidates, key=len, reverse=True):
+        occurrences = candidates[key]
+        if len({occurrence[0] for occurrence in occurrences}) < 2:
+            continue
+
+        placed = [
+            occurrence
+            for occurrence in occurrences
+            if not claimed[occurrence[0]] & set(range(occurrence[1], occurrence[1] + occurrence[2]))
+        ]
+        if len({occurrence[0] for occurrence in placed}) < 2:
+            continue
+
+        for line_index, position, size in placed:
+            claimed[line_index].update(range(position, position + size))
+            units = units_per_line[line_index]
+            spans_per_line[line_index].append(
+                InternalRhymeSpan(
+                    start=units[position][0],
+                    end=units[position + size - 1][1],
+                    group=next_group_id,
+                )
+            )
+        next_group_id += 1
+
+    return [sorted(spans, key=lambda span: span.start) for spans in spans_per_line]
+
+
+def _drop_overlapping_spans(
+    spans: list[InternalRhymeSpan],
+    highlight_ranges: list[RhymeHighlightRange],
+) -> list[InternalRhymeSpan]:
+    """끝라임으로 이미 강조된 구간과 겹치는 내부 라임은 중복 표시하지 않는다."""
+    return [
+        span
+        for span in spans
+        if not any(span.start < r.end and r.start < span.end for r in highlight_ranges)
+    ]
+
+
+def _compact_internal_rhyme_groups(analyses: list[RhymeLineAnalysis]) -> None:
+    """끝라임과 겹쳐 일부 구간이 제거된 뒤의 내부 라임 그룹을 정리한다.
+
+    남은 라인이 하나뿐인 그룹은 더 이상 라임이 아니므로 제거하고,
+    남은 그룹은 번호를 앞에서부터 다시 매겨 색상이 중복되지 않게 한다.
+    """
+    line_counts: dict[int, int] = {}
+    for analysis in analyses:
+        for group in {span.group for span in analysis.internalRhymes}:
+            line_counts[group] = line_counts.get(group, 0) + 1
+
+    remapped: dict[int, int] = {}
+    for analysis in analyses:
+        surviving = [span for span in analysis.internalRhymes if line_counts[span.group] > 1]
+        for span in surviving:
+            if span.group not in remapped:
+                remapped[span.group] = len(remapped)
+            span.group = remapped[span.group]
+        analysis.internalRhymes = surviving
 
 
 async def _save_uploaded_beat(

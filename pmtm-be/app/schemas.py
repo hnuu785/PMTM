@@ -19,6 +19,12 @@ class RhymeHighlightRange(BaseModel):
     end: int
 
 
+class InternalRhymeSpan(BaseModel):
+    start: int
+    end: int
+    group: int
+
+
 class RhymeLineAnalysis(BaseModel):
     text: str
     rhymeGroup: int | None = None
@@ -26,6 +32,7 @@ class RhymeLineAnalysis(BaseModel):
     highlightStart: int | None = None
     highlightEnd: int | None = None
     highlightRanges: list[RhymeHighlightRange] = Field(default_factory=list)
+    internalRhymes: list[InternalRhymeSpan] = Field(default_factory=list)
 
 
 class LyricGenerateResponse(BaseModel):

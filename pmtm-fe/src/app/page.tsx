@@ -65,6 +65,7 @@ type RhymeLineAnalysis = {
   highlightStart: number | null;
   highlightEnd: number | null;
   highlightRanges?: Array<{ start: number; end: number }>;
+  internalRhymes?: Array<{ start: number; end: number; group: number }>;
 };
 
 type LyricModel = string;
@@ -82,12 +83,21 @@ const DIFFSINGER_VOICEBANKS = [
   { value: "rang", label: "RANG" },
   { value: "lunar", label: "LUNAR" },
 ];
+// 라임 그룹 하나당 색 하나. 끝라임 그룹이 앞쪽 인덱스를 먼저 쓰고,
+// 내부 라임 그룹이 그 뒤를 이어 받아 서로 다른 라임이 같은 색이 되지 않게 한다.
 const RHYME_COLORS = [
-  { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
-  { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
-  { background: "rgba(245, 185, 80, 0.28)", border: "rgba(245, 185, 80, 0.74)", color: "#fff3ca" },
-  { background: "rgba(150, 124, 255, 0.28)", border: "rgba(150, 124, 255, 0.74)", color: "#ece7ff" },
-  { background: "rgba(74, 222, 128, 0.24)", border: "rgba(74, 222, 128, 0.70)", color: "#dcfce7" },
+  { rgb: "82, 212, 200", color: "#d7fffb" },
+  { rgb: "255, 90, 31", color: "#ffe2d4" },
+  { rgb: "245, 185, 80", color: "#fff3ca" },
+  { rgb: "150, 124, 255", color: "#ece7ff" },
+  { rgb: "74, 222, 128", color: "#dcfce7" },
+  { rgb: "244, 114, 182", color: "#ffe4f1" },
+  { rgb: "96, 165, 250", color: "#dbeafe" },
+  { rgb: "248, 113, 113", color: "#ffe4e4" },
+  { rgb: "163, 230, 53", color: "#ecfccb" },
+  { rgb: "34, 211, 238", color: "#cffafe" },
+  { rgb: "232, 121, 249", color: "#fae8ff" },
+  { rgb: "148, 163, 184", color: "#e6ecf3" },
 ];
 type LlmOption = {
   value: string;
@@ -147,6 +157,11 @@ export default function Home() {
   const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+  // 내부 라임 그룹은 끝라임 그룹 다음 색상부터 사용한다 (색 중복 방지).
+  const endRhymeGroupCount = useMemo(
+    () => new Set(rhymeAnalysis.map((item) => item.rhymeGroup).filter((group) => group != null)).size,
+    [rhymeAnalysis],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -770,7 +785,15 @@ export default function Home() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3 text-xs font-semibold tracking-[0.12em] text-[#b9865f] uppercase">
                       <span>[Verse]</span>
-                      <span>{isAnalyzingRhyme ? "Analyzing rhyme" : "Rhyme view"}</span>
+                      <span className="flex items-center gap-3 normal-case tracking-normal">
+                        <span className="border border-[#f5b950]/85 bg-[#f5b950]/30 px-1 py-0.5 text-[#fff3ca]">
+                          끝라임
+                        </span>
+                        <span className="border border-[#f5b950]/55 bg-[#f5b950]/16 px-1 py-0.5 text-[#fff3ca]">
+                          내부 라임
+                        </span>
+                        <span>{isAnalyzingRhyme ? "Analyzing rhyme" : "Rhyme view"}</span>
+                      </span>
                     </div>
                     {lyricLines.map((line, index) => {
                       const analysis = rhymeAnalysis[index];
@@ -792,7 +815,7 @@ export default function Home() {
                               />
                             ) : (
                               <div className="min-w-0 flex-1 font-mono text-sm leading-7 text-[#fff6df]">
-                                {renderHighlightedLine(line, analysis)}
+                                {renderHighlightedLine(line, analysis, endRhymeGroupCount)}
                               </div>
                             )}
                             <span className="shrink-0 border border-[#f5b950]/25 bg-black/25 px-2 py-1 text-[11px] font-bold text-[#b9865f]">
@@ -1009,44 +1032,73 @@ function parseLyricLines(lyrics: string) {
   return sliced;
 }
 
-function renderHighlightedLine(line: string, analysis?: RhymeLineAnalysis) {
+type RhymeSegment = {
+  start: number;
+  end: number;
+  kind: "end" | "internal";
+  colorIndex: number;
+  label: string;
+};
+
+function renderHighlightedLine(line: string, analysis?: RhymeLineAnalysis, endGroupCount = 0) {
   const rawRanges = analysis?.highlightRanges?.length
     ? analysis.highlightRanges
     : analysis?.highlightStart != null && analysis.highlightEnd != null
       ? [{ start: analysis.highlightStart, end: analysis.highlightEnd }]
       : [];
-  const highlightRanges = normalizeHighlightRanges(rawRanges, line.length);
 
-  if (
-    !analysis ||
-    analysis.rhymeGroup == null ||
-    highlightRanges.length === 0
-  ) {
+  const segments: RhymeSegment[] = [];
+
+  if (analysis?.rhymeGroup != null) {
+    for (const range of normalizeHighlightRanges(rawRanges, line.length)) {
+      segments.push({ ...range, kind: "end", colorIndex: analysis.rhymeGroup, label: `R${analysis.rhymeGroup + 1}` });
+    }
+  }
+
+  for (const span of analysis?.internalRhymes ?? []) {
+    const [range] = normalizeHighlightRanges([span], line.length);
+    // 끝라임 강조와 겹치는 구간은 건너뛴다 (중첩 렌더링 방지).
+    if (range && !segments.some((seg) => range.start < seg.end && seg.start < range.end)) {
+      segments.push({
+        ...range,
+        kind: "internal",
+        colorIndex: endGroupCount + span.group,
+        label: `I${span.group + 1}`,
+      });
+    }
+  }
+
+  if (segments.length === 0) {
     return <span>{line || " "}</span>;
   }
 
-  const palette = RHYME_COLORS[analysis.rhymeGroup % RHYME_COLORS.length];
+  segments.sort((left, right) => left.start - right.start);
+
   const parts = [];
   let cursor = 0;
 
-  for (const range of highlightRanges) {
-    if (cursor < range.start) {
-      parts.push(<span key={`plain-${cursor}`}>{line.slice(cursor, range.start)}</span>);
+  for (const segment of segments) {
+    if (cursor < segment.start) {
+      parts.push(<span key={`plain-${cursor}`}>{line.slice(cursor, segment.start)}</span>);
     }
+
+    const palette = RHYME_COLORS[segment.colorIndex % RHYME_COLORS.length];
+    const isEnd = segment.kind === "end";
     parts.push(
       <span
-        key={`highlight-${range.start}-${range.end}`}
+        key={`${segment.kind}-${segment.start}-${segment.end}`}
         className="border px-1 py-0.5 font-bold"
         style={{
-          backgroundColor: palette.background,
-          borderColor: palette.border,
+          backgroundColor: `rgba(${palette.rgb}, ${isEnd ? 0.3 : 0.16})`,
+          borderColor: `rgba(${palette.rgb}, ${isEnd ? 0.85 : 0.55})`,
           color: palette.color,
         }}
+        title={`${isEnd ? "끝라임" : "내부 라임"} ${segment.label}`}
       >
-        {line.slice(range.start, range.end)}
+        {line.slice(segment.start, segment.end)}
       </span>,
     );
-    cursor = range.end;
+    cursor = segment.end;
   }
 
   if (cursor < line.length) {
