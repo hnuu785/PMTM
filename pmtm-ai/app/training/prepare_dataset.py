@@ -14,10 +14,14 @@ from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
 from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
+from app.rhyme_scoring.end_rhyme import calculate_chunk_end_rhyme_score
+from app.training.line_structurer import structure_lines
+
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset.jsonl"
 
 MIN_RHYME_SCORE = 0.35
+MIN_END_RHYME_SCORE = 0.30
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 28
@@ -119,8 +123,10 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
     rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
+    end_rhyme_score = calculate_chunk_end_rhyme_score(lines)
     return {
         "rhyme_score": rhyme_score,
+        "end_rhyme_score": end_rhyme_score,
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
         "max_ending_word_count": max(Counter(endings).values()) if endings else len(lines),
         "korean_ratio": korean_ratio(lines),
@@ -135,6 +141,8 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
 def rejection_reason(features: dict[str, float | int]) -> str | None:
     if features["rhyme_score"] < MIN_RHYME_SCORE:
         return "low_rhyme"
+    if features.get("end_rhyme_score", 1.0) < MIN_END_RHYME_SCORE:
+        return "low_end_rhyme"
     if features["duplicate_lines"] > 0:
         return "line_repeat"
     if features["max_ending_word_count"] > MAX_ENDING_WORD_COUNT:
@@ -172,6 +180,24 @@ def build_record(lines: list[str], genre: str, bpm: float, topic: str | None = N
     }
 
 
+def map_topic(raw_topic: str | None) -> str | None:
+    """7개 세부 주제를 4대 주요 카테고리로 통일 매핑합니다.
+    - 자신감/성공, 비판/디스, 유흥/파티 -> '자신감/성공' (자연스러운 프롬프트 표현)
+    - 사랑, 이별 -> '사랑/이별'
+    - 삶/성찰 -> '삶/성찰'
+    """
+    if not raw_topic:
+        return None
+    raw_topic = raw_topic.strip()
+    if raw_topic in ("자신감/성공", "비판/디스", "유흥/파티"):
+        return "자신감/성공"
+    elif raw_topic in ("사랑", "이별"):
+        return "사랑/이별"
+    elif raw_topic == "삶/성찰":
+        return "삶/성찰"
+    return raw_topic
+
+
 def prepare() -> tuple[list[dict], Counter]:
     records = []
     stats = Counter()
@@ -180,7 +206,8 @@ def prepare() -> tuple[list[dict], Counter]:
     with DATA_PATH.open(encoding="utf-8-sig", newline="") as fp:
         for row in csv.DictReader(fp):
             lyrics = row.get("lyrics", "")
-            topic = row.get("topic_primary", "").strip() or None
+            raw_topic = row.get("topic_primary", "").strip() or None
+            topic = map_topic(raw_topic)
             try:
                 bpm = float(row.get("bpm", "0") or 0)
             except ValueError:
@@ -192,7 +219,10 @@ def prepare() -> tuple[list[dict], Counter]:
 
             genre, target_lines, min_s, max_s = get_genre_rules(bpm)
 
-            for chunk in make_chunks(clean_lines(lyrics), chunk_size=target_lines):
+            cleaned_lines = clean_lines(lyrics)
+            structured = structure_lines(cleaned_lines, min_allowed=min_s - 1, max_allowed=max_s + 1)
+
+            for chunk in make_chunks(structured, chunk_size=target_lines):
                 stats["candidate_chunks"] += 1
 
                 chunk_key = "\n".join(normalize_text(line) for line in chunk)
