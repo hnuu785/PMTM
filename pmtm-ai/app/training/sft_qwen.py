@@ -1,4 +1,8 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
 # pyrefly: ignore [missing-import]
@@ -11,6 +15,7 @@ from transformers import (
 )
 # pyrefly: ignore [missing-import]
 from app.training.train_utils import setup_training_env
+
 # pyrefly: ignore [missing-import]
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 # pyrefly: ignore [missing-import]
@@ -81,15 +86,32 @@ def _make_data_collator(tokenizer):
     return collate
 
 
-def train_sft():
+def train_sft(
+    genre: str | None = None,
+    data_path: str | None = None,
+    output_dir: str | None = None,
+    save_dir: str | None = None,
+):
+    if genre in ("boombap", "trap"):
+        target_data_path = data_path or str(DATA_DIR / f"prepared_dataset_{genre}.jsonl")
+        target_output_dir = output_dir or str(OUTPUTS_DIR / f"sft_qwen_{genre}")
+        target_save_dir = save_dir or str(MODELS_DIR / f"sft_rap_qwen_{genre}")
+    else:
+        target_data_path = data_path or DATA_PATH
+        target_output_dir = output_dir or OUTPUT_DIR
+        target_save_dir = save_dir or SAVE_DIR
+
     tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(
         MODEL_ID, padding_side="right"
     )
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
+    print(f"[dataset] data_path={target_data_path}")
+    print(f"[output] output_dir={target_output_dir}")
+    print(f"[save] save_dir={target_save_dir}")
 
-    raw = Dataset.from_json(DATA_PATH)
+    raw = Dataset.from_json(target_data_path)
     if "messages" not in raw.column_names:
-        raise ValueError("prepared_dataset.jsonl must contain a 'messages' column. Regenerate it with prepare_dataset.py.")
+        raise ValueError(f"{target_data_path} must contain a 'messages' column. Regenerate it with prepare_dataset.py.")
 
     split = raw.train_test_split(test_size=EVAL_RATIO, seed=SEED)
     train_raw, eval_raw = split["train"], split["test"]
@@ -132,7 +154,7 @@ def train_sft():
     data_collator = _make_data_collator(tokenizer)
 
     training_args = TrainingArguments(
-        output_dir=OUTPUT_DIR,
+        output_dir=target_output_dir,
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=8,
@@ -145,9 +167,9 @@ def train_sft():
         weight_decay=0.05,
         logging_steps=10,
         eval_strategy="steps",
-        eval_steps=10,
+        eval_steps=20,
         save_strategy="steps",
-        save_steps=10,
+        save_steps=20,
         save_total_limit=3,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
@@ -166,7 +188,7 @@ def train_sft():
     )
 
     import glob
-    ckpts = sorted(glob.glob(f"{OUTPUT_DIR}/checkpoint-*"),
+    ckpts = sorted(glob.glob(f"{target_output_dir}/checkpoint-*"),
                    key=lambda p: int(p.rsplit("-", 1)[-1]))
     resume = ckpts[-1] if ckpts else None
     print(f"Starting SFT ({MODEL_ID}) — train={len(train_ds)} eval={len(eval_ds)}")
@@ -174,10 +196,24 @@ def train_sft():
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
 
-    trainer.save_model(SAVE_DIR)
-    tokenizer.save_pretrained(SAVE_DIR)
-    print(f"SFT done -> {SAVE_DIR}")
+    trainer.save_model(target_save_dir)
+    tokenizer.save_pretrained(target_save_dir)
+    print(f"SFT done -> {target_save_dir}")
 
 
 if __name__ == "__main__":
-    train_sft()
+    import argparse
+    parser = argparse.ArgumentParser(description="Qwen SFT Training")
+    parser.add_argument("--genre", choices=["boombap", "trap"], default=None, help="Train specifically for boombap or trap")
+    parser.add_argument("--data-path", default=None, help="Path to jsonl dataset")
+    parser.add_argument("--output-dir", default=None, help="Path for training checkpoints")
+    parser.add_argument("--save-dir", default=None, help="Path to save final adapter")
+    args = parser.parse_args()
+
+    train_sft(
+        genre=args.genre,
+        data_path=args.data_path,
+        output_dir=args.output_dir,
+        save_dir=args.save_dir,
+    )
+

@@ -52,7 +52,7 @@ def validate_first_bar_start(value: float) -> float:
     return value
 
 
-def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voicebank_id: str) -> None:
+def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voicebank_id: str, genre: str = "boom_bap") -> None:
     profile = VOICEBANK_PROFILES[voicebank_id]
     build_flow_plan(
         lyrics,
@@ -60,6 +60,7 @@ def validate_guide_flow(lyrics: str, bpm: int, first_bar_start_sec: float, voice
         first_bar_start_sec,
         voicebank_id,
         base_f0_hz=profile.base_f0_hz,
+        genre=genre,
     )
 
 
@@ -83,8 +84,11 @@ def run_guide_demo_generation(
     bpm: int,
     first_bar_start_sec: float,
     voicebank_id: str,
+    genre: str = "boom_bap",
     rvc_model_id: str | None = None,
+    use_index: bool | None = None,
 ) -> None:
+    # pyrefly: ignore [missing-import]
     import redis
 
     settings = get_settings()
@@ -109,6 +113,7 @@ def run_guide_demo_generation(
             first_bar_start_sec,
             voicebank_id,
             base_f0_hz=profile.base_f0_hz,
+            genre=genre,
         )
         flow_plan_path = work_path / "flow-plan.json"
         score_path = work_path / "score.ds"
@@ -144,9 +149,10 @@ def run_guide_demo_generation(
                 voicebank=voicebank_id,
             )
             rvc_vocal_path = work_path / "vocal_rvc.wav"
-            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id)
+            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id, use_index=use_index)
             vocal_path = rvc_vocal_path
-            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}"
+            index_tag = " (인덱스 적용)" if use_index else ""
+            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}{index_tag}"
 
         _set_status(
             redis_client,
@@ -158,8 +164,15 @@ def run_guide_demo_generation(
             voicebank=voicebank_id,
         )
         output_path = mix_demo_audio(work_path / "beat_segment.wav", vocal_path, work_path)
+        line_count = len([
+            line
+            for line in lyrics.splitlines()
+            if line.strip() and not line.strip().lower().startswith("[verse")
+        ])
+        bar_count = len(plan.bars)
+        rule_desc = "2줄=1마디(트랩)" if line_count == 16 else "1줄=1마디(붐뱁)"
         notes = [
-            "편집된 8줄을 1줄=1마디로 렌더링했습니다.",
+            f"편집된 {line_count}줄({bar_count}마디, {rule_desc})을 렌더링했습니다.",
             f"첫 마디 시작: {first_bar_start_sec:.3f}초",
             f"DiffSinger 보이스뱅크: {profile.label}",
         ]
@@ -232,7 +245,7 @@ def render_diffsinger(score_path: Path, output_path: Path, voicebank_id: str) ->
             timeout=settings.diffsinger_timeout_seconds,
         )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("DiffSinger 8마디 렌더링 시간이 초과되었습니다.") from exc
+        raise RuntimeError("DiffSinger 렌더링 시간이 초과되었습니다.") from exc
     except subprocess.CalledProcessError as exc:
         detail = exc.stderr.strip() or exc.stdout.strip() or "DiffSinger rendering failed."
         raise RuntimeError(detail[-4000:]) from exc
@@ -339,9 +352,18 @@ def enqueue_guide_demo(
     bpm: int,
     first_bar_start_sec: float,
     voicebank_id: str,
+    genre: str = "boom_bap",
+    rvc_model_id: str | None = None,
+    use_index: bool | None = None,
 ) -> None:
+    # pyrefly: ignore [missing-import]
     from rq import Queue
 
+    line_count = len([
+        line
+        for line in lyrics.splitlines()
+        if line.strip() and not line.strip().lower().startswith("[verse")
+    ])
     status_key = f"{DEMO_STATUS_KEY_PREFIX}{job_id}"
     redis_client.hset(
         status_key,
@@ -352,7 +374,7 @@ def enqueue_guide_demo(
             "bpm": str(bpm),
             "lyrics": lyrics,
             "voicebank": voicebank_id,
-            "notes": json.dumps(["8마디 SVS 작업이 대기열에 등록되었습니다."], ensure_ascii=False),
+            "notes": json.dumps([f"{line_count}마디 SVS 작업이 대기열에 등록되었습니다."], ensure_ascii=False),
         },
     )
     redis_client.expire(status_key, 60 * 60)
@@ -365,6 +387,9 @@ def enqueue_guide_demo(
         bpm,
         first_bar_start_sec,
         voicebank_id,
+        genre,
+        rvc_model_id,
+        use_index,
         job_id=job_id,
         job_timeout=get_settings().diffsinger_timeout_seconds + 120,
     )

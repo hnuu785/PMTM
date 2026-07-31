@@ -18,9 +18,10 @@ class Settings(BaseSettings):
     diffsinger_voicebank_root: str = "../pmtm-svs/voicebanks"
     diffsinger_device: str = "auto"
     diffsinger_timeout_seconds: int = 900
-    rvc_python_path: str = "../pmtm-svs/.venv/bin/python"
-    rvc_model_root: str = "../pmtm-svs/rvc_models"
+    rvc_python_path: str = "../Applio/.venv/bin/python"
+    rvc_model_root: str = "../Applio/logs"
     rvc_device: str = "auto"
+    rvc_use_index: bool = False
     rvc_timeout_seconds: int = 300
 
 

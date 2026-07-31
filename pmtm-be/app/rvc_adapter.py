@@ -1,3 +1,4 @@
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,17 +52,21 @@ def render_rvc(
     output_vocal_path: Path,
     rvc_model_id: str,
     pitch_shift: int = 0,
-    f0_method: str = "pm",
+    f0_method: str = "rmvpe",
+    use_index: bool | None = None,
 ) -> None:
     settings = get_settings()
     project_root = Path(__file__).resolve().parents[2]
     python_path = resolve_configured_path(settings.rvc_python_path, project_root / "pmtm-be")
     rvc_root = resolve_configured_path(settings.rvc_model_root, project_root / "pmtm-be")
     model_dir = rvc_root / rvc_model_id
-    infer_script = project_root / "pmtm-svs" / "rvc_infer.py"
+    applio_dir = project_root / "Applio"
+    applio_core = applio_dir / "core.py"
 
     if not python_path.is_file():
         raise RuntimeError(f"RVC Python runtime not found: {python_path}")
+    if not applio_core.is_file():
+        raise RuntimeError(f"Applio core script not found: {applio_core}")
     if not model_dir.is_dir():
         raise RuntimeError(f"RVC model directory not found: {model_dir}")
 
@@ -70,28 +75,36 @@ def render_rvc(
         raise RuntimeError(f"No .pth model file found in RVC model dir: {model_dir}")
     model_pth = pth_files[0]
 
+    should_use_index = settings.rvc_use_index if use_index is None else use_index
     index_files = list(model_dir.glob("*.index"))
-    index_file = index_files[0] if index_files else None
+    index_file = index_files[0] if (index_files and should_use_index) else None
+
+    valid_f0_methods = {"crepe", "crepe-tiny", "rmvpe", "fcpe"}
+    selected_f0 = f0_method if f0_method in valid_f0_methods else "rmvpe"
 
     command = [
-        str(python_path),
-        str(infer_script),
-        "--input",
-        str(input_vocal_path),
-        "--output",
-        str(output_vocal_path),
-        "--model-pth",
-        str(model_pth),
-        "--pitch-shift",
+        str(python_path.absolute()),
+        str(applio_core.resolve()),
+        "infer",
+        "--input-path",
+        str(input_vocal_path.resolve()),
+        "--output-path",
+        str(output_vocal_path.resolve()),
+        "--pth-path",
+        str(model_pth.resolve()),
+        "--index-path",
+        str(index_file.resolve()) if index_file else "",
+        "--pitch",
         str(pitch_shift),
         "--f0-method",
-        f0_method,
-        "--device",
-        settings.rvc_device,
+        selected_f0,
     ]
 
-    if index_file:
-        command.extend(["--index-file", str(index_file)])
+    env = {
+        **os.environ,
+        "OMP_NUM_THREADS": "1",
+        "KMP_DUPLICATE_LIB_OK": "TRUE",
+    }
 
     try:
         subprocess.run(
@@ -99,6 +112,8 @@ def render_rvc(
             check=True,
             capture_output=True,
             text=True,
+            cwd=str(applio_dir),
+            env=env,
             timeout=settings.rvc_timeout_seconds,
         )
     except subprocess.TimeoutExpired as exc:

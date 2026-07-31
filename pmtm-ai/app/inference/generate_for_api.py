@@ -6,6 +6,7 @@ from app.inference.device import model_device, move_model_to_device, select_infe
 from app.inference.generate import DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE, DEFAULT_TOP_P
 from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
 from app.paths import MODEL_ID
+from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
 PROMPT_FORMATS = ("auto", "chat", "raw")
 
@@ -25,6 +26,12 @@ def parse_args():
     p.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Sampling temperature")
     p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P, help="Top-p sampling")
     p.add_argument("--repetition-penalty", type=float, default=DEFAULT_REPETITION_PENALTY, help="Repetition penalty for generation")
+    p.add_argument(
+        "--num-candidates",
+        type=int,
+        default=4,
+        help="Number of candidates to generate for Best-of-N reward selection (default: 4)",
+    )
     p.add_argument(
         "--print-prompt",
         action="store_true",
@@ -132,7 +139,16 @@ def build_model(base_model: str, adapter_path: Path | None):
 
 
 
-def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperature: float, top_p: float, repetition_penalty: float = 1.1) -> str:
+def generate_candidate_texts(
+    tokenizer,
+    model,
+    prompt: str,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    repetition_penalty: float = 1.1,
+    num_candidates: int = 4,
+) -> list[str]:
     # pyrefly: ignore [missing-import]
     import torch
 
@@ -142,13 +158,40 @@ def generate_text(tokenizer, model, prompt: str, max_new_tokens: int, temperatur
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=True,
+            num_return_sequences=num_candidates,
             temperature=temperature,
             top_p=top_p,
             repetition_penalty=repetition_penalty,
             pad_token_id=tokenizer.eos_token_id,
         )
-    generated = output[0][inputs["input_ids"].shape[1]:]
-    return tokenizer.decode(generated, skip_special_tokens=True).strip()
+    prompt_len = inputs["input_ids"].shape[1]
+    candidates = []
+    for i in range(len(output)):
+        gen = output[i][prompt_len:]
+        candidates.append(tokenizer.decode(gen, skip_special_tokens=True).strip())
+    return candidates
+
+
+def generate_text(
+    tokenizer,
+    model,
+    prompt: str,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    repetition_penalty: float = 1.1,
+) -> str:
+    cands = generate_candidate_texts(
+        tokenizer,
+        model,
+        prompt,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        repetition_penalty=repetition_penalty,
+        num_candidates=1,
+    )
+    return cands[0]
 
 
 import re
@@ -172,6 +215,51 @@ def post_process_lyrics(raw_text: str) -> str:
     return "\n".join(lines)
 
 
+def score_lyric_completion(raw_text: str, bpm: float | None = None) -> float:
+    """
+    생성된 가사(raw_text)의 라임 밀도와 구조적 완성도를 채점하여 Reward 점수를 반환합니다.
+    (GRPO 학습 시 rhyme_reward 채점 기준과 동일)
+    """
+    clean_text = post_process_lyrics(raw_text)
+    lines = [line.strip() for line in clean_text.split("\n") if line.strip()]
+    if not lines:
+        return -1.0
+
+    # 1) 공백/특수문자 제거 정규화 문장 기반 중복 줄 수 계산 및 페널티 부여
+    norm_lines = [re.sub(r"[^\w]", "", line) for line in lines if line.strip()]
+    dup_count = (len(norm_lines) - len(set(norm_lines))) if norm_lines else 0
+
+    if dup_count == 0:
+        dup_penalty = 0.0
+    elif dup_count == 1:
+        dup_penalty = 0.2
+    elif dup_count == 2:
+        dup_penalty = 0.5
+    elif dup_count == 3:
+        dup_penalty = 0.8
+    else:
+        dup_penalty = 1.2
+
+    # 2) 전체 생성 라인의 라임 밀도 계산
+    rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
+
+    final_reward = rhyme_score - dup_penalty
+    return float(final_reward)
+
+
+def select_best_candidate(candidates: list[str], bpm: float | None = None) -> tuple[str, float, list[tuple[str, float]]]:
+    """
+    생성된 후보 가사(candidates) 리스트 중 reward가 가장 높은 후보와 점수 목록을 반환합니다.
+    """
+    scored = []
+    for cand in candidates:
+        reward = score_lyric_completion(cand, bpm=bpm)
+        scored.append((cand, reward))
+
+    best_cand, best_reward = max(scored, key=lambda item: item[1])
+    return best_cand, best_reward, scored
+
+
 def main():
     args = parse_args()
     adapter_path = Path(args.adapter).expanduser().resolve() if args.adapter else None
@@ -193,7 +281,8 @@ def main():
         print(prompt, file=sys.stderr)
         print("-" * 60, file=sys.stderr)
 
-    text = generate_text(
+    num_candidates = max(1, getattr(args, "num_candidates", 4))
+    candidates = generate_candidate_texts(
         tokenizer,
         model,
         prompt,
@@ -201,13 +290,24 @@ def main():
         temperature=args.temperature,
         top_p=args.top_p,
         repetition_penalty=args.repetition_penalty,
+        num_candidates=num_candidates,
     )
-    
+
+    best_cand, best_reward, scored = select_best_candidate(candidates, bpm=args.bpm)
+
     import sys
-    print("=== Raw Generated Output ===", file=sys.stderr)
-    print(text, file=sys.stderr)
-    print(post_process_lyrics(text))
+    print(f"=== Generated {len(candidates)} Candidates ===", file=sys.stderr)
+    for idx, (cand, reward) in enumerate(scored, 1):
+        print(f"--- Candidate {idx} (Reward: {reward:+.4f}) ---", file=sys.stderr)
+        print(cand, file=sys.stderr)
+
+    print("-" * 60, file=sys.stderr)
+    print(f"★ Selected Best Candidate (Reward: {best_reward:+.4f})", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
+
+    print(post_process_lyrics(best_cand))
 
 
 if __name__ == "__main__":
     main()
+

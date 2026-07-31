@@ -1,0 +1,926 @@
+{
+  "version": 1,
+  "sourceAudio": "90_boombap.mp3",
+  "bpm": 91.0,
+  "timeSignature": "4/4",
+  "gridResolution": 16,
+  "genre": "boom_bap",
+  "voicebank": "potg",
+  "bars": [
+    {
+      "bar": 1,
+      "text": "나는 비트 위를 달려",
+      "pronunciation": "나는 비트 위를 달려",
+      "startSec": 0.0813,
+      "endSec": 2.718663,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "나",
+          "slot": 0,
+          "onsetSec": 0.0813,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "n",
+            "a"
+          ]
+        },
+        {
+          "syllable": "는",
+          "slot": 2,
+          "onsetSec": 0.4109,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "n",
+            "eu",
+            "n"
+          ]
+        },
+        {
+          "syllable": "비",
+          "slot": 4,
+          "onsetSec": 0.7406,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "i"
+          ]
+        },
+        {
+          "syllable": "트",
+          "slot": 6,
+          "onsetSec": 1.0703,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "t",
+            "eu"
+          ]
+        },
+        {
+          "syllable": "위",
+          "slot": 8,
+          "onsetSec": 1.4,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "ui"
+          ]
+        },
+        {
+          "syllable": "를",
+          "slot": 9,
+          "onsetSec": 1.5648,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "달",
+          "slot": 12,
+          "onsetSec": 2.0593,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": true,
+          "phonemes": [
+            "d",
+            "a",
+            "l"
+          ]
+        },
+        {
+          "syllable": "려",
+          "slot": 13,
+          "onsetSec": 2.2241,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164892,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "ieo"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 2,
+      "text": "고개를 들고 앞을 봐",
+      "pronunciation": "고개를 들고 아플 봐",
+      "startSec": 2.7186,
+      "endSec": 5.355963,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "고",
+          "slot": 0,
+          "onsetSec": 2.7186,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "o"
+          ]
+        },
+        {
+          "syllable": "개",
+          "slot": 2,
+          "onsetSec": 3.0483,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "e"
+          ]
+        },
+        {
+          "syllable": "를",
+          "slot": 4,
+          "onsetSec": 3.378,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "들",
+          "slot": 6,
+          "onsetSec": 3.7076,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "d",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "고",
+          "slot": 8,
+          "onsetSec": 4.0373,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "o"
+          ]
+        },
+        {
+          "syllable": "아",
+          "slot": 9,
+          "onsetSec": 4.2021,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16493,
+          "accent": false,
+          "phonemes": [
+            "a"
+          ]
+        },
+        {
+          "syllable": "플",
+          "slot": 12,
+          "onsetSec": 4.6967,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": true,
+          "phonemes": [
+            "p",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "봐",
+          "slot": 13,
+          "onsetSec": 4.8615,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164792,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "oa"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 3,
+      "text": "작은 불씨 크게 번져",
+      "pronunciation": "자근 불씨 크게 번저",
+      "startSec": 5.356,
+      "endSec": 7.993363,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "자",
+          "slot": 0,
+          "onsetSec": 5.356,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "jh",
+            "a"
+          ]
+        },
+        {
+          "syllable": "근",
+          "slot": 2,
+          "onsetSec": 5.6857,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "eu",
+            "n"
+          ]
+        },
+        {
+          "syllable": "불",
+          "slot": 4,
+          "onsetSec": 6.0153,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "u",
+            "l"
+          ]
+        },
+        {
+          "syllable": "씨",
+          "slot": 6,
+          "onsetSec": 6.345,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "s",
+            "i"
+          ]
+        },
+        {
+          "syllable": "크",
+          "slot": 8,
+          "onsetSec": 6.6747,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "k",
+            "eu"
+          ]
+        },
+        {
+          "syllable": "게",
+          "slot": 9,
+          "onsetSec": 6.8395,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "e"
+          ]
+        },
+        {
+          "syllable": "번",
+          "slot": 12,
+          "onsetSec": 7.334,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "eo",
+            "n"
+          ]
+        },
+        {
+          "syllable": "저",
+          "slot": 13,
+          "onsetSec": 7.4989,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164792,
+          "accent": true,
+          "phonemes": [
+            "jh",
+            "eo"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 4,
+      "text": "흔들림 없이 길을 가",
+      "pronunciation": "흔들림 업씨 기를 가",
+      "startSec": 7.9934,
+      "endSec": 10.630763,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "흔",
+          "slot": 0,
+          "onsetSec": 7.9934,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "hh",
+            "eu",
+            "n"
+          ]
+        },
+        {
+          "syllable": "들",
+          "slot": 2,
+          "onsetSec": 8.323,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "d",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "림",
+          "slot": 4,
+          "onsetSec": 8.6527,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "i",
+            "m"
+          ]
+        },
+        {
+          "syllable": "업",
+          "slot": 6,
+          "onsetSec": 8.9824,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "eo",
+            "pcl"
+          ]
+        },
+        {
+          "syllable": "씨",
+          "slot": 8,
+          "onsetSec": 9.312,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": false,
+          "phonemes": [
+            "s",
+            "i"
+          ]
+        },
+        {
+          "syllable": "기",
+          "slot": 9,
+          "onsetSec": 9.4769,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "i"
+          ]
+        },
+        {
+          "syllable": "를",
+          "slot": 12,
+          "onsetSec": 9.9714,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "가",
+          "slot": 13,
+          "onsetSec": 10.1362,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164892,
+          "accent": true,
+          "phonemes": [
+            "g",
+            "a"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 5,
+      "text": "다시 박자 위에 올라",
+      "pronunciation": "다시 박짜 위에 올라",
+      "startSec": 10.6307,
+      "endSec": 13.268063,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "다",
+          "slot": 0,
+          "onsetSec": 10.6307,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "d",
+            "a"
+          ]
+        },
+        {
+          "syllable": "시",
+          "slot": 2,
+          "onsetSec": 10.9604,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "sc",
+            "i"
+          ]
+        },
+        {
+          "syllable": "박",
+          "slot": 4,
+          "onsetSec": 11.2901,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "a",
+            "kcl"
+          ]
+        },
+        {
+          "syllable": "짜",
+          "slot": 6,
+          "onsetSec": 11.6197,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "jj",
+            "a"
+          ]
+        },
+        {
+          "syllable": "위",
+          "slot": 8,
+          "onsetSec": 11.9494,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "ui"
+          ]
+        },
+        {
+          "syllable": "에",
+          "slot": 9,
+          "onsetSec": 12.1142,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "e"
+          ]
+        },
+        {
+          "syllable": "올",
+          "slot": 12,
+          "onsetSec": 12.6087,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": true,
+          "phonemes": [
+            "o",
+            "l"
+          ]
+        },
+        {
+          "syllable": "라",
+          "slot": 13,
+          "onsetSec": 12.7736,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164792,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "a"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 6,
+      "text": "숨을 고르고 말을 해",
+      "pronunciation": "수믈 고르고 마를 해",
+      "startSec": 13.2681,
+      "endSec": 15.905463,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "수",
+          "slot": 0,
+          "onsetSec": 13.2681,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "sc",
+            "u"
+          ]
+        },
+        {
+          "syllable": "믈",
+          "slot": 2,
+          "onsetSec": 13.5978,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "m",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "고",
+          "slot": 4,
+          "onsetSec": 13.9274,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "g",
+            "o"
+          ]
+        },
+        {
+          "syllable": "르",
+          "slot": 6,
+          "onsetSec": 14.2571,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "rx",
+            "eu"
+          ]
+        },
+        {
+          "syllable": "고",
+          "slot": 8,
+          "onsetSec": 14.5868,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "g",
+            "o"
+          ]
+        },
+        {
+          "syllable": "마",
+          "slot": 9,
+          "onsetSec": 14.7516,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "m",
+            "a"
+          ]
+        },
+        {
+          "syllable": "를",
+          "slot": 12,
+          "onsetSec": 15.2461,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "해",
+          "slot": 13,
+          "onsetSec": 15.4109,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164892,
+          "accent": true,
+          "phonemes": [
+            "hh",
+            "e"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 7,
+      "text": "오늘보다 멀리 날아",
+      "pronunciation": "오늘보다 멀리 나라",
+      "startSec": 15.9054,
+      "endSec": 18.542763,
+      "syllableCount": 8,
+      "densitySyllablesPerSec": 3.033,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "오",
+          "slot": 0,
+          "onsetSec": 15.9054,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "o"
+          ]
+        },
+        {
+          "syllable": "늘",
+          "slot": 2,
+          "onsetSec": 16.2351,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "n",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "보",
+          "slot": 4,
+          "onsetSec": 16.5648,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "b",
+            "o"
+          ]
+        },
+        {
+          "syllable": "다",
+          "slot": 6,
+          "onsetSec": 16.8945,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "d",
+            "a"
+          ]
+        },
+        {
+          "syllable": "멀",
+          "slot": 8,
+          "onsetSec": 17.2241,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": false,
+          "phonemes": [
+            "m",
+            "eo",
+            "l"
+          ]
+        },
+        {
+          "syllable": "리",
+          "slot": 9,
+          "onsetSec": 17.389,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.16483,
+          "accent": false,
+          "phonemes": [
+            "rx",
+            "i"
+          ]
+        },
+        {
+          "syllable": "나",
+          "slot": 12,
+          "onsetSec": 17.8835,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": true,
+          "phonemes": [
+            "n",
+            "a"
+          ]
+        },
+        {
+          "syllable": "라",
+          "slot": 13,
+          "onsetSec": 18.0483,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164792,
+          "accent": true,
+          "phonemes": [
+            "rx",
+            "a"
+          ]
+        }
+      ]
+    },
+    {
+      "bar": 8,
+      "text": "마지막까지 나를 믿어",
+      "pronunciation": "마지막까지 나를 미더",
+      "startSec": 18.5428,
+      "endSec": 21.180163,
+      "syllableCount": 9,
+      "densitySyllablesPerSec": 3.412,
+      "snareSlots": [
+        4,
+        12
+      ],
+      "placements": [
+        {
+          "syllable": "마",
+          "slot": 0,
+          "onsetSec": 18.5428,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "m",
+            "a"
+          ]
+        },
+        {
+          "syllable": "지",
+          "slot": 2,
+          "onsetSec": 18.8725,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "jh",
+            "i"
+          ]
+        },
+        {
+          "syllable": "막",
+          "slot": 4,
+          "onsetSec": 19.2021,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": true,
+          "phonemes": [
+            "m",
+            "a",
+            "kcl"
+          ]
+        },
+        {
+          "syllable": "까",
+          "slot": 5,
+          "onsetSec": 19.367,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": true,
+          "phonemes": [
+            "kk",
+            "a"
+          ]
+        },
+        {
+          "syllable": "지",
+          "slot": 7,
+          "onsetSec": 19.6967,
+          "durationSec": 0.14832,
+          "restAfterSec": 0.01648,
+          "accent": false,
+          "phonemes": [
+            "jh",
+            "i"
+          ]
+        },
+        {
+          "syllable": "나",
+          "slot": 8,
+          "onsetSec": 19.8615,
+          "durationSec": 0.29673,
+          "restAfterSec": 0.03297,
+          "accent": false,
+          "phonemes": [
+            "n",
+            "a"
+          ]
+        },
+        {
+          "syllable": "를",
+          "slot": 10,
+          "onsetSec": 20.1912,
+          "durationSec": 0.29664,
+          "restAfterSec": 0.03296,
+          "accent": false,
+          "phonemes": [
+            "rx",
+            "eu",
+            "l"
+          ]
+        },
+        {
+          "syllable": "미",
+          "slot": 12,
+          "onsetSec": 20.5208,
+          "durationSec": 0.14841,
+          "restAfterSec": 0.01649,
+          "accent": true,
+          "phonemes": [
+            "m",
+            "i"
+          ]
+        },
+        {
+          "syllable": "더",
+          "slot": 13,
+          "onsetSec": 20.6857,
+          "durationSec": 0.32967,
+          "restAfterSec": 0.164792,
+          "accent": true,
+          "phonemes": [
+            "d",
+            "eo"
+          ]
+        }
+      ]
+    }
+  ]
+}

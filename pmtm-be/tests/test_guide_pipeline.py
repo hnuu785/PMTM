@@ -9,8 +9,13 @@ from fastapi.testclient import TestClient
 from app import main
 from app import guide_pipeline
 from app.flow_adapter import (
+    MIN_VOWEL_DUR_SEC,
+    _english_word_to_syllables,
+    _get_word_syllable_weights,
+    _phoneme_weight,
     _syllable_to_phonemes,
     build_flow_plan,
+    convert_numbers_to_hangul,
     parse_eight_bar_lyrics,
     write_diffsinger_ds,
 )
@@ -31,6 +36,38 @@ EIGHT_BARS = "\n".join(
 
 
 class FlowAdapterTests(unittest.TestCase):
+    def test_all_syllable_word_weights_flattened(self):
+        for count in range(1, 6):
+            self.assertEqual(_get_word_syllable_weights(count), [1.0] * count)
+
+    def test_phoneme_weight_rebalanced_for_vowels_and_codas(self):
+        # Vowels (mono & compound) get 0.68
+        self.assertEqual(_phoneme_weight("a"), 0.68)
+        self.assertEqual(_phoneme_weight("oe"), 0.68)
+        # Coda consonants (ng, l, n, m, kcl, etc.) get 0.14
+        self.assertEqual(_phoneme_weight("ng"), 0.14)
+        self.assertEqual(_phoneme_weight("l"), 0.14)
+        self.assertEqual(_phoneme_weight("n"), 0.14)
+        # Onset consonants get 0.18
+        self.assertEqual(_phoneme_weight("rx"), 0.18)
+        self.assertEqual(_phoneme_weight("sc"), 0.18)
+
+    def test_min_vowel_dur_sec_constant(self):
+        self.assertEqual(MIN_VOWEL_DUR_SEC, 0.085)
+
+    def test_english_word_phoneme_mapping_to_potg(self):
+        # 'love' -> ['l', 'eo', 'b']
+        self.assertEqual(_english_word_to_syllables("love"), [["l", "eo", "b"]])
+        # 'beat' -> ['b', 'i', 't']
+        self.assertEqual(_english_word_to_syllables("beat"), [["b", "i", "t"]])
+
+    def test_korean_number_conversion(self):
+        self.assertEqual(convert_numbers_to_hangul("1 2 3"), "일 이 삼")
+        self.assertEqual(convert_numbers_to_hangul("10"), "십")
+        self.assertEqual(convert_numbers_to_hangul("100"), "백")
+        self.assertEqual(convert_numbers_to_hangul("1000"), "천")
+        self.assertEqual(convert_numbers_to_hangul("1234"), "천이백삼십사")
+
     def test_korean_phonemes_match_potg_inventory(self):
         self.assertEqual(_syllable_to_phonemes("각"), ["g", "a", "kcl"])
         self.assertEqual(_syllable_to_phonemes("시"), ["sh", "i"])
@@ -75,7 +112,7 @@ class FlowAdapterTests(unittest.TestCase):
         lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "I'm on my way to the future")
         plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
         self.assertEqual(len(plan.bars), 8)
-        self.assertIn("ay", [p.symbol for p in plan.bars[0].phonemes])
+        self.assertIn("a", [p.symbol for p in plan.bars[0].phonemes])
 
     def test_flow_plan_rejects_unsupported_characters(self):
         lyrics = EIGHT_BARS.replace("나는 비트 위를 달려", "나는 🚀 위를 달려")
@@ -127,7 +164,7 @@ class FlowAdapterTests(unittest.TestCase):
         ])
         plan = build_flow_plan(test_lyrics, 90, 0, "potg", base_f0_hz=190.0)
         bar0 = plan.bars[0]
-        self.assertIn("adaptive_hierarchical_13syl_5words", bar0.template)
+        self.assertIn("adaptive_hierarchical_boom_bap_13syl_5words", bar0.template)
         # Check that inter-word SPs are removed for legato flow (only lead & tail SP remain)
         sp_count = sum(1 for p in bar0.phonemes if p.symbol == "SP")
         self.assertEqual(sp_count, 2)
@@ -151,7 +188,7 @@ class FlowAdapterTests(unittest.TestCase):
         ])
         plan = build_flow_plan(dense_130bpm, 130, 0, "potg", base_f0_hz=190.0)
         bar0 = plan.bars[0]
-        self.assertIn("adaptive_hierarchical_13syl", bar0.template)
+        self.assertIn("13syl", bar0.template)
         # Ensure total duration matches bar duration
         self.assertAlmostEqual(
             sum(p.durationSec for p in bar0.phonemes),
@@ -202,6 +239,39 @@ class FlowAdapterTests(unittest.TestCase):
             len(sections[0]["f0_seq"].split()),
             len(sections[0]["energy"].split()),
         )
+
+    def test_kiwi_morpheme_stress_and_dynamic_pitch_cadence(self):
+        plan = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0)
+        bar0 = plan.bars[0]
+        self.assertIsNotNone(bar0.noteSeq)
+        self.assertIn("rest", bar0.noteSeq)
+        # Check pitch notes are unified to C4
+        self.assertTrue(all(note in ("C4", "D4", "D#4", "rest") for note in bar0.noteSeq))
+
+
+    def test_genre_boom_bap_vs_trap_timing_modulation(self):
+        plan_bb = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0, genre="boom_bap")
+        plan_trap = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0, genre="trap")
+        self.assertEqual(plan_bb.genre, "boom_bap")
+        self.assertEqual(plan_trap.genre, "trap")
+        # Check template names reflect the genre
+        self.assertIn("boom_bap", plan_bb.bars[0].template)
+        self.assertIn("trap", plan_trap.bars[0].template)
+        # Compare phoneme durations between boom_bap (layback) and trap (early push)
+        dur_bb = [p.durationSec for p in plan_bb.bars[0].phonemes]
+        dur_trap = [p.durationSec for p in plan_trap.bars[0].phonemes]
+        self.assertNotEqual(dur_bb, dur_trap)
+
+    def test_sixteen_lines_trap_pairs_two_lines_per_bar(self):
+        sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
+        plan = build_flow_plan(sixteen_bars, 120, 1.25, "potg", base_f0_hz=190.0, genre="trap")
+        # 16 lines should combine into 8 bars
+        self.assertEqual(plan.beatMap.barCount, 8)
+        self.assertEqual(len(plan.bars), 8)
+        self.assertEqual(plan.beatMap.beatsPerBar, 4)
+        # Bar 0 should contain text of both line 1 and line 2 (G2P transformed)
+        self.assertIn("나는 비트 위를 달려", plan.bars[0].text)
+        self.assertIn("고개를 들고", plan.bars[0].text)
 
     def test_f0_curve_is_flat(self):
         from app.flow_adapter import _build_f0_curve
@@ -261,6 +331,33 @@ class GuideDemoApiTests(unittest.TestCase):
         self.assertEqual(enqueue.call_args.args[5], 92)
         self.assertEqual(enqueue.call_args.args[6], 3.25)
         self.assertEqual(enqueue.call_args.args[7], "rang")
+        self.assertEqual(enqueue.call_args.kwargs.get("genre"), "boom_bap")
+
+    def test_guide_demo_enqueues_sixteen_lines_as_trap(self):
+        client = TestClient(main.app)
+        redis_client = mock.Mock()
+        sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
+        with (
+            TemporaryDirectory() as storage_dir,
+            mock.patch.object(main, "DEMO_STORAGE_ROOT", Path(storage_dir)),
+            mock.patch.object(main, "_get_redis_client", return_value=redis_client),
+            mock.patch.object(main, "enqueue_guide_demo") as enqueue,
+        ):
+            response = client.post(
+                "/api/v1/guide-demos",
+                data={
+                    "lyrics": sixteen_bars,
+                    "bpm": "130",
+                    "firstBarStartSec": "1.0",
+                    "voicebank": "potg",
+                },
+                files={"beat": ("beat.wav", b"audio bytes", "audio/wav")},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "queued")
+        enqueue.assert_called_once()
+        self.assertEqual(enqueue.call_args.kwargs.get("genre"), "trap")
 
     def test_guide_demo_rejects_seven_lines(self):
         client = TestClient(main.app)

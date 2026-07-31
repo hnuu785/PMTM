@@ -22,6 +22,10 @@ def _match_with_offset(p1: list[dict], p2: list[dict], offset1: int, offset2: in
     min_len = min(len(sub_p1), len(sub_p2), 3)
     if min_len <= 0:
         return 0.0
+
+    # 맨 끝 음절(앵커 음절) 불일치 시 라임 미성립 (0.0 반환)
+    if calculate_syllable_score(sub_p1[-1], sub_p2[-1]) == 0.0:
+        return 0.0
         
     total_score = 0.0
     for i in range(1, min_len + 1):

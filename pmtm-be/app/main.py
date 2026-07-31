@@ -39,10 +39,11 @@ from app.guide_pipeline import validate_bpm as validate_guide_bpm
 from app.guide_pipeline import validate_first_bar_start
 from app.guide_pipeline import validate_guide_flow
 from app.guide_pipeline import validate_voicebank
+from app.rvc_adapter import list_rvc_models
 from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
-from app.schemas import VoicebankResponse
+from app.schemas import RvcModelResponse, VoicebankResponse
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -91,12 +92,14 @@ def _list_available_models() -> list[dict]:
             "name": "Qwen local",
             "detail": "Qwen2.5-3B-Instruct",
             "type": "local",
+            "genre": "all",
         },
         {
             "id": "openai",
             "name": "OpenAI",
             "detail": settings.openai_model,
             "type": "api",
+            "genre": "all",
         },
     ]
 
@@ -109,11 +112,20 @@ def _list_available_models() -> list[dict]:
             rel_path = adapter_dir.relative_to(project_root / "pmtm-ai")
             rel_path_str = rel_path.as_posix()
             display_name = rel_path_str.replace("models/", "")
+            lower_name = rel_path_str.lower()
+            if "boombap" in lower_name or "boom_bap" in lower_name:
+                genre = "boombap"
+            elif "trap" in lower_name:
+                genre = "trap"
+            else:
+                genre = "all"
+
             models.append({
                 "id": rel_path_str,
                 "name": display_name,
                 "detail": f"Qwen + {display_name}",
                 "type": "adapter",
+                "genre": genre,
             })
 
     base_models = models[:2]
@@ -235,19 +247,34 @@ def get_guide_voicebanks() -> list[VoicebankResponse]:
     return [VoicebankResponse(**item) for item in list_voicebanks()]
 
 
+@app.get("/api/v1/guide-demos/rvc-models", response_model=list[RvcModelResponse])
+def get_guide_rvc_models() -> list[RvcModelResponse]:
+    return [RvcModelResponse(**item) for item in list_rvc_models()]
+
+
 @app.post("/api/v1/guide-demos", response_model=DemoGenerateResponse)
 async def generate_guide_demo(
     lyrics: str = Form(...),
     bpm: int = Form(...),
     firstBarStartSec: float = Form(...),
     voicebank: str = Form("potg"),
+    rvcModelId: str | None = Form(None),
+    useIndex: bool = Form(False),
+    genre: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
     try:
         bpm_value = validate_guide_bpm(bpm)
         first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
         voicebank_id = validate_voicebank(voicebank)
-        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id)
+        rvc_model_id = rvcModelId.strip() if rvcModelId and rvcModelId.strip() else None
+        lines = [
+            line.strip()
+            for line in lyrics.splitlines()
+            if line.strip() and not line.strip().lower().startswith("[verse")
+        ]
+        genre_value = genre.strip() if genre and genre.strip() else ("trap" if len(lines) == 16 else "boom_bap")
+        validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id, genre=genre_value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -265,6 +292,9 @@ async def generate_guide_demo(
             bpm_value,
             first_bar_start_sec,
             voicebank_id,
+            genre=genre_value,
+            rvc_model_id=rvc_model_id,
+            use_index=useIndex,
         )
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
@@ -322,6 +352,21 @@ def get_demo_flow_plan(job_id: str) -> FileResponse:
     raise HTTPException(status_code=404, detail="FlowPlan 파일을 찾을 수 없습니다.")
 
 
+def normalize_topic(raw_topic: str | None) -> str | None:
+    if not raw_topic:
+        return None
+    raw_topic = raw_topic.strip()
+    if not raw_topic:
+        return None
+    if raw_topic in ("자신감/성공", "비판/디스", "유흥/파티"):
+        return "자신감/성공"
+    elif raw_topic in ("사랑", "이별", "사랑/이별"):
+        return "사랑/이별"
+    elif raw_topic == "삶/성찰":
+        return "삶/성찰"
+    return raw_topic
+
+
 def _generate_verse_for_model(
     bpm: int,
     llm: LyricModel,
@@ -329,6 +374,7 @@ def _generate_verse_for_model(
     topic: str | None = None,
     bars: int | None = None,
 ) -> tuple[str, list[str]]:
+    topic = normalize_topic(topic)
     if llm == "openai":
         return _generate_openai_verse(bpm, topic=topic, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",

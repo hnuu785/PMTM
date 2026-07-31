@@ -74,6 +74,7 @@ DemoStatus = Literal[
     "planning",
     "voicing",
     "rendering",
+    "converting_rvc",
     "mixing",
     "succeeded",
     "failed",
@@ -104,4 +105,12 @@ class DemoStatusResponse(BaseModel):
 class VoicebankResponse(BaseModel):
     id: str
     label: str
+    available: bool
+
+
+class RvcModelResponse(BaseModel):
+    id: str
+    label: str
+    model_file: str
+    has_index: bool
     available: bool
