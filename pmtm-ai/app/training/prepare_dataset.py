@@ -237,9 +237,9 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                # 장르별 프롬프트 명시 범위 엄격 일치 필터링 (붐뱁 8~16음절, 트랩 6~14음절)
+                # 장르별 음절 허용 범위 (±1 마진 부여: 붐뱁 7~17음절, 트랩 5~15음절)
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s <= s <= max_s for s in syllables_list):
+                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 
