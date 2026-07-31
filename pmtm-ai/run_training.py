@@ -35,6 +35,13 @@ import sys
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
+if "--use-unsloth" in sys.argv:
+    try:
+        import unsloth  # noqa: F401
+    except ImportError:
+        pass
+
+
 
 def _bootstrap_experiment_name(argv: list[str]) -> None:
     for i, arg in enumerate(argv):
