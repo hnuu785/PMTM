@@ -200,6 +200,7 @@ def train_sft(
         greater_is_better=False,
         optim="paged_adamw_8bit",
         remove_unused_columns=False,
+        average_tokens_across_devices=False,
         report_to="none",
         seed=SEED,
     )
