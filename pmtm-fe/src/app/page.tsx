@@ -126,6 +126,9 @@ export default function Home() {
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
     DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
   );
+  const [rvcModelId, setRvcModelId] = useState("none");
+  const [useIndex, setUseIndex] = useState(false);
+  const [rvcModelOptions, setRvcModelOptions] = useState<VoicebankInfo[]>([]);
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
   const [lyricLines, setLyricLines] = useState<string[]>([]);
@@ -153,6 +156,17 @@ export default function Home() {
             ? firstAvailable.id
             : current,
         );
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/v1/guide-demos/rvc-models`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rvc lookup failed"))))
+      .then((items: VoicebankInfo[]) => {
+        setRvcModelOptions(items);
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -400,6 +414,10 @@ export default function Home() {
     body.append("bpm", String(result.bpm));
     body.append("firstBarStartSec", String(parsedStart));
     body.append("voicebank", voicebank);
+    if (rvcModelId && rvcModelId !== "none") {
+      body.append("rvcModelId", rvcModelId);
+      body.append("useIndex", String(useIndex));
+    }
 
     setError("");
     setIsGeneratingDemo(true);
@@ -789,7 +807,35 @@ export default function Home() {
                       ))}
                     </select>
                   </label>
-                  <label className="w-44">
+                  <label className="min-w-40 flex-1">
+                    <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
+                      RVC Voice Model
+                    </span>
+                    <select
+                      value={rvcModelId}
+                      onChange={(event) => setRvcModelId(event.target.value)}
+                      className="mt-2 h-10 w-full border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none focus:border-[#52d4c8]"
+                    >
+                      <option value="none">적용 안 함 (기본)</option>
+                      {rvcModelOptions.map((option) => (
+                        <option key={option.id} value={option.id} disabled={!option.available}>
+                          {option.label}{option.available ? "" : " (not installed)"}
+                        </option>
+                      ))}
+                    </select>
+                    {rvcModelId !== "none" && (
+                      <label className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#8fcac4] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useIndex}
+                          onChange={(e) => setUseIndex(e.target.checked)}
+                          className="h-3 w-3 rounded border-[#52d4c8]/35 bg-[#130806] accent-[#169c91]"
+                        />
+                        <span>인덱스 적용</span>
+                      </label>
+                    )}
+                  </label>
+                  <label className="w-36">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
                       First bar (sec)
                     </span>
