@@ -248,6 +248,7 @@ async def generate_guide_demo(
     firstBarStartSec: float = Form(...),
     voicebank: str = Form("potg"),
     rvcModelId: str | None = Form(None),
+    useIndex: bool = Form(False),
     genre: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
@@ -282,6 +283,7 @@ async def generate_guide_demo(
             voicebank_id,
             genre=genre_value,
             rvc_model_id=rvc_model_id,
+            use_index=useIndex,
         )
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc

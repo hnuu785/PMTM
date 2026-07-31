@@ -86,6 +86,7 @@ def run_guide_demo_generation(
     voicebank_id: str,
     genre: str = "boom_bap",
     rvc_model_id: str | None = None,
+    use_index: bool | None = None,
 ) -> None:
     # pyrefly: ignore [missing-import]
     import redis
@@ -148,9 +149,10 @@ def run_guide_demo_generation(
                 voicebank=voicebank_id,
             )
             rvc_vocal_path = work_path / "vocal_rvc.wav"
-            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id)
+            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id, use_index=use_index)
             vocal_path = rvc_vocal_path
-            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}"
+            index_tag = " (인덱스 적용)" if use_index else ""
+            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}{index_tag}"
 
         _set_status(
             redis_client,
@@ -352,6 +354,7 @@ def enqueue_guide_demo(
     voicebank_id: str,
     genre: str = "boom_bap",
     rvc_model_id: str | None = None,
+    use_index: bool | None = None,
 ) -> None:
     # pyrefly: ignore [missing-import]
     from rq import Queue
@@ -386,6 +389,7 @@ def enqueue_guide_demo(
         voicebank_id,
         genre,
         rvc_model_id,
+        use_index,
         job_id=job_id,
         job_timeout=get_settings().diffsinger_timeout_seconds + 120,
     )

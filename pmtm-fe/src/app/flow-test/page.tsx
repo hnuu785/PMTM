@@ -71,6 +71,7 @@ export default function FlowTestPage() {
   const [firstBarStartSec, setFirstBarStartSec] = useState("1.25");
   const [voicebank, setVoicebank] = useState("potg");
   const [rvcModelId, setRvcModelId] = useState("none");
+  const [useIndex, setUseIndex] = useState(false);
   const [beatFile, setBeatFile] = useState<File | null>(null);
   
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
@@ -221,6 +222,7 @@ export default function FlowTestPage() {
     body.append("voicebank", voicebank);
     if (rvcModelId && rvcModelId !== "none") {
       body.append("rvcModelId", rvcModelId);
+      body.append("useIndex", String(useIndex));
     }
     body.append("genre", lineCount === 16 ? "trap" : "boom_bap");
 
@@ -362,6 +364,17 @@ export default function FlowTestPage() {
                     </option>
                   ))}
                 </select>
+                {rvcModelId !== "none" && (
+                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-[#d8b993] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useIndex}
+                      onChange={(e) => setUseIndex(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-[#f5b950]/45 bg-[#130806] accent-[#ff5a1f]"
+                    />
+                    <span>인덱스 적용 (Feature Index)</span>
+                  </label>
+                )}
               </div>
             </div>
 

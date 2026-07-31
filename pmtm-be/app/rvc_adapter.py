@@ -1,3 +1,4 @@
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -82,22 +83,28 @@ def render_rvc(
     selected_f0 = f0_method if f0_method in valid_f0_methods else "rmvpe"
 
     command = [
-        str(python_path),
-        str(applio_core),
+        str(python_path.absolute()),
+        str(applio_core.resolve()),
         "infer",
         "--input-path",
-        str(input_vocal_path),
+        str(input_vocal_path.resolve()),
         "--output-path",
-        str(output_vocal_path),
+        str(output_vocal_path.resolve()),
         "--pth-path",
-        str(model_pth),
+        str(model_pth.resolve()),
         "--index-path",
-        str(index_file) if index_file else "",
+        str(index_file.resolve()) if index_file else "",
         "--pitch",
         str(pitch_shift),
         "--f0-method",
         selected_f0,
     ]
+
+    env = {
+        **os.environ,
+        "OMP_NUM_THREADS": "1",
+        "KMP_DUPLICATE_LIB_OK": "TRUE",
+    }
 
     try:
         subprocess.run(
@@ -106,6 +113,7 @@ def render_rvc(
             capture_output=True,
             text=True,
             cwd=str(applio_dir),
+            env=env,
             timeout=settings.rvc_timeout_seconds,
         )
     except subprocess.TimeoutExpired as exc:
