@@ -203,13 +203,24 @@ def train_sft(
         seed=SEED,
     )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        data_collator=data_collator,
-    )
+    if active_unsloth:
+        from trl import SFTTrainer
+        trainer = SFTTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            data_collator=data_collator,
+        )
+    else:
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            data_collator=data_collator,
+        )
+
 
     import glob
     ckpts = sorted(glob.glob(f"{target_output_dir}/checkpoint-*"),
