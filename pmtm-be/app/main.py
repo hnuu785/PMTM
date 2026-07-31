@@ -341,6 +341,21 @@ def get_demo_flow_plan(job_id: str) -> FileResponse:
     raise HTTPException(status_code=404, detail="FlowPlan 파일을 찾을 수 없습니다.")
 
 
+def normalize_topic(raw_topic: str | None) -> str | None:
+    if not raw_topic:
+        return None
+    raw_topic = raw_topic.strip()
+    if not raw_topic:
+        return None
+    if raw_topic in ("자신감/성공", "비판/디스", "유흥/파티"):
+        return "자신감/성공"
+    elif raw_topic in ("사랑", "이별", "사랑/이별"):
+        return "사랑/이별"
+    elif raw_topic == "삶/성찰":
+        return "삶/성찰"
+    return raw_topic
+
+
 def _generate_verse_for_model(
     bpm: int,
     llm: LyricModel,
@@ -348,6 +363,7 @@ def _generate_verse_for_model(
     topic: str | None = None,
     bars: int | None = None,
 ) -> tuple[str, list[str]]:
+    topic = normalize_topic(topic)
     if llm == "openai":
         return _generate_openai_verse(bpm, topic=topic, bars=bars), [
             f"{settings.openai_model} 생성 결과입니다.",

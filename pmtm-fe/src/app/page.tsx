@@ -105,10 +105,7 @@ const TOPIC_OPTIONS = [
   { value: "", label: "전체 (자율)" },
   { value: "자신감/성공", label: "자신감/성공" },
   { value: "삶/성찰", label: "삶/성찰" },
-  { value: "사랑", label: "사랑" },
-  { value: "이별", label: "이별" },
-  { value: "유흥/파티", label: "유흥/파티" },
-  { value: "비판/디스", label: "비판/디스" },
+  { value: "사랑/이별", label: "사랑/이별" },
 ];
 
 export default function Home() {
