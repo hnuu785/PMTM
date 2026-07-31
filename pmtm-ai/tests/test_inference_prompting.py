@@ -160,7 +160,24 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertEqual(int(ko_lines_re.search(prompt_16).group(1)), 16)
         self.assertEqual(int(ko_lines_re.search(prompt_8).group(1)), 8)
 
+    def test_score_lyric_completion_penalizes_duplicates(self):
+        unique_lyrics = "1. 난 이 길을 걸어가\n2. 또 내일을 향해 가\n3. 날 막을 순 없어\n4. 끝까지 끝을 봐"
+        duplicate_lyrics = "1. 난 이 길을 걸어가\n2. 난 이 길을 걸어가\n3. 난 이 길을 걸어가\n4. 난 이 길을 걸어가"
+
+        score_unique = generate_for_api.score_lyric_completion(unique_lyrics, bpm=90)
+        score_dup = generate_for_api.score_lyric_completion(duplicate_lyrics, bpm=90)
+        self.assertGreater(score_unique, score_dup)
+
+    def test_select_best_candidate_picks_highest_reward(self):
+        cand_low = "1. 난 이 길을 걸어가\n2. 난 이 길을 걸어가\n3. 난 이 길을 걸어가\n4. 난 이 길을 걸어가"
+        cand_high = "1. 난 오늘 밤 무대 위 조명을 받아\n2. 내 목소리로 이 세상을 밝혀 봐\n3. 그 누구도 나를 멈출 수는 없어\n4. 거친 바다 위를 항해하는 선장"
+
+        best_cand, best_reward, scored = generate_for_api.select_best_candidate([cand_low, cand_high], bpm=90)
+        self.assertEqual(best_cand, cand_high)
+        self.assertEqual(len(scored), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
