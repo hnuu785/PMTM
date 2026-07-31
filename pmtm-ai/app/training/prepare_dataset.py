@@ -180,14 +180,14 @@ def build_record(lines: list[str], genre: str, bpm: float, topic: str | None = N
     }
 
 
-def map_topic(raw_topic: str | None) -> str | None:
-    """7개 세부 주제를 4대 주요 카테고리로 통일 매핑합니다.
-    - 자신감/성공, 비판/디스, 유흥/파티 -> '자신감/성공' (자연스러운 프롬프트 표현)
+def map_topic(raw_topic: str | None) -> str:
+    """7개 세부 주제를 3대 주요 카테고리로 100% 매핑합니다. (드롭아웃 없음)
+    - 자신감/성공, 비판/디스, 유흥/파티 -> '자신감/성공'
     - 사랑, 이별 -> '사랑/이별'
     - 삶/성찰 -> '삶/성찰'
     """
     if not raw_topic:
-        return None
+        return "자신감/성공"
     raw_topic = raw_topic.strip()
     if raw_topic in ("자신감/성공", "비판/디스", "유흥/파티"):
         return "자신감/성공"
@@ -195,7 +195,7 @@ def map_topic(raw_topic: str | None) -> str | None:
         return "사랑/이별"
     elif raw_topic == "삶/성찰":
         return "삶/성찰"
-    return raw_topic
+    return "자신감/성공"
 
 
 def prepare() -> tuple[list[dict], Counter]:
@@ -243,9 +243,8 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats["syllable_mismatch"] += 1
                     continue
 
-                # ~15% 확률(7개 중 1개)로 topic을 생략하여 일반 프롬프트 대응력 유지
-                sample_topic = topic if (len(records) % 7 != 0) else None
-                records.append(build_record(chunk, genre, bpm, topic=sample_topic))
+                # 100% 주제 태깅 적용 (드롭아웃 없이 3대 대주제 명시)
+                records.append(build_record(chunk, genre, bpm, topic=topic))
 
     stats["kept"] = len(records)
     return records, stats
