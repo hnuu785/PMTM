@@ -117,9 +117,10 @@ def train_sft(
             load_in_4bit=True,
             r=32,
             lora_alpha=64,
-            lora_dropout=0.1,
+            lora_dropout=0.0,
             padding_side="right",
         )
+
         use_bf16 = False
         use_fp16 = True
         compute_dtype = torch.float16

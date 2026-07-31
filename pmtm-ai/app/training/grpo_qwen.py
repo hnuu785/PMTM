@@ -397,8 +397,9 @@ def load_model(bnb_config, sft_path: str | None = None, genre: str | None = None
                 load_in_4bit=True,
                 r=32,
                 lora_alpha=64,
-                lora_dropout=0.05,
+                lora_dropout=0.0,
             )
+
         return model
 
     base = AutoModelForCausalLM.from_pretrained(
