@@ -74,7 +74,7 @@ def _make_data_collator(tokenizer):
         model_inputs = [
             {
                 "input_ids": feature["input_ids"],
-                "attention_mask": feature["attention_mask"],
+                "attention_mask": feature.get("attention_mask", [1] * len(feature["input_ids"])),
             }
             for feature in features
         ]
@@ -199,6 +199,7 @@ def train_sft(
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         optim="paged_adamw_8bit",
+        remove_unused_columns=False,
         report_to="none",
         seed=SEED,
     )
