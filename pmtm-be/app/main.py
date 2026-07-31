@@ -92,12 +92,14 @@ def _list_available_models() -> list[dict]:
             "name": "Qwen local",
             "detail": "Qwen2.5-3B-Instruct",
             "type": "local",
+            "genre": "all",
         },
         {
             "id": "openai",
             "name": "OpenAI",
             "detail": settings.openai_model,
             "type": "api",
+            "genre": "all",
         },
     ]
 
@@ -110,11 +112,20 @@ def _list_available_models() -> list[dict]:
             rel_path = adapter_dir.relative_to(project_root / "pmtm-ai")
             rel_path_str = rel_path.as_posix()
             display_name = rel_path_str.replace("models/", "")
+            lower_name = rel_path_str.lower()
+            if "boombap" in lower_name or "boom_bap" in lower_name:
+                genre = "boombap"
+            elif "trap" in lower_name:
+                genre = "trap"
+            else:
+                genre = "all"
+
             models.append({
                 "id": rel_path_str,
                 "name": display_name,
                 "detail": f"Qwen + {display_name}",
                 "type": "adapter",
+                "genre": genre,
             })
 
     base_models = models[:2]

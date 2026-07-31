@@ -89,16 +89,25 @@ const RHYME_COLORS = [
   { background: "rgba(150, 124, 255, 0.28)", border: "rgba(150, 124, 255, 0.74)", color: "#ece7ff" },
   { background: "rgba(74, 222, 128, 0.24)", border: "rgba(74, 222, 128, 0.70)", color: "#dcfce7" },
 ];
-const DEFAULT_LLM_OPTIONS: Array<{ value: string; label: string; detail: string }> = [
+type LlmOption = {
+  value: string;
+  label: string;
+  detail: string;
+  genre?: "boombap" | "trap" | "all";
+};
+
+const DEFAULT_LLM_OPTIONS: LlmOption[] = [
   {
     value: "qwen-local",
     label: "Qwen local",
     detail: "Qwen2.5-3B-Instruct",
+    genre: "all",
   },
   {
     value: "openai",
     label: "OpenAI",
     detail: "gpt-5-mini",
+    genre: "all",
   },
 ];
 const TOPIC_OPTIONS = [
@@ -116,9 +125,7 @@ export default function Home() {
   const [bpm, setBpm] = useState("90");
   const [topic, setTopic] = useState("");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
-  const [llmOptions, setLlmOptions] = useState<Array<{ value: string; label: string; detail: string }>>(
-    DEFAULT_LLM_OPTIONS,
-  );
+  const [llmOptions, setLlmOptions] = useState<LlmOption[]>(DEFAULT_LLM_OPTIONS);
   const [voicebank, setVoicebank] = useState("potg");
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
     DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
@@ -169,15 +176,21 @@ export default function Home() {
     return () => controller.abort();
   }, [apiBaseUrl]);
 
+  const activeGenre = useMemo(() => {
+    const parsedBpm = Number(bpm) || 90;
+    return parsedBpm < 115 ? "boombap" : "trap";
+  }, [bpm]);
+
   useEffect(() => {
     const controller = new AbortController();
     void fetch(`${apiBaseUrl}/api/v1/lyrics/models`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("models lookup failed"))))
-      .then((items: Array<{ id: string; name: string; detail: string; type: string }>) => {
-        const options = items.map((item) => ({
+      .then((items: Array<{ id: string; name: string; detail: string; type: string; genre?: "boombap" | "trap" | "all" }>) => {
+        const options: LlmOption[] = items.map((item) => ({
           value: item.id,
           label: item.name,
           detail: item.detail,
+          genre: item.genre || "all",
         }));
         setLlmOptions(options);
         setLlm((current) => {
@@ -645,7 +658,12 @@ export default function Home() {
                 </fieldset>
 
                 <fieldset className="space-y-2">
-                  <legend className="text-sm font-semibold text-[#d8b993]">LLM</legend>
+                  <legend className="text-sm font-semibold text-[#d8b993]">
+                    LLM{" "}
+                    <span className="text-xs font-normal text-[#b9865f]">
+                      (현재 비트: {activeGenre === "boombap" ? "붐뱁 - BPM < 115" : "트랩 - BPM ≥ 115"})
+                    </span>
+                  </legend>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {llmOptions.map((option) => (
                       <label
@@ -657,7 +675,24 @@ export default function Home() {
                         }`}
                       >
                         <span>
-                          <span className="block text-sm leading-5 font-semibold">{option.label}</span>
+                          <span className="flex items-center gap-1.5 text-sm leading-5 font-semibold">
+                            <span>{option.label}</span>
+                            {option.genre === "boombap" && (
+                              <span className="inline-block rounded border border-[#3b82f6]/50 bg-[#3b82f6]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#60a5fa]">
+                                붐뱁
+                              </span>
+                            )}
+                            {option.genre === "trap" && (
+                              <span className="inline-block rounded border border-[#ec4899]/50 bg-[#ec4899]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#f472b6]">
+                                트랩
+                              </span>
+                            )}
+                            {option.genre === "all" && (
+                              <span className="inline-block rounded border border-white/20 bg-white/10 px-1.5 py-0.2 text-[10px] font-bold text-neutral-300">
+                                공용
+                              </span>
+                            )}
+                          </span>
                           <span
                             className={`block text-[11px] leading-4 ${
                               llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
