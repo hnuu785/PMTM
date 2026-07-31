@@ -14,7 +14,11 @@ from transformers import (
     Trainer,
 )
 # pyrefly: ignore [missing-import]
-from app.training.train_utils import setup_training_env
+from app.training.train_utils import (
+    is_unsloth_available,
+    load_unsloth_model_and_tokenizer,
+    setup_training_env,
+)
 
 # pyrefly: ignore [missing-import]
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
@@ -91,6 +95,7 @@ def train_sft(
     data_path: str | None = None,
     output_dir: str | None = None,
     save_dir: str | None = None,
+    use_unsloth: bool = False,
 ):
     if genre in ("boombap", "trap"):
         target_data_path = data_path or str(DATA_DIR / f"prepared_dataset_{genre}.jsonl")
@@ -101,10 +106,29 @@ def train_sft(
         target_output_dir = output_dir or OUTPUT_DIR
         target_save_dir = save_dir or SAVE_DIR
 
-    tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(
-        MODEL_ID, padding_side="right"
-    )
-    print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
+    active_unsloth = use_unsloth and is_unsloth_available()
+    print(f"[unsloth] requested={use_unsloth}, active={active_unsloth}")
+
+    if active_unsloth:
+        print(f"[unsloth] Loading model with FastLanguageModel ({MODEL_ID})...")
+        model, tokenizer = load_unsloth_model_and_tokenizer(
+            model_id=MODEL_ID,
+            max_seq_length=MAX_LENGTH,
+            load_in_4bit=True,
+            r=32,
+            lora_alpha=64,
+            lora_dropout=0.1,
+            padding_side="right",
+        )
+        use_bf16 = False
+        use_fp16 = True
+        compute_dtype = torch.float16
+    else:
+        tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(
+            MODEL_ID, padding_side="right"
+        )
+        print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
+
     print(f"[dataset] data_path={target_data_path}")
     print(f"[output] output_dir={target_output_dir}")
     print(f"[save] save_dir={target_save_dir}")
@@ -127,29 +151,28 @@ def train_sft(
     train_ds = train_raw.map(tokenize_function, batched=True, remove_columns=train_raw.column_names)
     eval_ds = eval_raw.map(tokenize_function, batched=True, remove_columns=eval_raw.column_names)
 
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        quantization_config=bnb_config,
-        device_map="auto",
-        low_cpu_mem_usage=True,
-        trust_remote_code=True,
-    )
+    if not active_unsloth:
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            quantization_config=bnb_config,
+            device_map="auto",
+            low_cpu_mem_usage=True,
+            trust_remote_code=True,
+        )
 
-    # gradient_checkpointing 끔 (fast variant): 1.5B + 4bit + LoRA(r=32)는 T4 16GB에 들어감.
-    # backward에서 activation 재계산을 건너뛰어 약 1.5~2배 속도 향상.
-    model = prepare_model_for_kbit_training(model)
+        model = prepare_model_for_kbit_training(model)
 
-    lora_config = LoraConfig(
-        r=32,
-        lora_alpha=64,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj"],
-        lora_dropout=0.1,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(model, lora_config)
-    model.print_trainable_parameters()
+        lora_config = LoraConfig(
+            r=32,
+            lora_alpha=64,
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                            "gate_proj", "up_proj", "down_proj"],
+            lora_dropout=0.1,
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
 
     data_collator = _make_data_collator(tokenizer)
 
@@ -208,6 +231,7 @@ if __name__ == "__main__":
     parser.add_argument("--data-path", default=None, help="Path to jsonl dataset")
     parser.add_argument("--output-dir", default=None, help="Path for training checkpoints")
     parser.add_argument("--save-dir", default=None, help="Path to save final adapter")
+    parser.add_argument("--use-unsloth", action="store_true", help="Enable Unsloth acceleration")
     args = parser.parse_args()
 
     train_sft(
@@ -215,5 +239,7 @@ if __name__ == "__main__":
         data_path=args.data_path,
         output_dir=args.output_dir,
         save_dir=args.save_dir,
+        use_unsloth=args.use_unsloth,
     )
+
 

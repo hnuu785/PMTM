@@ -40,3 +40,67 @@ def setup_training_env(model_id: str, padding_side: str | None = None):
     bnb_config = get_bnb_config(compute_dtype)
 
     return tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16
+
+
+def is_unsloth_available() -> bool:
+    """Check if Unsloth is installed and CUDA is available."""
+    if not torch.cuda.is_available():
+        return False
+    try:
+        import unsloth  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def load_unsloth_model_and_tokenizer(
+    model_id: str,
+    max_seq_length: int = 2048,
+    load_in_4bit: bool = True,
+    r: int = 32,
+    lora_alpha: int = 64,
+    lora_dropout: float = 0.0,
+    target_modules: list[str] | None = None,
+    padding_side: str | None = None,
+):
+    """Load model and tokenizer using Unsloth's FastLanguageModel.
+
+    Returns:
+        tuple: (model, tokenizer)
+    """
+    from unsloth import FastLanguageModel
+
+    if target_modules is None:
+        target_modules = [
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ]
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=model_id,
+        max_seq_length=max_seq_length,
+        load_in_4bit=load_in_4bit,
+        trust_remote_code=True,
+    )
+
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r=r,
+        lora_alpha=lora_alpha,
+        target_modules=target_modules,
+        lora_dropout=lora_dropout,
+        bias="none",
+    )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    if padding_side is not None:
+        tokenizer.padding_side = padding_side
+
+    return model, tokenizer
+
