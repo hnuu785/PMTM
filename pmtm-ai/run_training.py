@@ -162,19 +162,31 @@ def run_sft(genre: str | None = None, force: bool = False, use_unsloth: bool = F
     print()
 
 
-def reward_sanity_check():
-    """GRPO 들어가기 전 SFT 모델로 20개 prompt 생성 → reward 분포 확인.
+def resolve_sft_adapter_path(genre: str | None = None) -> str:
+    """Find available SFT adapter path according to specified or default genre."""
+    candidates = []
+    if genre in ("boombap", "trap"):
+        candidates.append(MODELS_DIR / f"sft_rap_qwen_{genre}")
+    for g in ["boombap", "trap"]:
+        p = MODELS_DIR / f"sft_rap_qwen_{g}"
+        if p not in candidates:
+            candidates.append(p)
+    candidates.append(MODELS_DIR / "sft_rap_qwen")
 
-    - std < 0.05  → reward shaping이 약함, GRPO 학습 신호 부족 우려
-    - mean < 0    → format/dup 페널티 과도, 가중치 조정 권장
+    for cand in candidates:
+        if cand.exists():
+            return str(cand)
 
-    결과 해석 기준:
-        std >= 0.05  AND  mean >= 0   → PASS  (GRPO 진행 권장)
-        std <  0.05                   → WARNING: 보상 분산 부족, 학습 신호 약함
-        mean < 0                      → WARNING: 음수 편향, format/dup 페널티 과도
-    """
+    raise AssertionError(
+        f"SFT 어댑터 없음: 아래 경로 중 존재하는 어댑터 폴더가 없습니다.\n"
+        + "\n".join(f"  - {c}" for c in candidates)
+    )
+
+
+def reward_sanity_check(genre: str | None = None):
+    """GRPO 들어가기 전 SFT 모델로 20개 prompt 생성 → reward 분포 확인."""
     print("=" * 60)
-    print("[C2] Reward sanity check")
+    print(f"[C2] Reward sanity check (장르: {genre or '자동 감지'})")
     print("=" * 60)
 
     import pandas as pd
@@ -185,9 +197,10 @@ def reward_sanity_check():
     # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    from app.training.grpo_qwen import MODEL_ID, SFT_PATH, build_prompts, rhyme_reward
+    from app.training.grpo_qwen import MODEL_ID, build_prompts, rhyme_reward
 
-    assert os.path.exists(SFT_PATH), f"SFT 어댑터 없음: {SFT_PATH}"
+    sft_adapter = resolve_sft_adapter_path(genre)
+    print(f"[sanity check] SFT 어댑터 로드: {sft_adapter}")
 
     compute_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     bnb = BitsAndBytesConfig(
@@ -207,7 +220,7 @@ def reward_sanity_check():
         low_cpu_mem_usage=True,
         trust_remote_code=True,
     )
-    model = PeftModel.from_pretrained(base, SFT_PATH)
+    model = PeftModel.from_pretrained(base, sft_adapter)
     model.eval()
 
     df = pd.read_csv(DATA_DIR / "merged_final_dataset_analyzed.csv")
@@ -302,22 +315,21 @@ def run_grpo(genre: str | None = None, trace_finite: bool = False, use_unsloth: 
     print()
 
 
-def run_grpo_smoke(steps: int, use_unsloth: bool = False):
+def run_grpo_smoke(steps: int, genre: str | None = None, use_unsloth: bool = False):
     print("=" * 60)
     print(f"[C3-smoke] GRPO finite smoke test ({steps} steps)")
     print("=" * 60)
-    assert (MODELS_DIR / "sft_rap_qwen").exists(), (
-        "SFT 어댑터 없음 — 먼저 --stage sft 로 SFT를 실행하세요"
-    )
+    sft_adapter = resolve_sft_adapter_path(genre)
+    print(f"[smoke test] SFT 어댑터 사용: {sft_adapter}")
     from app.training.grpo_qwen import run_grpo_smoke_test
 
-    run_grpo_smoke_test(max_steps=steps, use_unsloth=use_unsloth)
+    run_grpo_smoke_test(max_steps=steps, genre=genre, use_unsloth=use_unsloth)
     print()
 
 
-def run_eval():
+def run_eval(genre: str | None = None):
     print("=" * 60)
-    print("[D] 생성 평가")
+    print(f"[D] 생성 평가 (장르: {genre or '전체'})")
     print("=" * 60)
 
     # pyrefly: ignore [missing-import]
@@ -327,14 +339,26 @@ def run_eval():
     # pyrefly: ignore [missing-import]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    GRPO_PATH = str(MODELS_DIR / "grpo_rap_qwen")
+    adapter = None
+    grpo_candidates = []
+    if genre in ("boombap", "trap"):
+        grpo_candidates.append(MODELS_DIR / f"grpo_rap_qwen_{genre}")
+    for g in ["boombap", "trap"]:
+        p = MODELS_DIR / f"grpo_rap_qwen_{g}"
+        if p not in grpo_candidates:
+            grpo_candidates.append(p)
+    grpo_candidates.append(MODELS_DIR / "grpo_rap_qwen")
 
-    if not (MODELS_DIR / "grpo_rap_qwen").exists():
-        print(f"[WARN] GRPO 어댑터 없음 ({GRPO_PATH}) — SFT 어댑터로 평가")
-        adapter = str(MODELS_DIR / "sft_rap_qwen")
-        assert (MODELS_DIR / "sft_rap_qwen").exists(), "SFT 어댑터도 없음"
-    else:
-        adapter = GRPO_PATH
+    for cand in grpo_candidates:
+        if cand.exists():
+            adapter = str(cand)
+            print(f"[eval] GRPO 어댑터 발견 및 사용: {adapter}")
+            break
+
+    if not adapter:
+        print("[WARN] GRPO 어댑터 없음 — SFT 어댑터 감지 중...")
+        adapter = resolve_sft_adapter_path(genre)
+        print(f"[eval] SFT 어댑터 사용: {adapter}")
 
     compute_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     bnb = BitsAndBytesConfig(
@@ -425,7 +449,7 @@ def main():
         return
 
     if args.stage == "sanity":
-        reward_sanity_check()
+        reward_sanity_check(genre=args.genre)
         return
 
     if args.stage == "grpo":
@@ -434,11 +458,11 @@ def main():
         return
 
     if args.stage == "grpo-smoke":
-        run_grpo_smoke(args.smoke_steps, use_unsloth=args.use_unsloth)
+        run_grpo_smoke(args.smoke_steps, genre=args.genre, use_unsloth=args.use_unsloth)
         return
 
     if args.stage == "eval":
-        run_eval()
+        run_eval(genre=args.genre)
         return
 
     # stage == "all"
@@ -448,11 +472,11 @@ def main():
     run_sft(genre=args.genre, force=args.force, use_unsloth=args.use_unsloth)
     save_loss_plots_if_possible()
     if not args.skip_sanity:
-        reward_sanity_check()
+        reward_sanity_check(genre=args.genre)
     run_grpo(genre=args.genre, trace_finite=args.trace_finite, use_unsloth=args.use_unsloth)
     save_loss_plots_if_possible()
     if not args.skip_eval:
-        run_eval()
+        run_eval(genre=args.genre)
 
     print("=" * 60)
     print("✓ 전체 파이프라인 완료")
