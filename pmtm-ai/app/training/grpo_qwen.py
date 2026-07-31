@@ -229,14 +229,20 @@ def _latest_checkpoint(output_dir: str) -> str | None:
     return ckpts[-1] if ckpts else None
 
 
-def build_prompts(df=None) -> list[list[dict[str, str]]]:
+def build_prompts(df=None, genre: str | None = None) -> list[list[dict[str, str]]]:
     """GRPO_BPMS 및 대표 TOPIC 조합으로 프롬프트를 생성한다."""
+    if genre == "boombap":
+        bpms = [90.0]
+    elif genre == "trap":
+        bpms = [140.0]
+    else:
+        bpms = GRPO_BPMS
+
     prompts = []
-    for bpm in GRPO_BPMS:
+    for bpm in bpms:
         for topic in GRPO_TOPICS:
             prompts.append(build_messages(bpm=bpm, bars=None, topic=topic))
     return prompts
-
 
 
 _END_RE = re.compile(r"\[End\]")
@@ -315,8 +321,6 @@ def _max_consecutive_duplicate_run(lines: list[str]) -> int:
     return max_run
 
 
-
-
 def rhyme_reward(completions, prompts=None, **kwargs):
     """생성된 가사의 라임 밀도를 산출하고, 중복 줄 수에 따른 단계별 차감 감점을 부여합니다."""
     rewards = []
@@ -366,10 +370,9 @@ def rhyme_reward(completions, prompts=None, **kwargs):
     return rewards
 
 
+def load_model(bnb_config, sft_path: str | None = None, genre: str | None = None):
+    target_sft_path = sft_path or (str(MODELS_DIR / f"sft_rap_qwen_{genre}") if genre else SFT_PATH)
 
-
-
-def load_model(bnb_config):
     base = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config,
@@ -379,11 +382,11 @@ def load_model(bnb_config):
     )
     base = prepare_model_for_kbit_training(base)
 
-    if os.path.exists(SFT_PATH):
-        print(f"SFT adapter 로드: {SFT_PATH}")
-        model = PeftModel.from_pretrained(base, SFT_PATH, is_trainable=True)
+    if os.path.exists(target_sft_path):
+        print(f"SFT adapter 로드: {target_sft_path}")
+        model = PeftModel.from_pretrained(base, target_sft_path, is_trainable=True)
     else:
-        print(f"[WARN] SFT 어댑터 없음 ({SFT_PATH}) — 베이스에 새 LoRA 부착")
+        print(f"[WARN] SFT 어댑터 없음 ({target_sft_path}) — 베이스에 새 LoRA 부착")
         lora_config = LoraConfig(
             r=32, lora_alpha=64,
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
@@ -435,6 +438,8 @@ def _build_grpo_config(
 def _build_grpo_trainer(
     *,
     output_dir: str,
+    genre: str | None = None,
+    sft_path: str | None = None,
     max_steps: int = -1,
     callbacks: list[TrainerCallback] | None = None,
     save_strategy: str = "steps",
@@ -444,11 +449,11 @@ def _build_grpo_trainer(
     tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(MODEL_ID)
     print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
 
-    prompts = build_prompts()
+    prompts = build_prompts(genre=genre)
     dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
-    print(f"prompts: {len(prompts)} (bpms={GRPO_BPMS})")
+    print(f"prompts: {len(prompts)} (genre={genre})")
 
-    model = load_model(bnb_config)
+    model = load_model(bnb_config, sft_path=sft_path, genre=genre)
     _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
     _assert_finite("loaded_sft.forward_logits", _forward_logits_summary(model, tokenizer, prompts[0]))
 
@@ -473,44 +478,61 @@ def _build_grpo_trainer(
     return trainer, prompts
 
 
-def train_grpo(*, trace_finite: bool = False, max_steps: int = 120):
+def train_grpo(
+    *,
+    genre: str | None = None,
+    sft_path: str | None = None,
+    output_dir: str | None = None,
+    save_dir: str | None = None,
+    trace_finite: bool = False,
+    max_steps: int = 120,
+):
+    target_output_dir = output_dir or (str(OUTPUTS_DIR / f"grpo_qwen_{genre}") if genre else OUTPUT_DIR)
+    target_save_dir = save_dir or (str(MODELS_DIR / f"grpo_rap_qwen_{genre}") if genre else SAVE_DIR)
+
     best_cb = GrpoBestRewardCallback()
     callbacks: list[TrainerCallback] = [GrpoRewardStdEarlyStoppingCallback(), best_cb]
     if trace_finite:
         callbacks.append(GrpoFiniteTraceCallback())
-    trainer, _prompts = _build_grpo_trainer(output_dir=OUTPUT_DIR, callbacks=callbacks, max_steps=max_steps)
+    trainer, _prompts = _build_grpo_trainer(
+        output_dir=target_output_dir,
+        genre=genre,
+        sft_path=sft_path,
+        callbacks=callbacks,
+        max_steps=max_steps,
+    )
 
-    resume = _latest_checkpoint(OUTPUT_DIR)
-    print(f"Starting GRPO ({MODEL_ID})...")
+    resume = _latest_checkpoint(target_output_dir)
+    print(f"Starting GRPO ({MODEL_ID}) genre={genre}...")
     if trace_finite:
         print("[trace] finite checks enabled for full GRPO training")
     if resume:
         print(f"[resume] from {resume}")
     trainer.train(resume_from_checkpoint=resume)
 
-    # 전체 학습 스텝 중 reward_mean이 가장 높았던 최고 성적 모델을 SAVE_DIR에 최종 저장
+    # 전체 학습 스텝 중 reward_mean이 가장 높았던 최고 성적 모델을 target_save_dir에 최종 저장
     if best_cb.best_checkpoint and os.path.exists(best_cb.best_checkpoint):
         print(
-            f"[final_save] Loading & saving Best Model (reward={best_cb.best_reward:+.4f}, step={best_cb.best_step}) from {best_cb.best_checkpoint} -> {SAVE_DIR}"
+            f"[final_save] Loading & saving Best Model (reward={best_cb.best_reward:+.4f}, step={best_cb.best_step}) from {best_cb.best_checkpoint} -> {target_save_dir}"
         )
         model = PeftModel.from_pretrained(trainer.model.get_base_model(), best_cb.best_checkpoint)
-        model.save_pretrained(SAVE_DIR)
+        model.save_pretrained(target_save_dir)
     else:
-        print(f"[final_save] Saving current model state to {SAVE_DIR}")
-        trainer.save_model(SAVE_DIR)
+        print(f"[final_save] Saving current model state to {target_save_dir}")
+        trainer.save_model(target_save_dir)
 
-    print(f"GRPO done -> {SAVE_DIR}")
+    print(f"GRPO done -> {target_save_dir}")
 
 
-
-def run_grpo_smoke_test(max_steps: int = 10) -> None:
+def run_grpo_smoke_test(max_steps: int = 10, genre: str | None = None) -> None:
     if max_steps < 1 or max_steps > 50:
         raise ValueError("GRPO smoke test supports 1 to 50 steps.")
 
-    output_dir = Path(SMOKE_OUTPUT_DIR)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = Path(SMOKE_OUTPUT_DIR if not genre else f"{SMOKE_OUTPUT_DIR}_{genre}")
+    output_path.mkdir(parents=True, exist_ok=True)
     trainer, _prompts = _build_grpo_trainer(
-        output_dir=str(output_dir),
+        output_dir=str(output_path),
+        genre=genre,
         max_steps=max_steps,
         callbacks=[GrpoFiniteTraceCallback()],
         save_strategy="no",

@@ -113,34 +113,45 @@ def save_loss_plots_if_possible() -> None:
 
 def prepare_dataset():
     print("=" * 60)
-    print("[B1] SFT 데이터셋 준비")
+    print("[B1] SFT 데이터셋 준비 (붐뱁 / 트랩 분리)")
     print("=" * 60)
-    out = DATA_DIR / "prepared_dataset.jsonl"
-    if out.exists():
-        n = sum(1 for _ in out.open(encoding="utf-8"))
-        print(f"이미 존재: {out} ({n} samples)")
+    out_b = DATA_DIR / "prepared_dataset_boombap.jsonl"
+    out_t = DATA_DIR / "prepared_dataset_trap.jsonl"
+    if out_b.exists() and out_t.exists():
+        nb = sum(1 for _ in out_b.open(encoding="utf-8"))
+        nt = sum(1 for _ in out_t.open(encoding="utf-8"))
+        print(f"이미 존재: {out_b} ({nb} samples), {out_t} ({nt} samples)")
     else:
         from app.training.prepare_dataset import main as prep_main
 
         prep_main()
-    assert out.exists(), "SFT 데이터 생성 실패"
+    assert out_b.exists() and out_t.exists(), "SFT 데이터 생성 실패"
     print()
 
 
-def run_sft(force: bool = False):
+def run_sft(genre: str | None = None, force: bool = False):
     print("=" * 60)
-    print("[B2] SFT 학습")
+    print(f"[B2] SFT 학습 (장르: {genre or '전체'})")
     print("=" * 60)
-    save_dir = MODELS_DIR / "sft_rap_qwen"
-    if save_dir.exists() and not force:
-        print(f"SFT 어댑터 이미 존재: {save_dir} (재학습하려면 --force)")
-        print()
-        return
+
+    if genre in ("boombap", "trap"):
+        genres = [genre]
+    elif genre == "both":
+        genres = ["boombap", "trap"]
+    else:
+        genres = ["boombap", "trap"]  # 기본적으로 붐뱁, 트랩 분리 학습 진행
 
     from app.training.sft_qwen import train_sft
 
-    train_sft()
-    assert save_dir.exists(), f"SFT 학습 후 {save_dir} 가 만들어지지 않았습니다"
+    for g in genres:
+        save_dir = MODELS_DIR / f"sft_rap_qwen_{g}" if g else MODELS_DIR / "sft_rap_qwen"
+        print(f"\n--- SFT 학습 시작 ({g or '통합'}) ---")
+        if save_dir.exists() and not force:
+            print(f"SFT 어댑터 이미 존재: {save_dir} (재학습하려면 --force)")
+            continue
+
+        train_sft(genre=g)
+        assert save_dir.exists(), f"SFT 학습 후 {save_dir} 가 만들어지지 않았습니다"
     print()
 
 
@@ -261,17 +272,28 @@ def reward_sanity_check():
     torch.cuda.empty_cache()
 
 
-def run_grpo(trace_finite: bool = False):
+def run_grpo(genre: str | None = None, trace_finite: bool = False):
     print("=" * 60)
-    print("[C3] GRPO 학습")
+    print(f"[C3] GRPO 학습 (장르: {genre or '전체'})")
     print("=" * 60)
-    assert (MODELS_DIR / "sft_rap_qwen").exists(), (
-        "SFT 어댑터 없음 — 먼저 --stage sft 로 SFT를 실행하세요"
-    )
+
+    if genre in ("boombap", "trap"):
+        genres = [genre]
+    elif genre == "both":
+        genres = ["boombap", "trap"]
+    else:
+        genres = ["boombap", "trap"]
+
     from app.training.grpo_qwen import train_grpo
 
-    train_grpo(trace_finite=trace_finite)
+    for g in genres:
+        sft_dir = MODELS_DIR / (f"sft_rap_qwen_{g}" if g else "sft_rap_qwen")
+        print(f"\n--- GRPO 학습 시작 ({g or '통합'}) ---")
+        if not sft_dir.exists():
+            print(f"[WARN] SFT 어댑터 없음 ({sft_dir}) — 베이스 모델로 GRPO 진행")
+        train_grpo(genre=g, trace_finite=trace_finite)
     print()
+
 
 
 def run_grpo_smoke(steps: int):
@@ -366,6 +388,12 @@ def parse_args():
         default="all",
         help="실행 단계 선택 (기본 all = 전체)",
     )
+    p.add_argument(
+        "--genre",
+        choices=["boombap", "trap", "both", "all"],
+        default="both",
+        help="SFT 학습 장르 선택 (boombap, trap, both, all)",
+    )
     p.add_argument("--force", action="store_true", help="SFT 어댑터 있어도 재학습")
     p.add_argument("--skip-phonetics", action="store_true", help="phonetics 회귀 테스트 스킵")
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
@@ -385,7 +413,7 @@ def main():
 
     if args.stage == "sft":
         prepare_dataset()
-        run_sft(force=args.force)
+        run_sft(genre=args.genre, force=args.force)
         save_loss_plots_if_possible()
         return
 
@@ -394,7 +422,7 @@ def main():
         return
 
     if args.stage == "grpo":
-        run_grpo(trace_finite=args.trace_finite)
+        run_grpo(genre=args.genre, trace_finite=args.trace_finite)
         save_loss_plots_if_possible()
         return
 
@@ -410,14 +438,16 @@ def main():
     if not args.skip_phonetics:
         run_phonetics_test()
     prepare_dataset()
-    run_sft(force=args.force)
+    run_sft(genre=args.genre, force=args.force)
     save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check()
-    run_grpo(trace_finite=args.trace_finite)
+    run_grpo(genre=args.genre, trace_finite=args.trace_finite)
     save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval()
+
+
 
     print("=" * 60)
     print("✓ 전체 파이프라인 완료")

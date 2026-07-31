@@ -24,7 +24,7 @@ MIN_RHYME_SCORE = 0.35
 MIN_END_RHYME_SCORE = 0.30
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
-MAX_MEAN_LINE_LENGTH = 28
+MAX_MEAN_LINE_LENGTH = 18
 MAX_LINE_LENGTH_STDEV = 9
 MAX_SHORT_LINES = 1
 MAX_ENDING_WORD_COUNT = 2
@@ -220,7 +220,7 @@ def prepare() -> tuple[list[dict], Counter]:
             genre, target_lines, min_s, max_s = get_genre_rules(bpm)
 
             cleaned_lines = clean_lines(lyrics)
-            structured = structure_lines(cleaned_lines, min_allowed=min_s - 1, max_allowed=max_s + 1)
+            structured = structure_lines(cleaned_lines, min_allowed=min_s, max_allowed=max_s)
 
             for chunk in make_chunks(structured, chunk_size=target_lines):
                 stats["candidate_chunks"] += 1
@@ -237,9 +237,9 @@ def prepare() -> tuple[list[dict], Counter]:
                     stats[reason] += 1
                     continue
 
-                # 장르별 ±1음절 허용 범위 (붐뱁 7~17음절, 트랩 5~15음절) 필터링
+                # 장르별 프롬프트 명시 범위 엄격 일치 필터링 (붐뱁 8~16음절, 트랩 6~14음절)
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
+                if not all(min_s <= s <= max_s for s in syllables_list):
                     stats["syllable_mismatch"] += 1
                     continue
 
@@ -251,13 +251,26 @@ def prepare() -> tuple[list[dict], Counter]:
 
 
 
+OUTPUT_PATH_BOOMBAP = DATA_DIR / "prepared_dataset_boombap.jsonl"
+OUTPUT_PATH_TRAP = DATA_DIR / "prepared_dataset_trap.jsonl"
+
+
 def main() -> None:
     records, stats = prepare()
-    with OUTPUT_PATH.open("w", encoding="utf-8") as fp:
-        for record in records:
+    
+    boombap_records = [r for r in records if "붐뱁" in r["messages"][0]["content"]]
+    trap_records = [r for r in records if "트랩" in r["messages"][0]["content"]]
+
+    with OUTPUT_PATH_BOOMBAP.open("w", encoding="utf-8") as fp:
+        for record in boombap_records:
             fp.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    print(f"saved: {OUTPUT_PATH} ({len(records)} samples)")
+    with OUTPUT_PATH_TRAP.open("w", encoding="utf-8") as fp:
+        for record in trap_records:
+            fp.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    print(f"saved boombap: {OUTPUT_PATH_BOOMBAP} ({len(boombap_records)} samples)")
+    print(f"saved trap: {OUTPUT_PATH_TRAP} ({len(trap_records)} samples)")
     print("stats:")
     for key, value in stats.most_common():
         print(f"  {key}: {value}")
