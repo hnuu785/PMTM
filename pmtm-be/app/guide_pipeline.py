@@ -351,6 +351,7 @@ def enqueue_guide_demo(
     first_bar_start_sec: float,
     voicebank_id: str,
     genre: str = "boom_bap",
+    rvc_model_id: str | None = None,
 ) -> None:
     # pyrefly: ignore [missing-import]
     from rq import Queue
@@ -384,6 +385,7 @@ def enqueue_guide_demo(
         first_bar_start_sec,
         voicebank_id,
         genre,
+        rvc_model_id,
         job_id=job_id,
         job_timeout=get_settings().diffsinger_timeout_seconds + 120,
     )

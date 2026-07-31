@@ -12,6 +12,7 @@ type DemoStatus =
   | "planning"
   | "voicing"
   | "rendering"
+  | "converting_rvc"
   | "mixing"
   | "succeeded"
   | "failed";
@@ -33,6 +34,12 @@ type DemoStatusResponse = {
 };
 
 type VoicebankInfo = {
+  id: string;
+  label: string;
+  available: boolean;
+};
+
+type RvcModelInfo = {
   id: string;
   label: string;
   available: boolean;
@@ -63,11 +70,13 @@ export default function FlowTestPage() {
   const [bpm, setBpm] = useState("90");
   const [firstBarStartSec, setFirstBarStartSec] = useState("1.25");
   const [voicebank, setVoicebank] = useState("potg");
+  const [rvcModelId, setRvcModelId] = useState("none");
   const [beatFile, setBeatFile] = useState<File | null>(null);
   
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
     DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
   );
+  const [rvcModelOptions, setRvcModelOptions] = useState<RvcModelInfo[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
@@ -88,6 +97,18 @@ export default function FlowTestPage() {
             ? firstAvailable.id
             : current,
         );
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [apiBaseUrl]);
+
+  // Sync RVC models
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBaseUrl}/api/v1/guide-demos/rvc-models`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rvc lookup failed"))))
+      .then((items: RvcModelInfo[]) => {
+        setRvcModelOptions(items);
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -198,6 +219,9 @@ export default function FlowTestPage() {
     body.append("bpm", String(parsedBpm));
     body.append("firstBarStartSec", String(parsedStart));
     body.append("voicebank", voicebank);
+    if (rvcModelId && rvcModelId !== "none") {
+      body.append("rvcModelId", rvcModelId);
+    }
     body.append("genre", lineCount === 16 ? "trap" : "boom_bap");
 
     try {
@@ -280,7 +304,7 @@ export default function FlowTestPage() {
 
 
             {/* Grid options */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-4">
               <div>
                 <label htmlFor="bpm-input" className="text-sm font-bold text-[#d8b993]">BPM</label>
                 <input
@@ -308,7 +332,7 @@ export default function FlowTestPage() {
               </div>
 
               <div>
-                <label htmlFor="voicebank-input" className="text-sm font-bold text-[#d8b993]">보이스뱅크</label>
+                <label htmlFor="voicebank-input" className="text-sm font-bold text-[#d8b993]">보이스뱅크 (SVS)</label>
                 <select
                   id="voicebank-input"
                   value={voicebank}
@@ -316,6 +340,23 @@ export default function FlowTestPage() {
                   className="mt-2 block w-full border border-[#f5b950]/45 bg-[#130806]/88 px-3 py-2 text-sm font-semibold focus:border-[#ff5a1f] focus:outline-none text-white"
                 >
                   {voicebankOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id} disabled={!opt.available} className="bg-[#130806]">
+                      {opt.label} {!opt.available ? "(준비 안 됨)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="rvc-model-input" className="text-sm font-bold text-[#d8b993]">RVC 음색 변환</label>
+                <select
+                  id="rvc-model-input"
+                  value={rvcModelId}
+                  onChange={(e) => setRvcModelId(e.target.value)}
+                  className="mt-2 block w-full border border-[#f5b950]/45 bg-[#130806]/88 px-3 py-2 text-sm font-semibold focus:border-[#ff5a1f] focus:outline-none text-white"
+                >
+                  <option value="none" className="bg-[#130806]">적용 안 함 (기본)</option>
+                  {rvcModelOptions.map((opt) => (
                     <option key={opt.id} value={opt.id} disabled={!opt.available} className="bg-[#130806]">
                       {opt.label} {!opt.available ? "(준비 안 됨)" : ""}
                     </option>

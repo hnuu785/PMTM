@@ -39,10 +39,11 @@ from app.guide_pipeline import validate_bpm as validate_guide_bpm
 from app.guide_pipeline import validate_first_bar_start
 from app.guide_pipeline import validate_guide_flow
 from app.guide_pipeline import validate_voicebank
+from app.rvc_adapter import list_rvc_models
 from app.schemas import BeatAnalysisResponse, DemoGenerateResponse, DemoStatusResponse
 from app.schemas import LyricGenerateRequest, LyricGenerateResponse, LyricModel, RhymeAnalyzeRequest
 from app.schemas import RhymeHighlightRange, RhymeLineAnalysis
-from app.schemas import VoicebankResponse
+from app.schemas import RvcModelResponse, VoicebankResponse
 
 settings = get_settings()
 MAX_BEAT_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -235,12 +236,18 @@ def get_guide_voicebanks() -> list[VoicebankResponse]:
     return [VoicebankResponse(**item) for item in list_voicebanks()]
 
 
+@app.get("/api/v1/guide-demos/rvc-models", response_model=list[RvcModelResponse])
+def get_guide_rvc_models() -> list[RvcModelResponse]:
+    return [RvcModelResponse(**item) for item in list_rvc_models()]
+
+
 @app.post("/api/v1/guide-demos", response_model=DemoGenerateResponse)
 async def generate_guide_demo(
     lyrics: str = Form(...),
     bpm: int = Form(...),
     firstBarStartSec: float = Form(...),
     voicebank: str = Form("potg"),
+    rvcModelId: str | None = Form(None),
     genre: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
@@ -248,6 +255,7 @@ async def generate_guide_demo(
         bpm_value = validate_guide_bpm(bpm)
         first_bar_start_sec = validate_first_bar_start(firstBarStartSec)
         voicebank_id = validate_voicebank(voicebank)
+        rvc_model_id = rvcModelId.strip() if rvcModelId and rvcModelId.strip() else None
         lines = [
             line.strip()
             for line in lyrics.splitlines()
@@ -273,6 +281,7 @@ async def generate_guide_demo(
             first_bar_start_sec,
             voicebank_id,
             genre=genre_value,
+            rvc_model_id=rvc_model_id,
         )
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc

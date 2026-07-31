@@ -21,6 +21,7 @@ type DemoStatus =
   | "planning"
   | "voicing"
   | "rendering"
+  | "converting_rvc"
   | "mixing"
   | "succeeded"
   | "failed";
@@ -1020,6 +1021,8 @@ function formatDemoStatus(status?: DemoStatus) {
       return "보컬 생성";
     case "rendering":
       return "DiffSinger 렌더링";
+    case "converting_rvc":
+      return "RVC 음색 변환";
     case "mixing":
       return "믹싱";
     case "succeeded":
