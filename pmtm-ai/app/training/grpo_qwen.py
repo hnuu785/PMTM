@@ -367,8 +367,39 @@ def rhyme_reward(completions, prompts=None, **kwargs):
     return rewards
 
 
-def load_model(bnb_config, sft_path: str | None = None, genre: str | None = None):
+from app.training.train_utils import (
+    is_unsloth_available,
+    load_unsloth_model_and_tokenizer,
+    setup_training_env,
+)
+
+
+def load_model(bnb_config, sft_path: str | None = None, genre: str | None = None, use_unsloth: bool = False):
     target_sft_path = sft_path or (str(MODELS_DIR / f"sft_rap_qwen_{genre}") if genre else SFT_PATH)
+    active_unsloth = use_unsloth and is_unsloth_available()
+
+    if active_unsloth:
+        from unsloth import FastLanguageModel, PatchFastRL
+        PatchFastRL("GRPO", FastLanguageModel)
+        if os.path.exists(target_sft_path):
+            print(f"[unsloth] SFT adapter 로드: {target_sft_path}")
+            model, _ = FastLanguageModel.from_pretrained(
+                model_name=target_sft_path,
+                max_seq_length=2048,
+                load_in_4bit=True,
+                trust_remote_code=True,
+            )
+        else:
+            print(f"[WARN][unsloth] SFT 어댑터 없음 ({target_sft_path}) — 베이스에 새 LoRA 부착")
+            model, _ = load_unsloth_model_and_tokenizer(
+                model_id=MODEL_ID,
+                max_seq_length=2048,
+                load_in_4bit=True,
+                r=32,
+                lora_alpha=64,
+                lora_dropout=0.05,
+            )
+        return model
 
     base = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -442,15 +473,33 @@ def _build_grpo_trainer(
     save_strategy: str = "steps",
     save_steps: int = 50,
     save_total_limit: int | None = 3,
+    use_unsloth: bool = False,
 ) -> tuple[GRPOTrainer, list[list[dict[str, str]]]]:
-    tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(MODEL_ID)
-    print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
+    active_unsloth = use_unsloth and is_unsloth_available()
+    print(f"[unsloth] requested={use_unsloth}, active={active_unsloth}")
+
+    if active_unsloth:
+        from unsloth import FastLanguageModel
+        _, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=MODEL_ID,
+            max_seq_length=2048,
+            load_in_4bit=True,
+            trust_remote_code=True,
+        )
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        use_bf16 = False
+        use_fp16 = True
+        bnb_config = None
+    else:
+        tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(MODEL_ID)
+        print(f"[precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
 
     prompts = build_prompts(genre=genre)
     dataset = Dataset.from_list([{"prompt": prompt} for prompt in prompts])
     print(f"prompts: {len(prompts)} (genre={genre})")
 
-    model = load_model(bnb_config, sft_path=sft_path, genre=genre)
+    model = load_model(bnb_config, sft_path=sft_path, genre=genre, use_unsloth=use_unsloth)
     _assert_finite("loaded_sft.weights", _trainable_parameter_summary(model))
     _assert_finite("loaded_sft.forward_logits", _forward_logits_summary(model, tokenizer, prompts[0]))
 
@@ -483,6 +532,7 @@ def train_grpo(
     save_dir: str | None = None,
     trace_finite: bool = False,
     max_steps: int = 120,
+    use_unsloth: bool = False,
 ):
     target_output_dir = output_dir or (str(OUTPUTS_DIR / f"grpo_qwen_{genre}") if genre else OUTPUT_DIR)
     target_save_dir = save_dir or (str(MODELS_DIR / f"grpo_rap_qwen_{genre}") if genre else SAVE_DIR)
@@ -497,6 +547,7 @@ def train_grpo(
         sft_path=sft_path,
         callbacks=callbacks,
         max_steps=max_steps,
+        use_unsloth=use_unsloth,
     )
 
     resume = _latest_checkpoint(target_output_dir)
@@ -521,7 +572,7 @@ def train_grpo(
     print(f"GRPO done -> {target_save_dir}")
 
 
-def run_grpo_smoke_test(max_steps: int = 10, genre: str | None = None) -> None:
+def run_grpo_smoke_test(max_steps: int = 10, genre: str | None = None, use_unsloth: bool = False) -> None:
     if max_steps < 1 or max_steps > 50:
         raise ValueError("GRPO smoke test supports 1 to 50 steps.")
 
@@ -534,9 +585,10 @@ def run_grpo_smoke_test(max_steps: int = 10, genre: str | None = None) -> None:
         callbacks=[GrpoFiniteTraceCallback()],
         save_strategy="no",
         save_total_limit=None,
+        use_unsloth=use_unsloth,
     )
 
-    print(f"Starting GRPO smoke test ({max_steps} steps, output_dir={output_dir})...")
+    print(f"Starting GRPO smoke test ({max_steps} steps, output_dir={output_path})...")
     trainer.train(resume_from_checkpoint=None)
     _assert_finite("smoke_end.weights", _trainable_parameter_summary(trainer.model))
     print("GRPO smoke test completed without non-finite tensors.")

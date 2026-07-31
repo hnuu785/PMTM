@@ -28,7 +28,10 @@ cd pmtm-ai
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# NVIDIA GPU 서버 / Colab 환경 (Unsloth 가속 사용 시):
+# pip install -r requirements-gpu.txt
 ```
+
 
 `g2pk`는 선택 의존성입니다. 로컬 macOS 환경에서는 `python-mecab-ko` 빌드가 `mecab-config` 때문에 실패할 수 있는데, 이 경우 설치하지 않아도 자모 분해 폴백으로 동작합니다.
 
@@ -93,8 +96,9 @@ drive.mount("/content/drive")
 cd /content
 git clone <YOUR_REPO_URL>
 cd PMTM/pmtm-ai
-pip install -r requirements.txt
+pip install -r requirements-gpu.txt
 ```
+
 
 ```bash
 export PMTM_MODELS_DIR=/content/drive/MyDrive/pmtm-ai/models

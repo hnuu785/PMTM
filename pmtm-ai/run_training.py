@@ -129,7 +129,7 @@ def prepare_dataset():
     print()
 
 
-def run_sft(genre: str | None = None, force: bool = False):
+def run_sft(genre: str | None = None, force: bool = False, use_unsloth: bool = False):
     print("=" * 60)
     print(f"[B2] SFT 학습 (장르: {genre or '전체'})")
     print("=" * 60)
@@ -150,7 +150,7 @@ def run_sft(genre: str | None = None, force: bool = False):
             print(f"SFT 어댑터 이미 존재: {save_dir} (재학습하려면 --force)")
             continue
 
-        train_sft(genre=g)
+        train_sft(genre=g, use_unsloth=use_unsloth)
         assert save_dir.exists(), f"SFT 학습 후 {save_dir} 가 만들어지지 않았습니다"
     print()
 
@@ -272,7 +272,7 @@ def reward_sanity_check():
     torch.cuda.empty_cache()
 
 
-def run_grpo(genre: str | None = None, trace_finite: bool = False):
+def run_grpo(genre: str | None = None, trace_finite: bool = False, use_unsloth: bool = False):
     print("=" * 60)
     print(f"[C3] GRPO 학습 (장르: {genre or '전체'})")
     print("=" * 60)
@@ -291,12 +291,11 @@ def run_grpo(genre: str | None = None, trace_finite: bool = False):
         print(f"\n--- GRPO 학습 시작 ({g or '통합'}) ---")
         if not sft_dir.exists():
             print(f"[WARN] SFT 어댑터 없음 ({sft_dir}) — 베이스 모델로 GRPO 진행")
-        train_grpo(genre=g, trace_finite=trace_finite)
+        train_grpo(genre=g, trace_finite=trace_finite, use_unsloth=use_unsloth)
     print()
 
 
-
-def run_grpo_smoke(steps: int):
+def run_grpo_smoke(steps: int, use_unsloth: bool = False):
     print("=" * 60)
     print(f"[C3-smoke] GRPO finite smoke test ({steps} steps)")
     print("=" * 60)
@@ -305,7 +304,7 @@ def run_grpo_smoke(steps: int):
     )
     from app.training.grpo_qwen import run_grpo_smoke_test
 
-    run_grpo_smoke_test(max_steps=steps)
+    run_grpo_smoke_test(max_steps=steps, use_unsloth=use_unsloth)
     print()
 
 
@@ -400,6 +399,7 @@ def parse_args():
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
     p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~50)")
     p.add_argument("--trace-finite", action="store_true", help="본 GRPO 학습 중 gradient/weight finite check 활성화")
+    p.add_argument("--use-unsloth", action="store_true", help="Unsloth 가속 라이브러리 활성화")
     return p.parse_args()
 
 
@@ -413,7 +413,7 @@ def main():
 
     if args.stage == "sft":
         prepare_dataset()
-        run_sft(genre=args.genre, force=args.force)
+        run_sft(genre=args.genre, force=args.force, use_unsloth=args.use_unsloth)
         save_loss_plots_if_possible()
         return
 
@@ -422,12 +422,12 @@ def main():
         return
 
     if args.stage == "grpo":
-        run_grpo(genre=args.genre, trace_finite=args.trace_finite)
+        run_grpo(genre=args.genre, trace_finite=args.trace_finite, use_unsloth=args.use_unsloth)
         save_loss_plots_if_possible()
         return
 
     if args.stage == "grpo-smoke":
-        run_grpo_smoke(args.smoke_steps)
+        run_grpo_smoke(args.smoke_steps, use_unsloth=args.use_unsloth)
         return
 
     if args.stage == "eval":
@@ -438,16 +438,14 @@ def main():
     if not args.skip_phonetics:
         run_phonetics_test()
     prepare_dataset()
-    run_sft(genre=args.genre, force=args.force)
+    run_sft(genre=args.genre, force=args.force, use_unsloth=args.use_unsloth)
     save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check()
-    run_grpo(genre=args.genre, trace_finite=args.trace_finite)
+    run_grpo(genre=args.genre, trace_finite=args.trace_finite, use_unsloth=args.use_unsloth)
     save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval()
-
-
 
     print("=" * 60)
     print("✓ 전체 파이프라인 완료")

@@ -14,3 +14,5 @@ uvicorn[standard]>=0.32,<1.0
 pydantic-settings>=2.6,<3.0
 tiktoken
 sentencepiece
+# Optional (NVIDIA GPU / Colab 가속 시):
+# pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
