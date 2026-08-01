@@ -68,7 +68,7 @@ const DIFFSINGER_VOICEBANKS = [
 export default function FlowTestPage() {
   const [lyrics, setLyrics] = useState(DEFAULT_LYRICS);
   const [bpm, setBpm] = useState("90");
-  const [firstBarStartSec, setFirstBarStartSec] = useState("1.25");
+  const [firstBarStartSec, setFirstBarStartSec] = useState("0");
   const [voicebank, setVoicebank] = useState("potg");
   const [rvcModelId, setRvcModelId] = useState("none");
   const [useIndex, setUseIndex] = useState(false);

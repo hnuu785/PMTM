@@ -176,6 +176,36 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertEqual(best_cand, cand_high)
         self.assertEqual(len(scored), 2)
 
+    def test_unsupported_characters_validation_and_cleaning(self):
+        from app.lyric_prompts import clean_unsupported_characters, find_unsupported_characters
+
+        valid_text = "Hello 힙합 123! (8bars) ~ , . ?"
+        invalid_text = "Hello 힙합 歌詞★😀 123!"
+
+        self.assertEqual(find_unsupported_characters(valid_text), "")
+        self.assertEqual(find_unsupported_characters(invalid_text), "歌詞★😀")
+        self.assertEqual(clean_unsupported_characters(invalid_text), "Hello 힙합  123!")
+
+    def test_score_lyric_completion_penalizes_unsupported_characters(self):
+        clean_lyrics = "1. 난 이 길을 걸어가\n2. 또 내일을 향해 가\n3. 날 막을 순 없어\n4. 끝까지 끝을 봐"
+        weird_lyrics = "1. 난 이 길을 걸어가 歌詞★\n2. 또 내일을 향해 가 😀\n3. 날 막을 순 없어\n4. 끝까지 끝을 봐"
+
+        score_clean = generate_for_api.score_lyric_completion(clean_lyrics, bpm=90)
+        score_weird = generate_for_api.score_lyric_completion(weird_lyrics, bpm=90)
+        self.assertGreater(score_clean, score_weird)
+
+    def test_post_process_lyrics_cleans_unsupported_characters(self):
+        raw = "1. (8음절) 난 무대 위 漢字★\n2. (10em) 마이크를 잡아 😀\n3. (8bars) 세상을 뒤흔들어"
+        processed = generate_for_api.post_process_lyrics(raw)
+        self.assertNotIn("漢字", processed)
+        self.assertNotIn("★", processed)
+        self.assertNotIn("😀", processed)
+        self.assertNotIn("10em", processed)
+        self.assertNotIn("8bars", processed)
+        self.assertIn("난 무대 위", processed)
+        self.assertIn("마이크를 잡아", processed)
+        self.assertIn("세상을 뒤흔들어", processed)
+
 
 if __name__ == "__main__":
     unittest.main()

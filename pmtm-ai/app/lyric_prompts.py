@@ -1,6 +1,20 @@
+import re
 from app.genre_rules import get_genre_rules
 
 TARGET_BARS = 8
+
+# Allowed lyric characters: Korean, English, Digits, Whitespace, and basic punctuation
+ALLOWED_LYRIC_CHARS_REGEX = r"[가-힣a-zA-Z0-9\s.,!?~'\"()\[\]{}:;·…-]"
+
+
+def find_unsupported_characters(text: str) -> str:
+    """가사에서 허용되지 않는 문자(한글, 영문, 숫자, 기본 문장부호 이외)를 추출하여 반환"""
+    return re.sub(ALLOWED_LYRIC_CHARS_REGEX, "", text)
+
+
+def clean_unsupported_characters(text: str) -> str:
+    """가사에서 허용되지 않는 문자를 제거한 깨끗한 문자열 반환"""
+    return "".join(re.findall(ALLOWED_LYRIC_CHARS_REGEX, text))
 
 
 def build_user_prompt(

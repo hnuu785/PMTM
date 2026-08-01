@@ -192,7 +192,7 @@ import re
 
 def post_process_lyrics(raw_text: str) -> str:
     """
-    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수 태그((X음절))를 
+    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수/단위 태그((X음절), (10em) 등)를 
     완벽히 제거하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
     """
     lines = []
@@ -201,8 +201,8 @@ def post_process_lyrics(raw_text: str) -> str:
         if not line:
             continue
         line = re.sub(r"^\d+\.\s*", "", line)
-        line = re.sub(r"^\(\d+음절\)\s*", "", line)
-        line = re.sub(r"\(\d+음절\)\s*$", "", line)
+        line = re.sub(r"^\(\d+[^)]*\)\s*", "", line)
+        line = re.sub(r"\(\d+[^)]*\)\s*$", "", line)
         line = line.strip()
         if line:
             lines.append(line)

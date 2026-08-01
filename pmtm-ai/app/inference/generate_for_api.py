@@ -4,7 +4,13 @@ from pathlib import Path
 
 from app.inference.device import model_device, move_model_to_device, select_inference_device
 from app.inference.generate import DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE, DEFAULT_TOP_P
-from app.lyric_prompts import TARGET_BARS, build_messages as build_lyric_messages, build_user_prompt as build_lyric_user_prompt
+from app.lyric_prompts import (
+    TARGET_BARS,
+    build_messages as build_lyric_messages,
+    build_user_prompt as build_lyric_user_prompt,
+    clean_unsupported_characters,
+    find_unsupported_characters,
+)
 from app.paths import MODEL_ID
 from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
 
@@ -62,29 +68,30 @@ def should_use_chat_template(base_model: str, prompt_format: str) -> bool:
     return "instruct" in base_model.lower()
 
 
-def resolve_base_model(adapter_path: Path | None, override: str) -> str:
-    if not adapter_path:
+def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
+    if override:
         return override
 
-    try:
-        # pyrefly: ignore [missing-import]
-        from peft import PeftConfig
+    if adapter_path:
+        try:
+            # pyrefly: ignore [missing-import]
+            from peft import PeftConfig
 
-        cfg = PeftConfig.from_pretrained(str(adapter_path))
-        if cfg.base_model_name_or_path:
-            return cfg.base_model_name_or_path
-    except Exception:
-        pass
+            cfg = PeftConfig.from_pretrained(str(adapter_path))
+            if cfg.base_model_name_or_path:
+                return cfg.base_model_name_or_path
+        except Exception:
+            pass
 
-    config_path = adapter_path / "adapter_config.json"
-    if config_path.exists():
-        with config_path.open(encoding="utf-8") as fp:
-            config = json.load(fp)
-        base_model = config.get("base_model_name_or_path")
-        if base_model:
-            return str(base_model)
+        config_path = adapter_path / "adapter_config.json"
+        if config_path.exists():
+            with config_path.open(encoding="utf-8") as fp:
+                config = json.load(fp)
+            base_model = config.get("base_model_name_or_path")
+            if base_model:
+                return str(base_model)
 
-    return override
+    return MODEL_ID
 
 
 def build_model_input_text(tokenizer, base_model: str, prompt_format: str, prompt: str, messages: list[dict[str, str]]) -> str:
@@ -198,8 +205,8 @@ import re
 
 def post_process_lyrics(raw_text: str) -> str:
     """
-    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수 태그((X음절))를 
-    완벽히 제거하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
+    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수/단위 태그((X음절), (10em) 등)를 
+    완벽히 제거하고 지원하지 않는 문자(한자, 특수기호 등)를 정제하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
     """
     lines = []
     for line in raw_text.split("\n"):
@@ -207,9 +214,9 @@ def post_process_lyrics(raw_text: str) -> str:
         if not line:
             continue
         line = re.sub(r"^\d+\.\s*", "", line)
-        line = re.sub(r"^\(\d+음절\)\s*", "", line)
-        line = re.sub(r"\(\d+음절\)\s*$", "", line)
-        line = line.strip()
+        line = re.sub(r"^\(\d+[^)]*\)\s*", "", line)
+        line = re.sub(r"\(\d+[^)]*\)\s*$", "", line)
+        line = clean_unsupported_characters(line).strip()
         if line:
             lines.append(line)
     return "\n".join(lines)
@@ -220,10 +227,14 @@ def score_lyric_completion(raw_text: str, bpm: float | None = None) -> float:
     생성된 가사(raw_text)의 라임 밀도와 구조적 완성도를 채점하여 Reward 점수를 반환합니다.
     (GRPO 학습 시 rhyme_reward 채점 기준과 동일)
     """
+    # 허용되지 않는 이상 문자가 포함되어 있는지 체크하여 페널티 부여
+    unsupported = find_unsupported_characters(raw_text)
+    unsupported_penalty = len(unsupported) * 5.0
+
     clean_text = post_process_lyrics(raw_text)
     lines = [line.strip() for line in clean_text.split("\n") if line.strip()]
     if not lines:
-        return -1.0
+        return -1.0 - unsupported_penalty
 
     # 1) 공백/특수문자 제거 정규화 문장 기반 중복 줄 수 계산 및 페널티 부여
     norm_lines = [re.sub(r"[^\w]", "", line) for line in lines if line.strip()]
@@ -243,7 +254,7 @@ def score_lyric_completion(raw_text: str, bpm: float | None = None) -> float:
     # 2) 전체 생성 라인의 라임 밀도 계산
     rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
 
-    final_reward = rhyme_score - dup_penalty
+    final_reward = rhyme_score - dup_penalty - unsupported_penalty
     return float(final_reward)
 
 
@@ -282,20 +293,33 @@ def main():
         print("-" * 60, file=sys.stderr)
 
     num_candidates = max(1, getattr(args, "num_candidates", 4))
-    candidates = generate_candidate_texts(
-        tokenizer,
-        model,
-        prompt,
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        repetition_penalty=args.repetition_penalty,
-        num_candidates=num_candidates,
-    )
-
-    best_cand, best_reward, scored = select_best_candidate(candidates, bpm=args.bpm)
+    max_retries = 3
+    candidates = []
+    best_cand = ""
+    best_reward = -float("inf")
+    scored = []
 
     import sys
+    for attempt in range(1, max_retries + 1):
+        candidates = generate_candidate_texts(
+            tokenizer,
+            model,
+            prompt,
+            max_new_tokens=args.max_new_tokens,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            repetition_penalty=args.repetition_penalty,
+            num_candidates=num_candidates,
+        )
+        cand, reward, scored_items = select_best_candidate(candidates, bpm=args.bpm)
+        if reward > best_reward or attempt == 1:
+            best_cand, best_reward, scored = cand, reward, scored_items
+
+        unsupported = find_unsupported_characters(cand)
+        if not unsupported:
+            break
+        print(f"[Attempt {attempt}/{max_retries}] Candidate contains unsupported characters ({unsupported[:10]!r}). Retrying...", file=sys.stderr)
+
     print(f"=== Generated {len(candidates)} Candidates ===", file=sys.stderr)
     for idx, (cand, reward) in enumerate(scored, 1):
         print(f"--- Candidate {idx} (Reward: {reward:+.4f}) ---", file=sys.stderr)
@@ -306,6 +330,7 @@ def main():
     print("-" * 60, file=sys.stderr)
 
     print(post_process_lyrics(best_cand))
+
 
 
 if __name__ == "__main__":
