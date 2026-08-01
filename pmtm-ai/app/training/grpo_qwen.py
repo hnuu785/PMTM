@@ -446,7 +446,6 @@ def _build_grpo_config(
         max_completion_length=512,
         beta=0.04,
         scale_rewards="group",  # 그룹 내 std 정규화 → 보상 분포 편향 시 학습 안정화
-        cast_lm_head_to_fp32=False,
         temperature=1.0,
         top_p=0.95,
         generation_kwargs={
