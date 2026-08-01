@@ -28,6 +28,12 @@ from datasets import Dataset
 
 from app.paths import DATA_DIR, MODEL_ID, MODELS_DIR, OUTPUTS_DIR
 
+try:
+    # pyrefly: ignore [missing-import]
+    from trl import SFTConfig, SFTTrainer
+except ImportError:
+    SFTConfig, SFTTrainer = None, None
+
 DATA_PATH = str(DATA_DIR / "prepared_dataset.jsonl")
 OUTPUT_DIR = str(OUTPUTS_DIR / "sft_qwen")
 SAVE_DIR = str(MODELS_DIR / "sft_rap_qwen")
@@ -177,11 +183,11 @@ def train_sft(
 
     data_collator = _make_data_collator(tokenizer)
 
-    training_args = TrainingArguments(
+    args_kwargs = dict(
         output_dir=target_output_dir,
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
-        gradient_accumulation_steps=8,
+        gradient_accumulation_steps=4,
         num_train_epochs=4,
         learning_rate=2e-5,
         max_grad_norm=0.5,
@@ -206,8 +212,11 @@ def train_sft(
         seed=SEED,
     )
 
-    if active_unsloth:
-        from trl import SFTTrainer
+    if active_unsloth and SFTTrainer is not None:
+        if SFTConfig is not None:
+            training_args = SFTConfig(**args_kwargs, dataset_text_field=None, max_seq_length=MAX_LENGTH)
+        else:
+            training_args = TrainingArguments(**args_kwargs)
         trainer = SFTTrainer(
             model=model,
             args=training_args,
@@ -216,6 +225,7 @@ def train_sft(
             data_collator=data_collator,
         )
     else:
+        training_args = TrainingArguments(**args_kwargs)
         trainer = Trainer(
             model=model,
             args=training_args,
