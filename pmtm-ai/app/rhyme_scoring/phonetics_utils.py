@@ -68,12 +68,23 @@ CMU_CONS_TO_CODA = {
 }
 
 # fallback (CMU 사전에 없는 단어): 자모 직접 대응
+_CONS_DIGRAPHS = {'th', 'sh', 'ch', 'wh', 'ph', 'gh', 'ck', 'qu', 'ng'}
+_FINAL_STOP_LETTERS = set('bdgkpt')
 _LETTER_V = {'a': 'ㅏ', 'e': 'ㅔ', 'i': 'ㅣ', 'o': 'ㅗ', 'u': 'ㅜ', 'y': 'ㅣ'}
 _LETTER_C = {
     'b': 'ㅂ', 'c': 'ㄱ', 'd': 'ㄷ', 'f': 'ㅂ', 'g': 'ㄱ',
     'j': 'ㅅ', 'k': 'ㄱ', 'l': 'ㄹ', 'm': 'ㅁ', 'n': 'ㄴ',
     'p': 'ㅂ', 'q': 'ㄱ', 'r': 'ㄹ', 's': 'ㅅ', 't': 'ㄷ',
     'v': 'ㅂ', 'x': 'ㄱ', 'z': 'ㅅ', 'h': None, 'w': None,
+}
+
+# 알파벳을 한 글자씩 읽는 약어용 표. (OG → 오지, MC → 엠씨)
+_LETTER_NAME_KR = {
+    'A': '에이', 'B': '비', 'C': '씨', 'D': '디', 'E': '이', 'F': '에프',
+    'G': '지', 'H': '에이치', 'I': '아이', 'J': '제이', 'K': '케이', 'L': '엘',
+    'M': '엠', 'N': '엔', 'O': '오', 'P': '피', 'Q': '큐', 'R': '알',
+    'S': '에스', 'T': '티', 'U': '유', 'V': '브이', 'W': '더블유', 'X': '엑스',
+    'Y': '와이', 'Z': '지',
 }
 
 _BUILTIN_LOANWORD_OVERRIDES = {
@@ -133,6 +144,14 @@ _CMU_CONS_TO_CODA_LOAN = {
     'CH': 'ㅊ', 'JH': 'ㅈ',
 }
 
+# 이중모음의 활음은 한국어에서 별도 음절이 된다. (grind → 그라인드, down → 다운)
+# OW는 관용 표기가 갈려서(go → 고, flow → 플로우) 분해하지 않고 사전 항목에 맡긴다.
+_DIPHTHONG_OFFGLIDE = {'AY': 'ㅣ', 'AW': 'ㅜ', 'OY': 'ㅣ', 'EY': 'ㅣ'}
+
+# 어말 파열음. 장모음·이중모음 뒤에서는 '으'가 붙어 한 음절이 된다.
+_LONG_VOWELS = {'IY', 'UW', 'EY', 'OW', 'AY', 'AW', 'OY'}
+_FINAL_STOPS = {'P', 'T', 'K', 'B', 'G', 'D'}
+
 _EPENTHETIC_VOWEL_BY_CONS = {
     'CH': 'ㅣ', 'JH': 'ㅣ', 'Y': 'ㅣ',
     'SH': 'ㅡ', 'ZH': 'ㅡ', 'S': 'ㅡ', 'Z': 'ㅡ',
@@ -179,7 +198,14 @@ def _cmu_to_loanword(cmu_str: str) -> str | None:
         return None
 
     syllables: list[str] = []
-    carry_onset = _CMU_CONS_TO_ONSET.get(phones[0]) if vowel_idxs[0] > 0 else None
+    carry_onset = None
+    if vowel_idxs[0] > 0:
+        # 어두 자음군은 한국어에서 자음마다 삽입모음이 붙어 음절이 늘어난다.
+        # 마지막 자음만 첫 모음의 초성이 되고 앞선 자음들은 각각 한 음절이 된다.
+        # (street → 스트리트, crew → 크루). W, Y는 초성이 되어 이중모음을 이룬다.
+        onset_cluster = phones[:vowel_idxs[0]]
+        syllables.append(_append_epenthetic_syllables(onset_cluster[:-1]))
+        carry_onset = _CMU_CONS_TO_ONSET.get(onset_cluster[-1])
 
     for k, vi in enumerate(vowel_idxs):
         next_vi = vowel_idxs[k + 1] if k + 1 < len(vowel_idxs) else None
@@ -199,12 +225,21 @@ def _cmu_to_loanword(cmu_str: str) -> str | None:
                 carry_onset = _CMU_CONS_TO_ONSET.get(trailing[-1])
             elif len(trailing) == 1:
                 carry_onset = _CMU_CONS_TO_ONSET.get(trailing[0])
-        else:
-            if len(trailing) == 1:
-                coda = _CMU_CONS_TO_CODA_LOAN.get(trailing[0])
-            elif len(trailing) >= 2:
-                coda = _CMU_CONS_TO_CODA_LOAN.get(trailing[0])
+        elif trailing:
+            head = trailing[0]
+            if head == 'D' or (head in _FINAL_STOPS and phones[vi] in _LONG_VOWELS):
+                # 어말 파열음이 '으'를 얻어 한 음절이 되는 경우. (street → 스트리트, bad → 배드)
+                # 단모음 뒤 무성 파열음은 받침으로 남는다. (cat → 캣, stop → 스탑)
+                extra_tail = trailing
+            else:
+                coda = _CMU_CONS_TO_CODA_LOAN.get(head)
                 extra_tail = trailing[1:]
+
+        offglide = _DIPHTHONG_OFFGLIDE.get(phones[vi])
+        if offglide is not None:
+            syllables.append(_compose_hangul(onset, vowel, None))
+            onset = None
+            vowel = offglide
 
         syllables.append(_compose_hangul(onset, vowel, coda))
         if extra_tail:
@@ -234,30 +269,90 @@ def _cmu_to_phonemes(cmu_str: str) -> list[dict]:
     return out
 
 
+def _acronym_to_phonemes(word: str) -> list[dict] | None:
+    """대문자 약어를 글자 이름으로 읽는다. (OG → 오지, LA → 엘에이)
+
+    네 글자 이상은 GRAY, MKIT처럼 대문자로 표기한 이름·단어가 섞여 있어 제외한다.
+    """
+    if not (word.isupper() and 2 <= len(word) <= 3):
+        return None
+    if not all(ch in _LETTER_NAME_KR for ch in word):
+        return None
+    return _hangul_to_phonemes(''.join(_LETTER_NAME_KR[ch] for ch in word))
+
+
+def _digits_to_phonemes(token: str) -> list[dict]:
+    """숫자를 한국어 수사로 읽는다. count_syllables와 같은 규칙을 쓴다."""
+    try:
+        return _hangul_to_phonemes(int_to_korean(int(token)))
+    except Exception:
+        return []
+
+
+def _split_consonant_units(chunk: str) -> list[str]:
+    """자음 나열을 발음 단위로 자른다. th, sh처럼 두 글자가 한 소리인 것은 묶는다."""
+    units = []
+    i = 0
+    while i < len(chunk):
+        if chunk[i:i + 2] in _CONS_DIGRAPHS:
+            units.append(chunk[i:i + 2])
+            i += 2
+        else:
+            units.append(chunk[i])
+            i += 1
+    return units
+
+
 def _english_fallback(word: str) -> list[dict]:
     """CMU 사전 미등재 단어용 — 글자 단위 근사."""
     word = word.lower()
-    out = []
-    i = 0
+    out: list[dict] = []
+    first_vowel = next((k for k, ch in enumerate(word) if ch in _LETTER_V), None)
+    if first_vowel is None:
+        return out
+
+    # 어두 자음군은 마지막 단위만 초성이 되고 앞의 단위들은 'ㅡ' 음절이 된다.
+    # (swag → 스왜그) 'th' 같은 두 글자 자음은 하나로 세어 음절이 늘지 않게 한다.
+    for unit in _split_consonant_units(word[:first_vowel])[:-1]:
+        if _LETTER_C.get(unit[0]) is not None:
+            out.append({'v': 'ㅡ', 'c': None})
+
+    i = first_vowel
     while i < len(word):
         ch = word[i]
-        if ch in _LETTER_V:
-            # 다음 모음 위치 탐색
-            j = i + 1
-            while j < len(word) and word[j] not in _LETTER_V:
-                j += 1
-            cons_run = word[i + 1:j]
-            if not cons_run:
-                coda = None
-            elif j == len(word) or len(cons_run) >= 2:
-                coda = _LETTER_C.get(cons_run[0])
-            else:
-                # 단자음이 다음 모음의 onset이 됨
-                coda = None
-            out.append({'v': _LETTER_V[ch], 'c': coda})
-            i = j
-        else:
+        if ch not in _LETTER_V:
             i += 1
+            continue
+
+        # 연속된 모음 글자는 하나의 모음으로 본다. (feelin → 필린, homie → 호미)
+        k = i
+        while k + 1 < len(word) and word[k + 1] in _LETTER_V:
+            k += 1
+        j = k + 1
+        while j < len(word) and word[j] not in _LETTER_V:
+            j += 1
+
+        cons_run = word[k + 1:j]
+        coda = None
+        tail_syllable = False
+        if not cons_run:
+            pass
+        elif j == len(word):
+            if cons_run not in _CONS_DIGRAPHS and cons_run[-1] in _FINAL_STOP_LETTERS:
+                # 어말 파열음은 'ㅡ'가 붙어 한 음절이 된다. (swag → 스왜그)
+                coda = _LETTER_C.get(cons_run[0]) if len(cons_run) >= 2 else None
+                tail_syllable = True
+            else:
+                coda = _LETTER_C.get(cons_run[0])
+        elif len(cons_run) >= 2:
+            # 단자음은 다음 모음의 onset이 되므로 받침으로 잡지 않는다.
+            coda = _LETTER_C.get(cons_run[0])
+
+        out.append({'v': _LETTER_V[ch], 'c': coda})
+        if tail_syllable:
+            out.append({'v': 'ㅡ', 'c': None})
+        i = j
+
     return out
 
 
@@ -266,6 +361,10 @@ def _english_word_to_phonemes(word: str) -> list[dict]:
     override = _LOANWORD_OVERRIDES.get(word.lower())
     if override is not None:
         return _hangul_to_phonemes(override)
+
+    acronym = _acronym_to_phonemes(word)
+    if acronym:
+        return acronym
 
     if pronouncing is not None:
         cands = pronouncing.phones_for_word(word.lower())
@@ -306,7 +405,7 @@ def _hangul_to_phonemes(text: str) -> list[dict]:
 
 def normalize_pronunciation(text: str) -> list[dict]:
     """텍스트를 한글/영어 토큰으로 분기해 발음 처리 후 [{v,c}, ...]로 통합."""
-    tokens = re.findall(r'[가-힣]+|[A-Za-z]+', text)
+    tokens = re.findall(r'[가-힣]+|[A-Za-z]+|\d+', text)
     out = []
     for tok in tokens:
         if '가' <= tok[0] <= '힣':
@@ -316,6 +415,8 @@ def normalize_pronunciation(text: str) -> list[dict]:
                 except Exception:
                     pass
             out.extend(_hangul_to_phonemes(tok))
+        elif tok.isdigit():
+            out.extend(_digits_to_phonemes(tok))
         else:
             out.extend(_english_word_to_phonemes(tok))
     return out
