@@ -1,8 +1,29 @@
 import json
 import math
 import re
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+_project_root = Path(__file__).resolve().parents[2]
+_ai_app_dir = _project_root / "pmtm-ai"
+if _ai_app_dir.exists() and str(_ai_app_dir) not in sys.path:
+    sys.path.insert(0, str(_ai_app_dir))
+
+try:
+    from app.lyric_prompts import (
+        ALLOWED_LYRIC_CHARS_REGEX,
+        clean_unsupported_characters,
+        find_unsupported_characters,
+    )
+except ImportError:
+    ALLOWED_LYRIC_CHARS_REGEX = r"[가-힣a-zA-Z0-9\s.,!?~'\"()\[\]{}:;·…-]"
+
+    def find_unsupported_characters(text: str) -> str:
+        return re.sub(ALLOWED_LYRIC_CHARS_REGEX, "", text)
+
+    def clean_unsupported_characters(text: str) -> str:
+        return "".join(re.findall(ALLOWED_LYRIC_CHARS_REGEX, text))
 
 # pyrefly: ignore [missing-import]
 from g2pk2 import G2p
@@ -326,7 +347,7 @@ def convert_numbers_to_hangul(text: str) -> str:
 
 def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     text = convert_numbers_to_hangul(text)
-    unsupported = re.sub(r"[가-힣a-zA-Z0-9\s.,!?~'\"()\[\]{}:;·…-]", "", text)
+    unsupported = find_unsupported_characters(text)
     if unsupported:
         raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
     raw_words = text.strip().split()
