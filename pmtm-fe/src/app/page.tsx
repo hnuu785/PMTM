@@ -674,27 +674,27 @@ export default function Home() {
                             : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
                         }`}
                       >
-                        <span>
-                          <span className="flex items-center gap-1.5 text-sm leading-5 font-semibold">
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5 text-sm leading-5 font-semibold break-all">
                             <span>{option.label}</span>
                             {option.genre === "boombap" && (
-                              <span className="inline-block rounded border border-[#3b82f6]/50 bg-[#3b82f6]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#60a5fa]">
+                              <span className="inline-block shrink-0 rounded border border-[#3b82f6]/50 bg-[#3b82f6]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#60a5fa]">
                                 붐뱁
                               </span>
                             )}
                             {option.genre === "trap" && (
-                              <span className="inline-block rounded border border-[#ec4899]/50 bg-[#ec4899]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#f472b6]">
+                              <span className="inline-block shrink-0 rounded border border-[#ec4899]/50 bg-[#ec4899]/20 px-1.5 py-0.2 text-[10px] font-bold text-[#f472b6]">
                                 트랩
                               </span>
                             )}
                             {option.genre === "all" && (
-                              <span className="inline-block rounded border border-white/20 bg-white/10 px-1.5 py-0.2 text-[10px] font-bold text-neutral-300">
+                              <span className="inline-block shrink-0 rounded border border-white/20 bg-white/10 px-1.5 py-0.2 text-[10px] font-bold text-neutral-300">
                                 공용
                               </span>
                             )}
                           </span>
                           <span
-                            className={`block text-[11px] leading-4 ${
+                            className={`block text-[11px] leading-4 break-all ${
                               llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
                             }`}
                           >
