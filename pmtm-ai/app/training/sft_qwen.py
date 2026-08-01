@@ -15,6 +15,7 @@ from transformers import (
 )
 # pyrefly: ignore [missing-import]
 from app.training.train_utils import (
+    detect_precision,
     is_unsloth_available,
     load_unsloth_model_and_tokenizer,
     setup_training_env,
@@ -121,9 +122,8 @@ def train_sft(
             padding_side="right",
         )
 
-        use_bf16 = False
-        use_fp16 = True
-        compute_dtype = torch.float16
+        compute_dtype, use_bf16, use_fp16 = detect_precision()
+        print(f"[unsloth precision] dtype={compute_dtype}, bf16={use_bf16}, fp16={use_fp16}")
     else:
         tokenizer, bnb_config, compute_dtype, use_bf16, use_fp16 = setup_training_env(
             MODEL_ID, padding_side="right"
@@ -182,11 +182,12 @@ def train_sft(
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=8,
-        num_train_epochs=3,
-        learning_rate=7e-5,
+        num_train_epochs=4,
+        learning_rate=2e-5,
+        max_grad_norm=0.5,
         bf16=use_bf16,
         fp16=use_fp16,
-        warmup_ratio=0.03,
+        warmup_ratio=0.05,
         lr_scheduler_type="cosine",
         weight_decay=0.05,
         logging_steps=10,
