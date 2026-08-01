@@ -945,6 +945,8 @@ def _generate_qwen_verse(
             "app.inference.generate_for_api",
             "--bpm",
             str(bpm),
+            "--base-model",
+            "Qwen/Qwen2.5-3B-Instruct",
         ]
         if topic:
             command.extend(["--topic", topic])

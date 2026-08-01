@@ -262,6 +262,43 @@ class FlowAdapterTests(unittest.TestCase):
         dur_trap = [p.durationSec for p in plan_trap.bars[0].phonemes]
         self.assertNotEqual(dur_bb, dur_trap)
 
+    def test_bpm_115_threshold_tempo_scaling(self):
+        from app.flow_adapter import _phoneme_weight_v2
+        # For BPM >= 115 (fast tempo), fricative/plosive weights increase and vowel base weight decreases
+        v_fast = _phoneme_weight_v2("a", bpm=120)
+        v_slow = _phoneme_weight_v2("a", bpm=90)
+        self.assertLess(v_fast, v_slow)
+
+        fric_fast = _phoneme_weight_v2("sc", bpm=120)
+        fric_slow = _phoneme_weight_v2("sc", bpm=90)
+        self.assertGreater(fric_fast, fric_slow)
+
+    def test_16th_note_grid_slot_duration_allocation(self):
+        from app.flow_adapter import _allocate_syllable_grid_slots
+        # 10 syllables into 14 available slots
+        weights = [1.0] * 10
+        slots = _allocate_syllable_grid_slots(weights, 14)
+        self.assertEqual(sum(slots), 14)
+        self.assertEqual(len(slots), 10)
+
+    def test_dense_bar_syllables_not_truncated(self):
+        dense_lyrics = "\n".join([
+            "빛나던 날의 그 기분은 지금도 꽉 달라진 채",
+            "그때의 나보다 더 멋있어졌으니까 난 흥얼대고",
+            "이제는 말도 많이 하고, 사무실에 오지 않아도",
+            "네가 언제든지 찾아올 수 있기를 믿어주고 있어",
+            "너네 업체들 다 알고 있고, 뭘 해봤든 돈을 받았다고",
+            "그 액수가 대박이냐 안돼냐를 확인 agre",
+            "나의 삶은 뭐든 어머니가 지시하는 방식으로",
+            "살피고 집에 들어와 잊어버리는 것이",
+        ])
+        plan = build_flow_plan(dense_lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        for i, bar in enumerate(plan.bars):
+            dur_sum = sum(p.durationSec for p in bar.phonemes)
+            self.assertAlmostEqual(dur_sum, plan.beatMap.barDurationSec, places=4)
+            self.assertGreater(bar.phonemes[-1].durationSec, 0.0)
+            self.assertEqual(bar.phonemes[-1].symbol, "SP")
+
     def test_sixteen_lines_trap_pairs_two_lines_per_bar(self):
         sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
         plan = build_flow_plan(sixteen_bars, 120, 1.25, "potg", base_f0_hz=190.0, genre="trap")

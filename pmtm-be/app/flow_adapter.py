@@ -1,3 +1,4 @@
+from typing import Any
 import json
 import math
 import re
@@ -11,6 +12,7 @@ if _ai_app_dir.exists() and str(_ai_app_dir) not in sys.path:
     sys.path.insert(0, str(_ai_app_dir))
 
 try:
+    # pyrefly: ignore [missing-import]
     from app.lyric_prompts import (
         ALLOWED_LYRIC_CHARS_REGEX,
         clean_unsupported_characters,
@@ -508,6 +510,7 @@ def build_flow_plan(
             beat_map.barDurationSec,
             index,
             genre=genre,
+            bpm=beat_map.bpm,
         )
         start = beat_map.barStartTimes[index]
         bars.append(
@@ -627,8 +630,6 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
             }
         )
     path.write_text(json.dumps(sections, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
 def _syllable_to_phonemes(syllable: str) -> list[str]:
     code = ord(syllable) - 0xAC00
     onset = CHOSEONG[code // 588]
@@ -651,7 +652,69 @@ def _syllable_to_phonemes(syllable: str) -> list[str]:
 DEFAULT_MIN_DUR_SEC = 0.11
 ABSOLUTE_MIN_DUR_SEC = 0.08
 MIN_VOWEL_DUR_SEC = 0.085
-MAX_SYLLABLE_DUR_SEC = 0.30
+MIN_PLOSIVE_DUR_SEC = 0.030
+MIN_FRICATIVE_DUR_SEC = 0.040
+MIN_NASAL_DUR_SEC = 0.035
+MAX_SYLLABLE_DUR_SEC = 0.60
+
+PLOSIVE_SYMBOLS = {"g", "kk", "d", "tt", "b", "pp", "k", "t", "p", "kcl", "tcl", "pcl", "cl", "K", "P", "T"}
+FRICATIVE_SYMBOLS = {"sc", "s", "sh", "sy", "hh", "jh", "ch", "jj"}
+NASAL_LIQUID_SYMBOLS = {"n", "m", "ng", "l", "rx", "N", "M"}
+VOWEL_SYMBOLS = {
+    "a", "e", "eo", "eu", "i", "o", "u", "ia", "ie", "ieo", "io", "iu", "oa", "oe", "uo", "ui",
+    "a1", "a2", "a3", "a4", "e1", "e2", "e3", "e4", "eo1", "eo2", "eo3", "eo4", "eu1", "eu2", "eu3", "eu4",
+    "i1", "i2", "i3", "i4", "o1", "o2", "o3", "o4", "u1", "u2", "u3", "u4",
+    "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
+}
+CODA_SYMBOLS = {"ng", "l", "n", "m", "kcl", "tcl", "pcl", "cl", "K", "N", "M", "P"}
+
+
+def _phoneme_weight(symbol: str) -> float:
+    if symbol in VOWEL_SYMBOLS:
+        return 0.68
+    if symbol in CODA_SYMBOLS:
+        return 0.14
+    return 0.18
+
+
+def _phoneme_weight_v2(symbol: str, bpm: float = 120.0, stress: float = 1.0) -> float:
+    """Option A: Dynamic phoneme category weighting with BPM 115 threshold scaling & stress modulation."""
+    is_fast_tempo = bpm >= 115.0
+    if symbol in VOWEL_SYMBOLS:
+        base = 0.62 if is_fast_tempo else 0.68
+        if stress >= 1.15:
+            base *= 1.15
+        return base
+    elif symbol in FRICATIVE_SYMBOLS:
+        return 0.22 if is_fast_tempo else 0.18
+    elif symbol in PLOSIVE_SYMBOLS:
+        return 0.16 if is_fast_tempo else 0.14
+    elif symbol in NASAL_LIQUID_SYMBOLS:
+        return 0.15
+    return 0.18
+
+
+def _allocate_syllable_grid_slots(weights: list[float], available_slots: int) -> list[int]:
+    """Option B: 16th-note grid slot allocation based on stress weights."""
+    if not weights:
+        return []
+    if len(weights) > available_slots:
+        return [1] * len(weights)
+    total = sum(weights)
+    raw = [available_slots * w / total for w in weights]
+    durations = [max(1, math.floor(val)) for val in raw]
+    while sum(durations) > available_slots:
+        candidates = [i for i, v in enumerate(durations) if v > 1]
+        if not candidates:
+            break
+        durations[min(candidates, key=lambda i: weights[i])] -= 1
+    while sum(durations) < available_slots:
+        target = max(
+            range(len(weights)),
+            key=lambda i: (raw[i] - durations[i], weights[i]),
+        )
+        durations[target] += 1
+    return durations
 
 
 def _get_word_syllable_weights(syllable_count: int) -> list[float]:
@@ -674,33 +737,29 @@ def _allocate_word_hierarchical_durations(
     bar_duration_sec: float,
     bar_index: int,
     genre: str = "boom_bap",
+    bpm: float = 120.0,
 ) -> tuple[list[str], list[int], list[float], str, list[str], list[float]]:
     total_syllable_count = sum(len(w.syllables) for w in word_chunks)
-
-    if total_syllable_count <= 9:
-        lead_ratio, tail_ratio = 0.08, 0.22
-    elif total_syllable_count <= 16:
-        lead_ratio, tail_ratio = 0.06, 0.08
-    else:
-        lead_ratio, tail_ratio = 0.04, 0.05
-
-    lead_duration = bar_duration_sec * lead_ratio
-    tail_duration = bar_duration_sec * tail_ratio
-    active_duration = bar_duration_sec - lead_duration - tail_duration
-
-    if total_syllable_count > 0:
-        avail_per_syl = active_duration / total_syllable_count
-        target_min_dur = max(ABSOLUTE_MIN_DUR_SEC, min(DEFAULT_MIN_DUR_SEC, avail_per_syl))
-    else:
-        target_min_dur = DEFAULT_MIN_DUR_SEC
-
-    required_syl_time = total_syllable_count * target_min_dur
-    residual_time = active_duration - required_syl_time
-
     word_count = len(word_chunks)
-    items: list[dict[str, object]] = []
-    current_syl_index = 0
 
+    # 16th-note Grid Slot calculations (16 slots per bar - Option B)
+    slots_per_bar = 16
+    slot_duration = bar_duration_sec / float(slots_per_bar)
+
+    if total_syllable_count <= 10:
+        lead_slots, tail_slots = 1, 3
+    elif total_syllable_count <= 16:
+        lead_slots, tail_slots = 1, 2
+    else:
+        lead_slots, tail_slots = 1, 1
+
+    lead_duration = slot_duration * lead_slots
+    tail_duration = slot_duration * tail_slots
+    available_slots = max(1, slots_per_bar - lead_slots - tail_slots)
+
+    # Collect flat list of syllables and linguistic stress
+    syl_list: list[dict[str, Any]] = []
+    current_syl_index = 0
     for w_idx, chunk in enumerate(word_chunks):
         syl_weights = _get_word_syllable_weights(len(chunk.syllables))
         for s_idx, syl_phones in enumerate(chunk.syllables):
@@ -708,118 +767,129 @@ def _allocate_word_hierarchical_durations(
             ling_stress = ling.stress if ling else 1.0
             midi_note = ling.midi_note if ling else 60
 
-            # Combine position weight with Kiwi linguistic stress weight
             combined_weight = syl_weights[s_idx] * ling_stress
 
-            # Genre Micro Offset Modulation (Laying back vs Pushing early)
-            # Boom Bap: +12ms Laying Back delay on 2/4 beats & high stress
-            # Trap: -10ms Pushing Early speedup on 3 beat & high stress
-            rel_pos = current_syl_index / max(1, total_syllable_count)
-            is_snare_region = (0.20 <= rel_pos <= 0.35) or (0.70 <= rel_pos <= 0.85) if genre == "boom_bap" else (0.45 <= rel_pos <= 0.60)
-            if genre == "boom_bap" and (ling_stress >= 1.15 or is_snare_region):
-                combined_weight *= 1.08  # Micro delay / emphasis
-            elif genre == "trap" and (ling_stress >= 1.15 or is_snare_region):
-                combined_weight *= 0.94  # Micro early speedup
-
-            items.append({
-                "type": "SYLLABLE",
+            syl_list.append({
+                "syl_idx": current_syl_index,
                 "phones": syl_phones,
-                "base_dur": target_min_dur,
                 "weight": combined_weight,
+                "stress": ling_stress,
                 "midi_note": midi_note,
+                "punct": chunk.punctuation if s_idx == len(chunk.syllables) - 1 else None,
             })
             current_syl_index += 1
 
-        if chunk.punctuation in ("?", "!", "."):
-            sp_weight = 1.2
-        elif chunk.punctuation == ",":
-            sp_weight = 0.8
-        else:
-            sp_weight = 0.0
+    # Allocate 16th-note grid slots to syllables (Option B)
+    syl_weights_list = [float(item["weight"]) for item in syl_list]
+    allocated_slots = _allocate_syllable_grid_slots(syl_weights_list, available_slots)
 
-        if sp_weight > 0:
-            if residual_time <= 0:
-                sp_base = 0.06 if chunk.punctuation in ("?", "!", ".") else (0.04 if chunk.punctuation == "," else 0.0)
-                if sp_base > 0:
-                    items.append({
-                        "type": "SP",
-                        "phones": None,
-                        "base_dur": sp_base,
-                        "weight": 0.0,
-                        "midi_note": 0,
-                    })
-            else:
-                items.append({
-                    "type": "SP",
-                    "phones": None,
-                    "base_dur": 0.0,
-                    "weight": sp_weight,
-                    "midi_note": 0,
-                })
+    raw_syl_duration_sum = sum(slots * slot_duration for slots in allocated_slots)
+    active_duration = max(0.1, bar_duration_sec - lead_duration - tail_duration)
+    scale_factor = active_duration / raw_syl_duration_sum if raw_syl_duration_sum > active_duration else 1.0
 
-    total_weight = sum(float(item["weight"]) for item in items)
-    base_sum = sum(float(item["base_dur"]) for item in items)
-    effective_residual = max(0.0, active_duration - base_sum)
-
+    items: list[dict[str, Any]] = []
     cap_overflow = 0.0
-    raw_item_durations: list[float] = []
 
-    for item in items:
-        w = float(item["weight"])
-        b = float(item["base_dur"])
-        add_dur = (effective_residual * (w / total_weight)) if total_weight > 0 else 0.0
-        dur = b + add_dur
+    for item, slots in zip(syl_list, allocated_slots):
+        target_dur = slots * slot_duration * scale_factor
 
-        if item["type"] == "SYLLABLE" and dur > MAX_SYLLABLE_DUR_SEC:
-            cap_overflow += (dur - MAX_SYLLABLE_DUR_SEC)
-            dur = MAX_SYLLABLE_DUR_SEC
-        raw_item_durations.append(dur)
+        # Genre Micro Offset Modulation (Boom Bap +12ms Layback vs Trap -10ms Early Push)
+        rel_pos = item["syl_idx"] / max(1, total_syllable_count)
+        is_snare_region = (0.20 <= rel_pos <= 0.35) or (0.70 <= rel_pos <= 0.85) if genre == "boom_bap" else (0.45 <= rel_pos <= 0.60)
+        micro_offset = 0.0
+        if genre == "boom_bap" and (item["stress"] >= 1.15 or is_snare_region):
+            micro_offset = 0.012
+        elif genre == "trap" and (item["stress"] >= 1.15 or is_snare_region):
+            micro_offset = -0.010
+
+        target_dur += micro_offset
+
+        # For sparse lines (<= 10 syllables), cap syllable duration at ~0.15s (crisp 0.14s~0.16s rap speed)
+        # while preserving genre micro_offset (+12ms layback vs -10ms early push), and push remaining time to tail rest.
+        base_cap = 0.15 if total_syllable_count <= 10 else MAX_SYLLABLE_DUR_SEC
+        max_cap = base_cap + micro_offset
+        if target_dur > max_cap:
+            cap_overflow += (target_dur - max_cap)
+            target_dur = max_cap
+
+        items.append({
+            "type": "SYLLABLE",
+            "phones": item["phones"],
+            "dur": target_dur,
+            "weight": item["weight"],
+            "stress": item["stress"],
+            "midi_note": item["midi_note"],
+        })
+        if item["punct"] in ("?", "!", ".", ","):
+            sp_dur = 0.04 if item["punct"] == "," else 0.06
+            items.append({
+                "type": "SP",
+                "phones": None,
+                "dur": sp_dur,
+                "weight": 0.0,
+                "midi_note": 0,
+            })
 
     tail_duration += cap_overflow
 
+    # Prepare outputs
     phonemes: list[str] = ["SP"]
     ph_num: list[int] = [1]
     durations: list[float] = [lead_duration]
     note_seq: list[str] = ["rest"]
     note_dur: list[float] = [lead_duration]
 
-    for item, dur in zip(items, raw_item_durations):
+    for item in items:
         if item["type"] == "SP":
+            dur = item["dur"]
             phonemes.append("SP")
             ph_num.append(1)
             durations.append(dur)
             note_seq.append("rest")
             note_dur.append(dur)
         else:
+            syl_dur = item["dur"]
             syl_phones = item["phones"]
+            ling_stress = item["stress"]
             assert isinstance(syl_phones, list)
+
             phonemes.extend(syl_phones)
             ph_num.append(len(syl_phones))
-            phone_weights = [_phoneme_weight(sym) for sym in syl_phones]
-            pw_sum = sum(phone_weights)
-            syl_phone_durs = [dur * pw / pw_sum for pw in phone_weights]
 
-            # Enforce MIN_VOWEL_DUR_SEC (85ms) floor for vowels if needed
-            v_indices = [i for i, sym in enumerate(syl_phones) if sym in VOWEL_SYMBOLS]
-            if v_indices:
-                v_idx = v_indices[0]
-                if syl_phone_durs[v_idx] < MIN_VOWEL_DUR_SEC:
-                    target_v_dur = min(MIN_VOWEL_DUR_SEC, dur * 0.80)
-                    if target_v_dur > syl_phone_durs[v_idx]:
-                        diff = target_v_dur - syl_phone_durs[v_idx]
-                        other_indices = [i for i in range(len(syl_phones)) if i != v_idx]
-                        other_sum = sum(syl_phone_durs[i] for i in other_indices)
+            # Enhanced Option A phoneme weighting with category & BPM scaling (115 BPM threshold)
+            phone_weights = [_phoneme_weight_v2(sym, bpm=bpm, stress=ling_stress) for sym in syl_phones]
+            pw_sum = sum(phone_weights)
+            syl_phone_durs = [syl_dur * pw / pw_sum for pw in phone_weights]
+
+            # Enforce minimum duration floors (Vowel: 85ms, Fricative: 40ms, Plosive: 30ms, Nasal/Liquid: 35ms)
+            for i, sym in enumerate(syl_phones):
+                floor = 0.0
+                if sym in VOWEL_SYMBOLS:
+                    floor = MIN_VOWEL_DUR_SEC
+                elif sym in FRICATIVE_SYMBOLS:
+                    floor = MIN_FRICATIVE_DUR_SEC
+                elif sym in PLOSIVE_SYMBOLS:
+                    floor = MIN_PLOSIVE_DUR_SEC
+                elif sym in NASAL_LIQUID_SYMBOLS:
+                    floor = MIN_NASAL_DUR_SEC
+
+                if floor > 0.0 and syl_phone_durs[i] < floor:
+                    target_floor = min(floor, syl_dur * 0.75)
+                    if target_floor > syl_phone_durs[i]:
+                        diff = target_floor - syl_phone_durs[i]
+                        other_indices = [k for k in range(len(syl_phones)) if k != i]
+                        other_sum = sum(syl_phone_durs[k] for k in other_indices)
                         if other_sum > 0:
-                            syl_phone_durs[v_idx] = target_v_dur
-                            for i in other_indices:
-                                syl_phone_durs[i] -= diff * (syl_phone_durs[i] / other_sum)
+                            syl_phone_durs[i] = target_floor
+                            for k in other_indices:
+                                syl_phone_durs[k] -= diff * (syl_phone_durs[k] / other_sum)
 
             durations.extend(syl_phone_durs)
 
             midi_note = int(item["midi_note"])
             note_name = _midi_note_to_name(midi_note) if midi_note > 0 else "C4"
             note_seq.append(note_name)
-            note_dur.append(dur)
+            note_dur.append(syl_dur)
 
     phonemes.append("SP")
     ph_num.append(1)
@@ -834,23 +904,6 @@ def _allocate_word_hierarchical_durations(
 
     template_name = f"adaptive_hierarchical_{genre}_{total_syllable_count}syl_{word_count}words"
     return phonemes, ph_num, rounded_durations, template_name, note_seq, rounded_note_durs
-
-
-VOWEL_SYMBOLS = {
-    "a", "e", "eo", "eu", "i", "o", "u", "ia", "ie", "ieo", "io", "iu", "oa", "oe", "uo", "ui",
-    "a1", "a2", "a3", "a4", "e1", "e2", "e3", "e4", "eo1", "eo2", "eo3", "eo4", "eu1", "eu2", "eu3", "eu4",
-    "i1", "i2", "i3", "i4", "o1", "o2", "o3", "o4", "u1", "u2", "u3", "u4",
-    "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
-}
-CODA_SYMBOLS = {"ng", "l", "n", "m", "kcl", "tcl", "pcl", "cl", "K", "N", "M", "P"}
-
-
-def _phoneme_weight(symbol: str) -> float:
-    if symbol in VOWEL_SYMBOLS:
-        return 0.68
-    if symbol in CODA_SYMBOLS:
-        return 0.14
-    return 0.18
 
 
 def _note_name_to_midi(note_name: str) -> int:

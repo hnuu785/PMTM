@@ -195,13 +195,16 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertGreater(score_clean, score_weird)
 
     def test_post_process_lyrics_cleans_unsupported_characters(self):
-        raw = "1. (8음절) 난 무대 위 漢字★\n2. (10음절) 마이크를 잡아 😀"
+        raw = "1. (8음절) 난 무대 위 漢字★\n2. (10em) 마이크를 잡아 😀\n3. (8bars) 세상을 뒤흔들어"
         processed = generate_for_api.post_process_lyrics(raw)
         self.assertNotIn("漢字", processed)
         self.assertNotIn("★", processed)
         self.assertNotIn("😀", processed)
+        self.assertNotIn("10em", processed)
+        self.assertNotIn("8bars", processed)
         self.assertIn("난 무대 위", processed)
         self.assertIn("마이크를 잡아", processed)
+        self.assertIn("세상을 뒤흔들어", processed)
 
 
 if __name__ == "__main__":

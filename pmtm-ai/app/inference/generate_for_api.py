@@ -68,29 +68,30 @@ def should_use_chat_template(base_model: str, prompt_format: str) -> bool:
     return "instruct" in base_model.lower()
 
 
-def resolve_base_model(adapter_path: Path | None, override: str) -> str:
-    if not adapter_path:
+def resolve_base_model(adapter_path: Path | None, override: str | None) -> str:
+    if override:
         return override
 
-    try:
-        # pyrefly: ignore [missing-import]
-        from peft import PeftConfig
+    if adapter_path:
+        try:
+            # pyrefly: ignore [missing-import]
+            from peft import PeftConfig
 
-        cfg = PeftConfig.from_pretrained(str(adapter_path))
-        if cfg.base_model_name_or_path:
-            return cfg.base_model_name_or_path
-    except Exception:
-        pass
+            cfg = PeftConfig.from_pretrained(str(adapter_path))
+            if cfg.base_model_name_or_path:
+                return cfg.base_model_name_or_path
+        except Exception:
+            pass
 
-    config_path = adapter_path / "adapter_config.json"
-    if config_path.exists():
-        with config_path.open(encoding="utf-8") as fp:
-            config = json.load(fp)
-        base_model = config.get("base_model_name_or_path")
-        if base_model:
-            return str(base_model)
+        config_path = adapter_path / "adapter_config.json"
+        if config_path.exists():
+            with config_path.open(encoding="utf-8") as fp:
+                config = json.load(fp)
+            base_model = config.get("base_model_name_or_path")
+            if base_model:
+                return str(base_model)
 
-    return override
+    return MODEL_ID
 
 
 def build_model_input_text(tokenizer, base_model: str, prompt_format: str, prompt: str, messages: list[dict[str, str]]) -> str:
@@ -204,7 +205,7 @@ import re
 
 def post_process_lyrics(raw_text: str) -> str:
     """
-    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수 태그((X음절))를 
+    모델의 날것 출력(raw_text)에서 마디 번호(1., 2.) 및 끝단 음절 수/단위 태그((X음절), (10em) 등)를 
     완벽히 제거하고 지원하지 않는 문자(한자, 특수기호 등)를 정제하여 순수 랩 가사 본문만 깨끗하게 정돈해 주는 헬퍼 함수.
     """
     lines = []
@@ -213,8 +214,8 @@ def post_process_lyrics(raw_text: str) -> str:
         if not line:
             continue
         line = re.sub(r"^\d+\.\s*", "", line)
-        line = re.sub(r"^\(\d+음절\)\s*", "", line)
-        line = re.sub(r"\(\d+음절\)\s*$", "", line)
+        line = re.sub(r"^\(\d+[^)]*\)\s*", "", line)
+        line = re.sub(r"\(\d+[^)]*\)\s*$", "", line)
         line = clean_unsupported_characters(line).strip()
         if line:
             lines.append(line)
