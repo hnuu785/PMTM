@@ -16,3 +16,6 @@ pmtm-ai/models/
 pmtm-ai/outputs/
 pmtm-be/storage/
 pmtm-svs/voicebanks/
+
+# 발표용 포스터 자산 (QR 등) — 필요할 때 다시 생성
+docs/poster/
