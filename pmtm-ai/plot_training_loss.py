@@ -156,6 +156,7 @@ def _save_grpo_reward_plot(
     import matplotlib.pyplot as plt
 
     saved: list[Path] = []
+    prefix = stage_dir.name
 
     # ── reward + reward_std (shaded) ──────────────────────────────────────────
     reward_pts = _load_metric_points(stage_dir, "reward")
@@ -178,13 +179,13 @@ def _save_grpo_reward_plot(
                              label="±1 std")
 
         plt.axhline(0, color="#9ca3af", linewidth=0.8, linestyle="--")
-        plt.title(f"GRPO Reward ({exp_label})")
+        plt.title(f"GRPO Reward ({exp_label} - {prefix})")
         plt.xlabel("Step")
         plt.ylabel("Reward")
         plt.legend(fontsize=9)
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        out = plot_dir / "grpo_qwen_reward.png"
+        out = plot_dir / f"{prefix}_reward.png"
         plt.savefig(out, dpi=180)
         plt.close()
         saved.append(out)
@@ -198,12 +199,12 @@ def _save_grpo_reward_plot(
         plt.figure(figsize=(10, 5))
         plt.plot(steps_k, values_k, marker="o", markersize=3, linewidth=1.5,
                  color="#dc2626")
-        plt.title(f"GRPO KL Divergence ({exp_label})")
+        plt.title(f"GRPO KL Divergence ({exp_label} - {prefix})")
         plt.xlabel("Step")
         plt.ylabel("KL")
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        out = plot_dir / "grpo_qwen_kl.png"
+        out = plot_dir / f"{prefix}_kl.png"
         plt.savefig(out, dpi=180)
         plt.close()
         saved.append(out)
@@ -225,28 +226,29 @@ def generate_loss_plots(
     exp_label = experiment_name or outputs_dir.name
     saved: list[Path] = []
 
+    subdirs = sorted([d for d in outputs_dir.iterdir() if d.is_dir() and d.name != "plots"])
+    sft_dirs = [d for d in subdirs if d.name.startswith("sft")]
+    grpo_dirs = [d for d in subdirs if d.name.startswith("grpo")]
+
     # ── SFT: train loss + eval loss ───────────────────────────────────────────
-    sft_dir = outputs_dir / "sft_qwen"
-    if sft_dir.exists():
+    for sft_dir in sft_dirs:
         train_points = load_loss_points(sft_dir)
         eval_points = _load_metric_points(sft_dir, "eval_loss")
         if train_points or eval_points:
-            out = plot_dir / "sft_qwen_loss.png"
-            _save_sft_plot(train_points, eval_points, f"SFT Loss ({exp_label})", out)
+            out = plot_dir / f"{sft_dir.name}_loss.png"
+            title = f"SFT Loss ({exp_label} - {sft_dir.name})" if len(sft_dirs) > 1 else f"SFT Loss ({exp_label})"
+            _save_sft_plot(train_points, eval_points, title, out)
             saved.append(out)
 
     # ── GRPO: loss + reward + kl ──────────────────────────────────────────────
-    grpo_dir = outputs_dir / "grpo_qwen"
-    if grpo_dir.exists():
-        # loss 곡선 (참고용)
+    for grpo_dir in grpo_dirs:
         loss_pts = load_loss_points(grpo_dir)
         if loss_pts:
-            out = plot_dir / "grpo_qwen_loss.png"
-            _save_single_plot(loss_pts, f"GRPO Loss ({exp_label})", "Loss", out,
-                              color="#6b7280")
+            out = plot_dir / f"{grpo_dir.name}_loss.png"
+            title = f"GRPO Loss ({exp_label} - {grpo_dir.name})" if len(grpo_dirs) > 1 else f"GRPO Loss ({exp_label})"
+            _save_single_plot(loss_pts, title, "Loss", out, color="#6b7280")
             saved.append(out)
 
-        # reward / kl 곡선 (핵심 지표)
         saved.extend(_save_grpo_reward_plot(grpo_dir, exp_label, plot_dir))
 
     if not saved:
