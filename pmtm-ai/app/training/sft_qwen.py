@@ -188,7 +188,7 @@ def train_sft(
         per_device_train_batch_size=2,
         per_device_eval_batch_size=2,
         gradient_accumulation_steps=4,
-        num_train_epochs=3,
+        num_train_epochs=2,
         learning_rate=2e-5,
         max_grad_norm=0.5,
         bf16=use_bf16,
