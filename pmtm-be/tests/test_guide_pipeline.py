@@ -14,6 +14,7 @@ from app.flow_adapter import (
     _get_word_syllable_weights,
     _phoneme_weight,
     _syllable_to_phonemes,
+    build_beat_map,
     build_flow_plan,
     convert_numbers_to_hangul,
     parse_eight_bar_lyrics,
@@ -480,6 +481,54 @@ class GuideDemoApiTests(unittest.TestCase):
 
         self.assertEqual(fake_redis_client.payload["status"], "succeeded")
         self.assertEqual(fake_redis_client.payload["voicebank"], "potg")
+
+
+class BeatIntegrationTests(unittest.TestCase):
+    def test_build_beat_map_with_advanced_analysis(self):
+        sample_analysis = {
+            "bpm": {"fixed_integer": 95},
+            "downbeat_offset_sec": 1.25,
+            "absolute_grid": [
+                {"slot": 0, "time_sec": 1.25, "bar": 1, "beat_in_bar": 1, "subdivision": 0},
+                {"slot": 1, "time_sec": 1.408, "bar": 1, "beat_in_bar": 1, "subdivision": 1},
+                {"slot": 4, "time_sec": 1.88, "bar": 1, "beat_in_bar": 2, "subdivision": 0},
+                {"slot": 16, "time_sec": 3.77, "bar": 2, "beat_in_bar": 1, "subdivision": 0},
+            ],
+            "snare_detection": {
+                "events": [{"original_time": 1.88}, {"original_time": 4.4}]
+            },
+        }
+        beat_map = build_beat_map(90, 1.0, bar_count=2, beat_analysis=sample_analysis)
+        self.assertEqual(beat_map.bpm, 95)
+        self.assertEqual(beat_map.firstBarStartSec, 1.25)
+        self.assertIsNotNone(beat_map.slotDurations)
+        self.assertEqual(beat_map.snareTimes, [1.88, 4.4])
+
+    def test_build_flow_plan_with_beat_analysis(self):
+        sample_analysis = {
+            "bpm": {"fixed_integer": 90},
+            "downbeat_offset_sec": 0.5,
+            "absolute_grid": [
+                {
+                    "slot": i,
+                    "time_sec": round(0.5 + i * 0.166, 4),
+                    "bar": (i // 16) + 1,
+                    "beat_in_bar": ((i // 4) % 4) + 1,
+                    "subdivision": i % 4,
+                }
+                for i in range(128)
+            ],
+        }
+        plan = build_flow_plan(
+            EIGHT_BARS,
+            90,
+            1.0,
+            "potg",
+            base_f0_hz=190.0,
+            beat_analysis=sample_analysis,
+        )
+        self.assertEqual(plan.beatMap.firstBarStartSec, 0.5)
+        self.assertEqual(len(plan.bars), 8)
 
 
 if __name__ == "__main__":

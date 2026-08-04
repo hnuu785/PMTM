@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
 from fastapi.responses import FileResponse
 
+from app.beat_integration import run_advanced_beat_analysis
 from app.config import get_settings
 from app.demo_pipeline import DEMO_STATUS_KEY_PREFIX
 from app.demo_pipeline import parse_status_payload
@@ -714,6 +715,12 @@ def _enqueue_demo_job(
 
 
 def _analyze_beat_bpm(file_path: str) -> int:
+    adv_analysis = run_advanced_beat_analysis(file_path)
+    if adv_analysis and "bpm" in adv_analysis:
+        fixed_bpm = adv_analysis["bpm"].get("fixed_integer")
+        if fixed_bpm and 40 <= fixed_bpm <= 220:
+            return fixed_bpm
+
     try:
         # pyrefly: ignore [missing-import]
         import librosa

@@ -5,6 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.beat_integration import run_advanced_beat_analysis
 from app.config import get_settings
 from app.demo_pipeline import DEMO_JOB_TIMEOUT_SECONDS, DEMO_STATUS_KEY_PREFIX, mix_demo_audio
 from app.flow_adapter import build_flow_plan, write_diffsinger_ds, write_flow_plan
@@ -107,6 +108,7 @@ def run_guide_demo_generation(
             lyrics=lyrics,
             voicebank=voicebank_id,
         )
+        beat_analysis = run_advanced_beat_analysis(beat_file) if beat_file.exists() else None
         plan = build_flow_plan(
             lyrics,
             bpm,
@@ -114,6 +116,7 @@ def run_guide_demo_generation(
             voicebank_id,
             base_f0_hz=profile.base_f0_hz,
             genre=genre,
+            beat_analysis=beat_analysis,
         )
         flow_plan_path = work_path / "flow-plan.json"
         score_path = work_path / "score.ds"
