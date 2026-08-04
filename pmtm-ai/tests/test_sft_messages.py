@@ -44,8 +44,9 @@ class SftMessagesTests(unittest.TestCase):
         self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("8~16 범위 내로", messages[0]["content"])
-        self.assertIn("1. (2음절) line 1", messages[1]["content"])
-        self.assertIn("8. (2음절) line 8", messages[1]["content"])
+        # "line 1" = 라인(2) + 일(1)
+        self.assertIn("1. (3음절) line 1", messages[1]["content"])
+        self.assertIn("8. (3음절) line 8", messages[1]["content"])
 
 
     def test_tokenize_messages_masks_user_tokens(self):
