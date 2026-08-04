@@ -63,13 +63,23 @@ def clean_lines(lyrics: str) -> list[str]:
     return cleaned
 
 
-def make_chunks(lines: list[str], chunk_size: int = TARGET_BARS) -> list[list[str]]:
-    chunks = [lines[i:i + chunk_size] for i in range(0, len(lines) - chunk_size + 1, chunk_size)]
-    remainder = len(lines) % chunk_size
-    if remainder >= chunk_size // 2 and len(lines) >= chunk_size:
-        tail = lines[-chunk_size:]
-        if not chunks or tail != chunks[-1]:
-            chunks.append(tail)
+def make_chunks(lines: list[str], chunk_size: int = TARGET_BARS, step: int | None = None) -> list[list[str]]:
+    """가사 라인 리스트를 chunk_size(기본 8 또는 16) 크기의 덩어리로 자릅니다.
+    step이 지정된 경우(예: step=8, chunk_size=16) 슬라이딩 윈도우 방식으로 오버랩 증강을 수행합니다.
+    """
+    if len(lines) < chunk_size:
+        return []
+
+    stride = step if step is not None else chunk_size
+    chunks = [lines[i : i + chunk_size] for i in range(0, len(lines) - chunk_size + 1, stride)]
+
+    if step is None:
+        remainder = len(lines) % chunk_size
+        if remainder >= chunk_size // 2 and len(lines) >= chunk_size:
+            tail = lines[-chunk_size:]
+            if not chunks or tail != chunks[-1]:
+                chunks.append(tail)
+
     return chunks
 
 
@@ -123,7 +133,7 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
     rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
-    end_rhyme_score = calculate_chunk_end_rhyme_score(lines)
+    end_rhyme_score = calculate_chunk_end_rhyme_score(lines, bpm=bpm)
     return {
         "rhyme_score": rhyme_score,
         "end_rhyme_score": end_rhyme_score,
@@ -136,6 +146,7 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
         "repeated_bigrams": repeated_ngram_count(lines, 2),
         "repeated_trigrams": repeated_ngram_count(lines, 3),
     }
+
 
 
 def rejection_reason(features: dict[str, float | int]) -> str | None:
@@ -208,43 +219,79 @@ def prepare() -> tuple[list[dict], Counter]:
             lyrics = row.get("lyrics", "")
             raw_topic = row.get("topic_primary", "").strip() or None
             topic = map_topic(raw_topic)
-            try:
-                bpm = float(row.get("bpm", "0") or 0)
-            except ValueError:
-                bpm = 0.0
-
-            if bpm <= 0:
-                stats["bad_bpm"] += 1
-                continue
-
-            genre, target_lines, min_s, max_s = get_genre_rules(bpm)
 
             cleaned_lines = clean_lines(lyrics)
-            structured = structure_lines(cleaned_lines, min_allowed=min_s, max_allowed=max_s)
+            if not cleaned_lines:
+                continue
 
-            for chunk in make_chunks(structured, chunk_size=target_lines):
-                stats["candidate_chunks"] += 1
+            # 1) 붐뱁 브랜치 (target_lines=8, min_s=10, max_s=18, 대표 BPM=90.0)
+            boombap_target_lines, boombap_min_s, boombap_max_s = 8, 10, 18
+            boombap_bpm = 90.0
+            structured_bb = structure_lines(cleaned_lines, min_allowed=boombap_min_s, max_allowed=boombap_max_s)
 
-                chunk_key = "\n".join(normalize_text(line) for line in chunk)
+            for chunk in make_chunks(structured_bb, chunk_size=boombap_target_lines):
+                stats["candidate_chunks_bb"] += 1
+                chunk_key = "bb:" + "\n".join(normalize_text(line) for line in chunk)
                 if chunk_key in seen_chunks:
-                    stats["duplicate_chunk"] += 1
+                    stats["duplicate_chunk_bb"] += 1
                     continue
                 seen_chunks.add(chunk_key)
 
-                features = chunk_features(chunk, bpm=bpm)
+                features = chunk_features(chunk, bpm=boombap_bpm)
                 reason = rejection_reason(features)
                 if reason:
-                    stats[reason] += 1
+                    stats[f"{reason}_bb"] += 1
                     continue
 
-                # 장르별 음절 허용 범위 (±1 마진 부여: 붐뱁 7~17음절, 트랩 5~15음절)
                 syllables_list = [count_syllables(line) for line in chunk]
-                if not all(min_s - 1 <= s <= max_s + 1 for s in syllables_list):
-                    stats["syllable_mismatch"] += 1
+                # 마진 없이 정확히 10~18음절 엄격 필터링
+                if not all(boombap_min_s <= s <= boombap_max_s for s in syllables_list):
+                    stats["syllable_mismatch_bb"] += 1
                     continue
 
-                # 100% 주제 태깅 적용 (드롭아웃 없이 3대 대주제 명시)
-                records.append(build_record(chunk, genre, bpm, topic=topic))
+                # 스마트 주제 dropout: 수량이 풍부한 '자신감/성공'은 30%, 소수 주제는 10%만 dropout
+                dropout_rate = 30 if topic == "자신감/성공" else 10
+                topic_bb = None if (abs(hash(chunk_key)) % 100 < dropout_rate) else topic
+
+                records.append({
+                    "genre": "boombap",
+                    "record": build_record(chunk, "붐뱁", boombap_bpm, topic=topic_bb)
+                })
+
+            # 2) 트랩 브랜치 (target_lines=16, min_s=5, max_s=13, 대표 BPM=140.0, step=8 오버랩 증강)
+            trap_target_lines, trap_min_s, trap_max_s = 16, 5, 13
+            trap_bpm = 140.0
+            structured_tp = structure_lines(cleaned_lines, min_allowed=trap_min_s, max_allowed=trap_max_s)
+
+            for chunk in make_chunks(structured_tp, chunk_size=trap_target_lines, step=8):
+                stats["candidate_chunks_tp"] += 1
+                chunk_key = "tp:" + "\n".join(normalize_text(line) for line in chunk)
+                if chunk_key in seen_chunks:
+                    stats["duplicate_chunk_tp"] += 1
+                    continue
+                seen_chunks.add(chunk_key)
+
+                features = chunk_features(chunk, bpm=trap_bpm)
+                reason = rejection_reason(features)
+                if reason:
+                    stats[f"{reason}_tp"] += 1
+                    continue
+
+                syllables_list = [count_syllables(line) for line in chunk]
+                # 마진 없이 정확히 5~13음절 엄격 필터링
+                if not all(trap_min_s <= s <= trap_max_s for s in syllables_list):
+                    stats["syllable_mismatch_tp"] += 1
+                    continue
+
+                # 스마트 주제 dropout: 수량이 풍부한 '자신감/성공'은 30%, 소수 주제는 10%만 dropout
+                dropout_rate = 30 if topic == "자신감/성공" else 10
+                topic_tp = None if (abs(hash(chunk_key)) % 100 < dropout_rate) else topic
+
+                records.append({
+                    "genre": "trap",
+                    "record": build_record(chunk, "트랩", trap_bpm, topic=topic_tp)
+                })
+
 
     stats["kept"] = len(records)
     return records, stats
@@ -258,8 +305,8 @@ OUTPUT_PATH_TRAP = DATA_DIR / "prepared_dataset_trap.jsonl"
 def main() -> None:
     records, stats = prepare()
     
-    boombap_records = [r for r in records if "붐뱁" in r["messages"][0]["content"]]
-    trap_records = [r for r in records if "트랩" in r["messages"][0]["content"]]
+    boombap_records = [item["record"] for item in records if item["genre"] == "boombap"]
+    trap_records = [item["record"] for item in records if item["genre"] == "trap"]
 
     with OUTPUT_PATH_BOOMBAP.open("w", encoding="utf-8") as fp:
         for record in boombap_records:
@@ -278,3 +325,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
