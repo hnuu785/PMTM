@@ -412,6 +412,9 @@ class BeatMap:
     barDurationSec: float
     barStartTimes: list[float]
     beatTimes: list[float]
+    slotDurations: list[float] | None = None
+    snareTimes: list[float] | None = None
+    gridTimes: list[float] | None = None
 
 
 @dataclass(frozen=True)
@@ -454,19 +457,73 @@ def parse_eight_bar_lyrics(lyrics: str) -> list[str]:
     return lines
 
 
-def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> BeatMap:
+def build_beat_map(
+    bpm: int,
+    first_bar_start_sec: float,
+    bar_count: int = 8,
+    beat_analysis: dict[str, Any] | None = None,
+) -> BeatMap:
     if bpm < 40 or bpm > 220:
         raise ValueError("BPM은 40부터 220 사이여야 합니다.")
     if not math.isfinite(first_bar_start_sec) or first_bar_start_sec < 0:
         raise ValueError("첫 마디 시작 시각은 0 이상의 유한한 값이어야 합니다.")
 
     actual_bpm = bpm / 2.0 if bpm >= 115.0 else float(bpm)
-
     beat_duration = 60.0 / actual_bpm
     beats_per_unit = 4
     bar_duration = beat_duration * beats_per_unit
-    bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
-    beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
+
+    slot_durations: list[float] | None = None
+    snare_times: list[float] | None = None
+    grid_times: list[float] | None = None
+
+    if beat_analysis:
+        analysis_bpm = beat_analysis.get("bpm", {}).get("fixed_integer")
+        if analysis_bpm and 40 <= analysis_bpm <= 220:
+            actual_bpm = float(analysis_bpm / 2.0 if analysis_bpm >= 115 else analysis_bpm)
+            beat_duration = 60.0 / actual_bpm
+            bar_duration = beat_duration * beats_per_unit
+
+        downbeat_offset = beat_analysis.get("downbeat_offset_sec")
+        if downbeat_offset is not None and math.isfinite(downbeat_offset) and downbeat_offset >= 0:
+            first_bar_start_sec = downbeat_offset
+
+        absolute_grid = beat_analysis.get("absolute_grid", [])
+        if absolute_grid:
+            grid_times = [float(slot["time_sec"]) for slot in absolute_grid]
+            if len(grid_times) >= 2:
+                slot_durations = [grid_times[i + 1] - grid_times[i] for i in range(len(grid_times) - 1)]
+                slot_durations.append(slot_durations[-1] if slot_durations else beat_duration / 4.0)
+
+            extracted_bar_starts = [
+                slot["time_sec"] for slot in absolute_grid
+                if slot.get("beat_in_bar") == 1 and slot.get("subdivision") == 0
+            ]
+            extracted_beat_times = [
+                slot["time_sec"] for slot in absolute_grid
+                if slot.get("subdivision") == 0
+            ]
+
+            if len(extracted_bar_starts) >= bar_count:
+                bar_starts = extracted_bar_starts[:bar_count]
+            else:
+                bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
+
+            if len(extracted_beat_times) >= bar_count * beats_per_unit:
+                beat_times = extracted_beat_times[:bar_count * beats_per_unit]
+            else:
+                beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
+        else:
+            bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
+            beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
+
+        snare_events = beat_analysis.get("snare_detection", {}).get("events", [])
+        if snare_events:
+            snare_times = [float(evt["original_time"]) for evt in snare_events if "original_time" in evt]
+    else:
+        bar_starts = [first_bar_start_sec + index * bar_duration for index in range(bar_count)]
+        beat_times = [first_bar_start_sec + index * beat_duration for index in range(bar_count * beats_per_unit)]
+
     return BeatMap(
         bpm=int(round(actual_bpm)),
         beatsPerBar=beats_per_unit,
@@ -475,6 +532,9 @@ def build_beat_map(bpm: int, first_bar_start_sec: float, bar_count: int = 8) -> 
         barDurationSec=round(bar_duration, 6),
         barStartTimes=_rounded(bar_starts),
         beatTimes=_rounded(beat_times),
+        slotDurations=_rounded(slot_durations) if slot_durations else None,
+        snareTimes=_rounded(snare_times) if snare_times else None,
+        gridTimes=_rounded(grid_times) if grid_times else None,
     )
 
 
@@ -486,6 +546,7 @@ def build_flow_plan(
     *,
     base_f0_hz: float,
     genre: str = "boom_bap",
+    beat_analysis: dict[str, Any] | None = None,
 ) -> FlowPlan:
     lines = parse_eight_bar_lyrics(lyrics)
     if len(lines) == 16:
@@ -493,7 +554,7 @@ def build_flow_plan(
     else:
         bar_lines = lines
 
-    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(bar_lines))
+    beat_map = build_beat_map(bpm, first_bar_start_sec, bar_count=len(bar_lines), beat_analysis=beat_analysis)
     bars: list[FlowBar] = []
     for index, line_text in enumerate(bar_lines):
         word_chunks, g2p_line = _extract_word_syllables_and_text(line_text)

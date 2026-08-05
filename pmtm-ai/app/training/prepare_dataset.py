@@ -150,10 +150,6 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
 
 
 def rejection_reason(features: dict[str, float | int]) -> str | None:
-    if features["rhyme_score"] < MIN_RHYME_SCORE:
-        return "low_rhyme"
-    if features.get("end_rhyme_score", 1.0) < MIN_END_RHYME_SCORE:
-        return "low_end_rhyme"
     if features["duplicate_lines"] > 0:
         return "line_repeat"
     if features["max_ending_word_count"] > MAX_ENDING_WORD_COUNT:
@@ -224,8 +220,8 @@ def prepare() -> tuple[list[dict], Counter]:
             if not cleaned_lines:
                 continue
 
-            # 1) 붐뱁 브랜치 (target_lines=8, min_s=10, max_s=18, 대표 BPM=90.0)
-            boombap_target_lines, boombap_min_s, boombap_max_s = 8, 10, 18
+            # 1) 붐뱁 브랜치 (target_lines=8, min_s=9, max_s=16, 대표 BPM=90.0)
+            boombap_target_lines, boombap_min_s, boombap_max_s = 8, 9, 16
             boombap_bpm = 90.0
             structured_bb = structure_lines(cleaned_lines, min_allowed=boombap_min_s, max_allowed=boombap_max_s)
 
@@ -244,7 +240,7 @@ def prepare() -> tuple[list[dict], Counter]:
                     continue
 
                 syllables_list = [count_syllables(line) for line in chunk]
-                # 마진 없이 정확히 10~18음절 엄격 필터링
+                # 마진 없이 정확히 9~16음절 엄격 필터링
                 if not all(boombap_min_s <= s <= boombap_max_s for s in syllables_list):
                     stats["syllable_mismatch_bb"] += 1
                     continue
@@ -258,8 +254,8 @@ def prepare() -> tuple[list[dict], Counter]:
                     "record": build_record(chunk, "붐뱁", boombap_bpm, topic=topic_bb)
                 })
 
-            # 2) 트랩 브랜치 (target_lines=16, min_s=5, max_s=13, 대표 BPM=140.0, step=8 오버랩 증강)
-            trap_target_lines, trap_min_s, trap_max_s = 16, 5, 13
+            # 2) 트랩 브랜치 (target_lines=16, min_s=6, max_s=13, 대표 BPM=140.0, step=8 오버랩 증강)
+            trap_target_lines, trap_min_s, trap_max_s = 16, 6, 13
             trap_bpm = 140.0
             structured_tp = structure_lines(cleaned_lines, min_allowed=trap_min_s, max_allowed=trap_max_s)
 
@@ -278,7 +274,7 @@ def prepare() -> tuple[list[dict], Counter]:
                     continue
 
                 syllables_list = [count_syllables(line) for line in chunk]
-                # 마진 없이 정확히 5~13음절 엄격 필터링
+                # 마진 없이 정확히 6~13음절 엄격 필터링
                 if not all(trap_min_s <= s <= trap_max_s for s in syllables_list):
                     stats["syllable_mismatch_tp"] += 1
                     continue
