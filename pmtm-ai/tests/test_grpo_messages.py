@@ -36,35 +36,35 @@ class GrpoMessagesTests(unittest.TestCase):
         msg1 = prompts[0]
         self.assertEqual([m["role"] for m in msg1], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", msg1[0]["content"])
-        self.assertIn("8~16 범위 내로", msg1[0]["content"])
+        self.assertIn("9~16 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
         # 140 BPM, 트랩 prompt (5th prompt in 2x4 combination)
         msg2 = prompts[4]
         self.assertEqual([m["role"] for m in msg2], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", msg2[0]["content"])
-        self.assertIn("6~14 범위 내로", msg2[0]["content"])
+        self.assertIn("6~13 범위 내로", msg2[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg2[0]["content"])
 
     def test_build_prompts_doubles_halftime_bpm(self):
-        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (6~14 syllables)
+        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (6~13 syllables)
         messages = build_messages(bpm=70)
         self.assertEqual(len(messages), 1)
         self.assertEqual([m["role"] for m in messages], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("6~14 범위 내로", messages[0]["content"])
+        self.assertIn("6~13 범위 내로", messages[0]["content"])
 
     def test_rhyme_reward_accepts_conversational_completion(self):
         prompt = build_messages(bpm=90)
         raw_lines = [
             "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
+            "맘을 비워도 박자는 돌아와",
+            "길 위의 불빛이 나를 불러봐",
+            "진심을 눌러도 rhyme은 넘쳐나",
             "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
-            "과거의 기억들을 저 멀리 버렸지",
-            "내 앞을 막아선 저 쇠창살을 막았지",
+            "이 밤이 흐르기 전 모든 걸 바쳤니",
+            "과거의 기억들을 저 멀리 버렸으리",
+            "내 앞을 막아선 저 쇠창살을 부수기",
         ]
         formatted_lines = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(raw_lines, 1)]
         content = "\n".join(formatted_lines)
@@ -84,24 +84,24 @@ class GrpoMessagesTests(unittest.TestCase):
         self.assertGreater(rewards[0], 0.70)
 
     def test_rhyme_reward_penalizes_abab_and_rewards_aa_and_aaaa(self):
-        # 1. AAAA BBBB 가사 (1~4행 -가 라임, 5~8행 -다 라임)
+        # 1. AAAA BBBB 가사 (1~4행 -ㅏ 라임, 5~8행 -ㅣ 라임)
         lines_aaaa_bbbb = [
             "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
-            "차가운 빗줄기가 어깨에 내렸다",
-            "이 밤이 흐르기 전 모든 걸 바쳤다",
-            "과거의 기억들을 저 멀리 버렸다",
-            "내 앞을 막아선 저 쇠창살을 막았다",
+            "맘을 비워도 박자는 돌아와",
+            "길 위의 불빛이 나를 불러봐",
+            "진심을 눌러도 rhyme은 넘쳐나",
+            "차가운 빗줄기가 어깨에 내렸지",
+            "이 밤이 흐르기 전 모든 걸 바쳤니",
+            "과거의 기억들을 저 멀리 버렸으리",
+            "내 앞을 막아선 저 쇠창살을 부수기",
         ]
         
         # 2. AA BB CC DD 가사 (2줄 단위 라임)
         lines_aabb_ccdd = [
             "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
+            "맘을 비워도 박자는 돌아와",
             "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
+            "이 밤이 흐르기 전 모든 걸 바쳤니",
             "그 누구도 내 앞길을 막지 못해",
             "끝까지 가겠어 난 절대 안 멈춰",  # 라임 안맞음 (못해/멈춰)
             "새로운 세상을 향해서 가겠어",
@@ -111,9 +111,9 @@ class GrpoMessagesTests(unittest.TestCase):
         # 3. ABAB CDCD 가사 (교차 라임)
         lines_abab_cdcd = [
             "밤을 지나 나는 다시 올라가",      # A
-            "차가운 빗줄기가 어깨에 내렸다",    # B
-            "맘을 비워도 박자는 돌아가",        # A
-            "이 밤이 흐르기 전 모든 걸 바쳤다",  # B
+            "차가운 빗줄기가 어깨에 내렸지",    # B
+            "맘을 비워도 박자는 돌아와",        # A
+            "이 밤이 흐르기 전 모든 걸 바쳤니",  # B
             "그 누구도 내 앞길을 막지 못해",    # C
             "새로운 세상을 향해서 가겠어",      # D
             "이 모든 두려움을 뛰어 넘게",      # C
@@ -142,13 +142,13 @@ class GrpoMessagesTests(unittest.TestCase):
     def test_rhyme_reward_stepwise_duplicate_penalty(self):
         base_lines = [
             "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
+            "맘을 비워도 박자는 돌아와",
+            "길 위의 불빛이 나를 불러봐",
+            "진심을 눌러도 rhyme은 넘쳐나",
             "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
-            "과거의 기억들을 저 멀리 버렸지",
-            "내 앞을 막아선 저 쇠창살을 막았지",
+            "이 밤이 흐르기 전 모든 걸 바쳤니",
+            "과거의 기억들을 저 멀리 버렸으리",
+            "내 앞을 막아선 저 쇠창살을 부수기",
         ]
         
         def make_comp(lines):
