@@ -54,6 +54,8 @@ python run_training.py --experiment-name exp-001 --stage grpo
 python -m app.inference.generate --artist "Tablo" --bpm 90 --energy 0.65 --danceability 0.70 --loudness -6.0 --valence 0.50 --bars 8
 ```
 
+> **Unsloth 가속 사용 시:** `run_training.py` 실행 시 `--use-unsloth` 옵션을 추가합니다. (예: `python run_training.py --stage sft --use-unsloth`)
+
 `grpo-smoke`는 GRPO를 1~50 step만 실행하면서 학습 전 forward logits, optimizer step 직전 gradient, optimizer step 직후 LoRA weight의 finite 여부를 검사합니다. 여기서 NaN이 잡히면 본 GRPO 학습을 진행하지 말고 precision/optimizer/KL 설정을 먼저 고칩니다.
 본 GRPO schedule 그대로 NaN 발생 지점을 추적하려면 `python run_training.py --experiment-name exp-001 --stage grpo --trace-finite`를 사용합니다.
 
@@ -99,13 +101,20 @@ cd PMTM/pmtm-ai
 pip install -r requirements-gpu.txt
 ```
 
+Unsloth 가속 사용 시 Colab 셀에서 아래 설치 명령어 실행이 필요합니다:
+
+```bash
+!pip install --upgrade --force-reinstall --no-cache-dir --no-deps unsloth unsloth_zoo
+```
+
+또한, 학습 실행 시 `--use-unsloth` 플래그를 반드시 추가해야 Unsloth 가속이 활성화됩니다.
 
 ```bash
 export PMTM_MODELS_DIR=/content/drive/MyDrive/pmtm-ai/models
 export PMTM_OUTPUTS_DIR=/content/drive/MyDrive/pmtm-ai/outputs
-python run_training.py --stage sft
+python run_training.py --stage sft --use-unsloth
 python run_training.py --stage sanity
-python run_training.py --stage grpo
+python run_training.py --stage grpo --use-unsloth
 python run_training.py --stage eval
 ```
 
