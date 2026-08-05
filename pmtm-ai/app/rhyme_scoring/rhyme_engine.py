@@ -53,6 +53,12 @@ def get_line_rhyme_score(line1, line2):
     if w1_clean == w2_clean and w1_clean != "":
         return 0.2  # 동일 단어 단순 반복 시 낮은 점수(0.2) 부여
 
+    # 끝 음절 글자(자음과 모음) 완전 동일 시 어미 반복 감점 (0.2점 부여)
+    line1_clean = re.sub(r"[^\w]", "", line1).lower()
+    line2_clean = re.sub(r"[^\w]", "", line2).lower()
+    if line1_clean and line2_clean and line1_clean[-1] == line2_clean[-1]:
+        return 0.2  # 끝 음절 동일 시 0.2점 부여
+
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
     
