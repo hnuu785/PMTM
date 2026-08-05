@@ -39,6 +39,18 @@ def parse_args():
         help="Number of candidates to generate for Best-of-N reward selection (default: 4)",
     )
     p.add_argument(
+        "--min-rhyme-density",
+        type=float,
+        default=0.35,
+        help="Minimum rhyme density required to accept generation (default: 0.35)",
+    )
+    p.add_argument(
+        "--max-retries",
+        type=int,
+        default=5,
+        help="Maximum generation retries if quality threshold is not met (default: 5)",
+    )
+    p.add_argument(
         "--print-prompt",
         action="store_true",
         help="Print the constructed prompt before generation",
@@ -293,7 +305,8 @@ def main():
         print("-" * 60, file=sys.stderr)
 
     num_candidates = max(1, getattr(args, "num_candidates", 4))
-    max_retries = 3
+    min_rhyme_density = getattr(args, "min_rhyme_density", 0.35)
+    max_retries = max(1, getattr(args, "max_retries", 5))
     candidates = []
     best_cand = ""
     best_reward = -float("inf")
@@ -315,10 +328,14 @@ def main():
         if reward > best_reward or attempt == 1:
             best_cand, best_reward, scored = cand, reward, scored_items
 
+        clean_lines = [line.strip() for line in post_process_lyrics(cand).split("\n") if line.strip()]
+        rhyme_density = calculate_rhyme_density(clean_lines, bpm=args.bpm)
         unsupported = find_unsupported_characters(cand)
-        if not unsupported:
+
+        if not unsupported and rhyme_density >= min_rhyme_density:
             break
-        print(f"[Attempt {attempt}/{max_retries}] Candidate contains unsupported characters ({unsupported[:10]!r}). Retrying...", file=sys.stderr)
+
+        print(f"[Attempt {attempt}/{max_retries}] Candidate rejected. Retrying...", file=sys.stderr)
 
     print(f"=== Generated {len(candidates)} Candidates ===", file=sys.stderr)
     for idx, (cand, reward) in enumerate(scored, 1):

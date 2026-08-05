@@ -53,6 +53,12 @@ def get_line_rhyme_score(line1, line2):
     if w1_clean == w2_clean and w1_clean != "":
         return 0.2  # 동일 단어 단순 반복 시 낮은 점수(0.2) 부여
 
+    # 끝 음절 글자(자음과 모음) 완전 동일 시 어미 반복 감점 (0.2점 부여)
+    line1_clean = re.sub(r"[^\w]", "", line1).lower()
+    line2_clean = re.sub(r"[^\w]", "", line2).lower()
+    if line1_clean and line2_clean and line1_clean[-1] == line2_clean[-1]:
+        return 0.2  # 끝 음절 동일 시 0.2점 부여
+
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
     
@@ -73,10 +79,43 @@ def calculate_line_scores(
 
     bpm 또는 genre 매개변수를 기준으로 트랩(genre="트랩" 또는 bpm >= 115) 환경에서는
     건너뛴 라임(ABAC, BACA 등 i <-> i+2) 가중치를 1.3333 (line_score 기준 0.8점 반영)으로 상향 조절합니다.
+    트랩 환경에서 10줄 이상(16줄 구조, 2줄 = 1마디)인 경우, 마디의 끝이 되는 짝수번째 라인(index 1, 3, 5...)을 각운으로 평가합니다.
     """
     actual_len = len(actual_lines)
     if actual_len <= 1:
         return [0.0] * actual_len, [None] * actual_len
+
+    # 장르 판별 (트랩 여부 확인)
+    is_trap = False
+    if genre is not None:
+        is_trap = genre.lower() in ("trap", "트랩")
+    elif bpm is not None:
+        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+        is_trap = judgment_bpm >= 115
+
+    # 트랩 장르이고 10줄 이상(예: 16줄 구조, 2줄 = 1마디)인 경우:
+    # 짝수번째 라인(0-indexed 기준 index 1, 3, 5, 7...)만 추출하여 마디 각운으로 평가 (8마디 표준 채점과 동일)
+    if is_trap and actual_len >= 10:
+        even_indices = list(range(1, actual_len, 2))
+        even_lines = [actual_lines[idx] for idx in even_indices]
+
+        # 짝수번째 8개 라인은 이미 8마디 표준 각운들이므로 붐뱁(8마디 표준) 알고리즘으로 라인 스코어 산출
+        sub_scores, sub_matches = calculate_line_scores(even_lines, bpm=bpm, genre="붐뱁")
+
+        line_scores = [0.0] * actual_len
+        best_match_indexes = [None] * actual_len
+
+        for k, idx in enumerate(even_indices):
+            line_scores[idx] = sub_scores[k]
+            if idx - 1 >= 0:
+                line_scores[idx - 1] = sub_scores[k]
+
+            if sub_matches[k] is not None:
+                best_match_indexes[idx] = even_indices[sub_matches[k]]
+                if idx - 1 >= 0:
+                    best_match_indexes[idx - 1] = even_indices[sub_matches[k]]
+
+        return line_scores, best_match_indexes
 
     # 인접한 모든 쌍(i, i+1)의 라임 점수를 계산
     adj_scores = []
@@ -89,14 +128,6 @@ def calculate_line_scores(
     for i in range(actual_len - 2):
         score = get_line_rhyme_score(actual_lines[i], actual_lines[i+2])
         skip_scores.append(score)
-
-    # 장르 판별 (트랩 여부 확인)
-    is_trap = False
-    if genre is not None:
-        is_trap = genre.lower() in ("trap", "트랩")
-    elif bpm is not None:
-        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-        is_trap = judgment_bpm >= 115
 
     # 건너뛴 라임 가중치: 붐뱁 0.5 (줄당 0.3점), 트랩 1.3333 (줄당 0.8점)
     skip_factor = (4.0 / 3.0) if is_trap else 0.5
@@ -168,6 +199,20 @@ def calculate_rhyme_density(
     actual_len = len(lines)
     if actual_len <= 1:
         return 0.0
+
+    # 장르 판별 (트랩 여부 확인)
+    is_trap = False
+    if genre is not None:
+        is_trap = genre.lower() in ("trap", "트랩")
+    elif bpm is not None:
+        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+        is_trap = judgment_bpm >= 115
+
+    if is_trap and actual_len >= 10:
+        # 트랩 16줄 가사의 경우 짝수번째 라인(마디 끝단어)만 추출하여 8마디 표준 밀도로 산출
+        even_lines = [lines[i] for i in range(1, actual_len, 2)]
+        return calculate_rhyme_density(even_lines, bpm=bpm, genre="붐뱁")
+
     line_scores, _ = calculate_line_scores(lines, bpm=bpm, genre=genre)
     base_density = sum(line_scores) / actual_len
 
@@ -182,3 +227,5 @@ def calculate_rhyme_density(
 
     penalty = no_rhyme_triplets * 0.05
     return round(max(0.0, base_density - penalty), 4)
+
+
