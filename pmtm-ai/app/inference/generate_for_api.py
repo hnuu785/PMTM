@@ -41,8 +41,8 @@ def parse_args():
     p.add_argument(
         "--min-rhyme-coverage",
         type=float,
-        default=0.5,
-        help="Minimum adjacent end-rhyme coverage required to accept generation (default: 0.5)",
+        default=0.0,
+        help="Minimum adjacent end-rhyme coverage required to accept generation (default: 0.0)",
     )
     p.add_argument(
         "--max-retries",
@@ -305,7 +305,7 @@ def main():
         print("-" * 60, file=sys.stderr)
 
     num_candidates = max(1, getattr(args, "num_candidates", 4))
-    min_rhyme_coverage = getattr(args, "min_rhyme_coverage", 0.5)
+    min_rhyme_coverage = getattr(args, "min_rhyme_coverage", 0.0)
     max_retries = max(1, getattr(args, "max_retries", 5))
     candidates = []
     best_cand = ""
