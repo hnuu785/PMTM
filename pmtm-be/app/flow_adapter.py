@@ -522,8 +522,9 @@ def build_beat_map(
 
     if beat_analysis:
         analysis_bpm = beat_analysis.get("bpm", {}).get("fixed_integer")
+        half_time_multiplier = 2 if analysis_bpm and 115 <= analysis_bpm <= 220 else 1
         if analysis_bpm and 40 <= analysis_bpm <= 220:
-            actual_bpm = float(analysis_bpm / 2.0 if analysis_bpm >= 115 else analysis_bpm)
+            actual_bpm = float(analysis_bpm / half_time_multiplier)
             beat_duration = 60.0 / actual_bpm
             bar_duration = beat_duration * beats_per_unit
 
@@ -533,7 +534,7 @@ def build_beat_map(
 
         absolute_grid = beat_analysis.get("absolute_grid", [])
         if absolute_grid:
-            grid_times = [float(slot["time_sec"]) for slot in absolute_grid]
+            grid_times = [float(slot["time_sec"]) for slot in absolute_grid][::half_time_multiplier]
             if len(grid_times) >= 2:
                 slot_durations = [grid_times[i + 1] - grid_times[i] for i in range(len(grid_times) - 1)]
                 slot_durations.append(slot_durations[-1] if slot_durations else beat_duration / 4.0)
@@ -541,11 +542,11 @@ def build_beat_map(
             extracted_bar_starts = [
                 slot["time_sec"] for slot in absolute_grid
                 if slot.get("beat_in_bar") == 1 and slot.get("subdivision") == 0
-            ]
+            ][::half_time_multiplier]
             extracted_beat_times = [
                 slot["time_sec"] for slot in absolute_grid
                 if slot.get("subdivision") == 0
-            ]
+            ][::half_time_multiplier]
 
             if len(extracted_bar_starts) >= bar_count:
                 bar_starts = extracted_bar_starts[:bar_count]

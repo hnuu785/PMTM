@@ -378,6 +378,39 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertIn("나는 비트 위를 달려", plan.bars[0].text)
         self.assertIn("고개를 들고", plan.bars[0].text)
 
+    def test_trap_half_time_grid_does_not_overlap_paired_lines(self):
+        source_bpm = 140
+        source_sixteenth_duration = 60.0 / source_bpm / 4.0
+        analysis = {
+            "bpm": {"fixed_integer": source_bpm},
+            "downbeat_offset_sec": 0.0,
+            "absolute_grid": [
+                {
+                    "slot": index,
+                    "time_sec": round(index * source_sixteenth_duration, 6),
+                    "bar": (index // 16) + 1,
+                    "beat_in_bar": ((index // 4) % 4) + 1,
+                    "subdivision": index % 4,
+                }
+                for index in range(256)
+            ],
+        }
+        sixteen_lines = "\n".join(EIGHT_BARS.splitlines() * 2)
+        plan = build_flow_plan(
+            sixteen_lines,
+            source_bpm,
+            0.0,
+            "potg",
+            base_f0_hz=190.0,
+            genre="trap",
+            beat_analysis=analysis,
+        )
+
+        self.assertEqual(plan.beatMap.bpm, 70)
+        self.assertAlmostEqual(plan.beatMap.barStartTimes[1], plan.beatMap.barDurationSec, places=5)
+        for previous, current in zip(plan.bars, plan.bars[1:]):
+            self.assertGreaterEqual(current.startSec, previous.endSec)
+
     def test_f0_curve_is_flat(self):
         from app.flow_adapter import _build_f0_curve
         symbols = ["SP", "g", "a", "kcl", "SP"]
@@ -519,6 +552,11 @@ class GuideDemoApiTests(unittest.TestCase):
         with (
             TemporaryDirectory() as tmp,
             mock.patch.dict("sys.modules", {"redis": fake_redis_module}),
+            mock.patch.object(
+                guide_pipeline,
+                "run_advanced_beat_analysis",
+                return_value={"bpm": {"fixed_integer": 90}, "downbeat_offset_sec": 2.0},
+            ),
             mock.patch.object(guide_pipeline, "_trim_beat") as trim,
             mock.patch.object(guide_pipeline, "_fit_vocal_to_duration") as fit_vocal,
             mock.patch.object(guide_pipeline, "render_diffsinger") as render,
@@ -542,12 +580,15 @@ class GuideDemoApiTests(unittest.TestCase):
                 "potg",
             )
 
-            expected_plan = build_flow_plan(EIGHT_BARS, 90, 1.0, "potg", base_f0_hz=190.0)
-            expected_mix_duration = (
-                1.0
-                + expected_plan.beatMap.barDurationSec * expected_plan.beatMap.barCount
-                + guide_pipeline.MIX_TAIL_SECONDS
+            expected_plan = build_flow_plan(
+                EIGHT_BARS,
+                90,
+                1.0,
+                "potg",
+                base_f0_hz=190.0,
+                beat_analysis={"bpm": {"fixed_integer": 90}, "downbeat_offset_sec": 2.0},
             )
+            expected_mix_duration = expected_plan.bars[-1].endSec + guide_pipeline.MIX_TAIL_SECONDS
             self.assertAlmostEqual(trim.call_args.args[2], expected_mix_duration)
             self.assertAlmostEqual(fit_vocal.call_args.args[2], expected_mix_duration)
             self.assertTrue((work_dir / "flow-plan.json").is_file())

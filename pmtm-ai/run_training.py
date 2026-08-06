@@ -292,7 +292,12 @@ def reward_sanity_check(genre: str | None = None):
     torch.cuda.empty_cache()
 
 
-def run_grpo(genre: str | None = None, trace_finite: bool = False, use_unsloth: bool = False):
+def run_grpo(
+    genre: str | None = None,
+    trace_finite: bool = False,
+    use_unsloth: bool = False,
+    max_steps: int = 120,
+):
     print("=" * 60)
     print(f"[C3] GRPO 학습 (장르: {genre or '전체'})")
     print("=" * 60)
@@ -311,7 +316,12 @@ def run_grpo(genre: str | None = None, trace_finite: bool = False, use_unsloth: 
         print(f"\n--- GRPO 학습 시작 ({g or '통합'}) ---")
         if not sft_dir.exists():
             print(f"[WARN] SFT 어댑터 없음 ({sft_dir}) — 베이스 모델로 GRPO 진행")
-        train_grpo(genre=g, trace_finite=trace_finite, use_unsloth=use_unsloth)
+        train_grpo(
+            genre=g,
+            trace_finite=trace_finite,
+            use_unsloth=use_unsloth,
+            max_steps=max_steps,
+        )
     print()
 
 
@@ -428,6 +438,7 @@ def parse_args():
     p.add_argument("--skip-phonetics", action="store_true", help="phonetics 회귀 테스트 스킵")
     p.add_argument("--skip-sanity", action="store_true", help="GRPO 전 reward sanity check 스킵")
     p.add_argument("--skip-eval", action="store_true", help="최종 샘플 생성 스킵")
+    p.add_argument("--grpo-steps", type=int, default=120, help="GRPO 학습 max_steps 지정 (기본값: 120)")
     p.add_argument("--smoke-steps", type=int, default=10, help="GRPO smoke test step 수 (1~50)")
     p.add_argument("--trace-finite", action="store_true", help="본 GRPO 학습 중 gradient/weight finite check 활성화")
     p.add_argument("--use-unsloth", action="store_true", help="Unsloth 가속 라이브러리 활성화")
@@ -453,7 +464,12 @@ def main():
         return
 
     if args.stage == "grpo":
-        run_grpo(genre=args.genre, trace_finite=args.trace_finite, use_unsloth=args.use_unsloth)
+        run_grpo(
+            genre=args.genre,
+            trace_finite=args.trace_finite,
+            use_unsloth=args.use_unsloth,
+            max_steps=args.grpo_steps,
+        )
         save_loss_plots_if_possible()
         return
 
@@ -473,7 +489,12 @@ def main():
     save_loss_plots_if_possible()
     if not args.skip_sanity:
         reward_sanity_check(genre=args.genre)
-    run_grpo(genre=args.genre, trace_finite=args.trace_finite, use_unsloth=args.use_unsloth)
+    run_grpo(
+        genre=args.genre,
+        trace_finite=args.trace_finite,
+        use_unsloth=args.use_unsloth,
+        max_steps=args.grpo_steps,
+    )
     save_loss_plots_if_possible()
     if not args.skip_eval:
         run_eval(genre=args.genre)
