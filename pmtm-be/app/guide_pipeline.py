@@ -126,7 +126,7 @@ def run_guide_demo_generation(
         write_flow_plan(plan, flow_plan_path)
         write_diffsinger_ds(plan, score_path, base_f0_hz=profile.base_f0_hz)
 
-        render_duration_sec = first_bar_start_sec + plan.beatMap.barDurationSec * plan.beatMap.barCount
+        render_duration_sec = max(bar.endSec for bar in plan.bars)
         mix_duration_sec = render_duration_sec + MIX_TAIL_SECONDS
         _trim_beat(beat_file, work_path / "beat_segment.wav", mix_duration_sec)
 
@@ -180,7 +180,7 @@ def run_guide_demo_generation(
         rule_desc = "2줄=1마디(트랩)" if line_count == 16 else "1줄=1마디(붐뱁)"
         notes = [
             f"편집된 {line_count}줄({bar_count}마디, {rule_desc})을 렌더링했습니다.",
-            f"첫 마디 시작: {first_bar_start_sec:.3f}초",
+            f"첫 마디 시작: {plan.beatMap.firstBarStartSec:.3f}초",
             f"DiffSinger 보이스뱅크: {profile.label}",
         ]
         if rvc_applied_note:
