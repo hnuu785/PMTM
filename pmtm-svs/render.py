@@ -18,6 +18,13 @@ from diffsinger_utau.voice_bank.commons.utils import resample_align_curve
 from diffsinger_utau.voice_bank.commons.voice_bank_reader import VoiceBankReader
 
 
+LONG_NOTE_PITCH_FLATTEN_THRESHOLD_SEC = 0.32
+NOTE_SEMITONES = {
+    "C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5,
+    "F#": 6, "G": 7, "G#": 8, "A": 9, "A#": 10, "B": 11,
+}
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Render an 8-bar PMTM DiffSinger score.")
     parser.add_argument("--score", required=True)
@@ -45,6 +52,50 @@ def select_device(requested):
     if requested == "mps" and "CoreMLExecutionProvider" not in providers:
         raise RuntimeError("CoreMLExecutionProvider is not available in this DiffSinger runtime.")
     return requested
+
+
+def note_name_to_hz(note):
+    if len(note) < 2:
+        return None
+    name_end = 2 if note[1:2] == "#" else 1
+    name, octave = note[:name_end], note[name_end:]
+    if name not in NOTE_SEMITONES:
+        return None
+    try:
+        midi_note = (int(octave) + 1) * 12 + NOTE_SEMITONES[name]
+    except ValueError:
+        return None
+    return 440.0 * (2.0 ** ((midi_note - 69) / 12.0))
+
+
+def flatten_long_note_pitch(f0_values, section, timestep):
+    """Hold score-note pitch for long notes while preserving unvoiced frames."""
+    note_seq = section.get("note_seq", "").split()
+    try:
+        note_durations = [float(value) for value in section.get("note_dur", "").split()]
+    except ValueError:
+        return f0_values
+
+    if timestep <= 0 or len(note_seq) != len(note_durations):
+        return f0_values
+
+    flattened = np.asarray(f0_values, dtype=np.float32).copy()
+    start_frame = 0
+    cumulative_duration = 0.0
+    for note, duration in zip(note_seq, note_durations):
+        cumulative_duration += duration
+        end_frame = min(
+            len(flattened),
+            max(start_frame, round(cumulative_duration / timestep + 0.5)),
+        )
+        note_f0 = flattened[start_frame:end_frame]
+        if note != "rest" and duration >= LONG_NOTE_PITCH_FLATTEN_THRESHOLD_SEC:
+            target_hz = note_name_to_hz(note)
+            if target_hz is not None:
+                note_f0[note_f0 > 0] = target_hz
+                flattened[start_frame:end_frame] = note_f0
+        start_frame = end_frame
+    return flattened
 
 
 def render(score_path, voice_bank_path, output_path, device, lang, acoustic_steps, variance_steps, use_ai_dur=True):
@@ -109,6 +160,7 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
             try:
                 ai_f0 = pitch_model.predict(section, lang=lang, steps=variance_steps)
                 if ai_f0 is not None and len(ai_f0) > 0:
+                    ai_f0 = flatten_long_note_pitch(ai_f0, section, pitch_model.timestep)
                     section["f0_seq"] = " ".join(f"{float(v):.4f}" for v in ai_f0)
                     section["f0_timestep"] = str(pitch_model.timestep)
             except Exception as exc:

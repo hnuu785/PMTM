@@ -178,6 +178,7 @@ class SyllableLinguisticInfo:
     is_content: bool
     is_word_start: bool
     midi_note: int
+    is_liaison_accent_target: bool = False
 
 
 def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableLinguisticInfo]:
@@ -230,6 +231,9 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
             "stress": stress,
             "isContent": is_content,
             "isWordStart": is_word_start,
+            "isFunction": bool(tag and tag.startswith(FUNCTION_POS_PREFIXES)),
+            "morphemeEnd": morpheme["end"] if morpheme else char_idx + 1,
+            "eojeolId": eojeol["id"] if eojeol else None,
         })
 
     spoken_hangul = [c for _, c in _hangul_chars(g2p_text)]
@@ -237,6 +241,36 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
         return [SyllableLinguisticInfo(c, 1.0, True, True, 60) for c in spoken_hangul]
 
     operations = _align_sequences([s["text"] for s in sources], spoken_hangul)
+    source_to_spoken = {
+        source_index: spoken_index
+        for _, source_index, spoken_index in operations
+        if source_index is not None and spoken_index is not None
+    }
+    liaison_target_indices = set()
+    for source_index, source in enumerate(sources[:-1]):
+        following = sources[source_index + 1]
+        source_spoken_index = source_to_spoken.get(source_index)
+        target_spoken_index = source_to_spoken.get(source_index + 1)
+        has_coda = JONGSEONG[(ord(source["text"]) - ord("가")) % 28] != ""
+        spoken_source_has_coda = (
+            source_spoken_index is not None
+            and JONGSEONG[(ord(spoken_hangul[source_spoken_index]) - ord("가")) % 28] != ""
+        )
+        is_liaison = (
+            source["isContent"]
+            and source["isWordStart"]
+            and following["isFunction"]
+            and source["morphemeEnd"] == following["charIndex"]
+            and source["eojeolId"] == following["eojeolId"]
+            and has_coda
+            and source_spoken_index is not None
+            and target_spoken_index is not None
+            and not spoken_source_has_coda
+            and spoken_hangul[source_spoken_index] != source["text"]
+            and spoken_hangul[target_spoken_index] != following["text"]
+        )
+        if is_liaison:
+            liaison_target_indices.add(target_spoken_index)
     result: list[SyllableLinguisticInfo] = []
 
     for _, s_idx, p_idx in operations:
@@ -263,6 +297,7 @@ def _analyze_korean_line_linguistics(text: str, g2p_text: str) -> list[SyllableL
             is_content=is_content,
             is_word_start=is_word_start,
             midi_note=midi_note,
+            is_liaison_accent_target=p_idx in liaison_target_indices,
         ))
 
     return result
@@ -276,6 +311,14 @@ def _english_word_to_syllables(word: str) -> list[list[str]]:
     phones_list = pronouncing.phones_for_word(clean) or pronouncing.phones_for_word(lookup)
     if phones_list:
         raw_phones = [re.sub(r"\d+", "", p).lower() for p in phones_list[0].split()]
+        # POTG has no single phoneme for the English /eɪ/ diphthong.  Keep its
+        # closing glide as a separate /i/ syllable so "someday" is sung
+        # "썸-데-이", rather than ending at "썸-데".
+        raw_phones = [
+            expanded
+            for phone in raw_phones
+            for expanded in (("eh", "iy") if phone == "ey" else (phone,))
+        ]
         potg_phones = [ARPABET_TO_POTG.get(p, p) for p in raw_phones]
         v_indices = [i for i, p in enumerate(raw_phones) if p in ARPABET_VOWELS]
         if len(v_indices) <= 1:
@@ -755,26 +798,46 @@ def _phoneme_weight_v2(symbol: str, bpm: float = 120.0, stress: float = 1.0) -> 
     return 0.18
 
 
-def _allocate_syllable_grid_slots(weights: list[float], available_slots: int) -> list[int]:
-    """Option B: 16th-note grid slot allocation based on stress weights."""
+def _allocate_syllable_grid_slots(
+    weights: list[float],
+    available_slots: int,
+    priority_indices: list[int] | None = None,
+    extra_eligible_indices: list[int] | None = None,
+) -> list[int]:
+    """Allocate one slot per syllable before prioritizing content-word attacks."""
     if not weights:
         return []
     if len(weights) > available_slots:
         return [1] * len(weights)
-    total = sum(weights)
-    raw = [available_slots * w / total for w in weights]
-    durations = [max(1, math.floor(val)) for val in raw]
-    while sum(durations) > available_slots:
-        candidates = [i for i, v in enumerate(durations) if v > 1]
-        if not candidates:
+
+    durations = [1] * len(weights)
+    remaining_slots = available_slots - len(weights)
+    for index in priority_indices or []:
+        if remaining_slots == 0:
             break
-        durations[min(candidates, key=lambda i: weights[i])] -= 1
+        if 0 <= index < len(durations) and durations[index] == 1:
+            durations[index] += 1
+            remaining_slots -= 1
+
+    if remaining_slots == 0:
+        return durations
+
+    eligible_indices = set(extra_eligible_indices or range(len(weights)))
+    allocation_weights = [weight if index in eligible_indices else 0.0 for index, weight in enumerate(weights)]
+    total = sum(allocation_weights)
+    if total <= 0:
+        allocation_weights = weights
+        total = sum(allocation_weights)
+    raw = [remaining_slots * weight / total for weight in allocation_weights]
+    extra_slots = [math.floor(value) for value in raw]
+    durations = [duration + extra for duration, extra in zip(durations, extra_slots)]
     while sum(durations) < available_slots:
         target = max(
             range(len(weights)),
-            key=lambda i: (raw[i] - durations[i], weights[i]),
+            key=lambda i: (raw[i] - extra_slots[i], allocation_weights[i]),
         )
         durations[target] += 1
+        extra_slots[target] += 1
     return durations
 
 
@@ -803,20 +866,10 @@ def _allocate_word_hierarchical_durations(
     total_syllable_count = sum(len(w.syllables) for w in word_chunks)
     word_count = len(word_chunks)
 
-    # 16th-note Grid Slot calculations (16 slots per bar - Option B)
+    # Use the full 16th-note grid. Rests are cadence choices, not fixed
+    # reservations based solely on syllable count.
     slots_per_bar = 16
     slot_duration = bar_duration_sec / float(slots_per_bar)
-
-    if total_syllable_count <= 10:
-        lead_slots, tail_slots = 1, 3
-    elif total_syllable_count <= 16:
-        lead_slots, tail_slots = 1, 2
-    else:
-        lead_slots, tail_slots = 1, 1
-
-    lead_duration = slot_duration * lead_slots
-    tail_duration = slot_duration * tail_slots
-    available_slots = max(1, slots_per_bar - lead_slots - tail_slots)
 
     # Collect flat list of syllables and linguistic stress
     syl_list: list[dict[str, Any]] = []
@@ -827,6 +880,12 @@ def _allocate_word_hierarchical_durations(
             ling = chunk.linguistics[s_idx] if chunk.linguistics and s_idx < len(chunk.linguistics) else None
             ling_stress = ling.stress if ling else 1.0
             midi_note = ling.midi_note if ling else 60
+            is_liaison_target = bool(ling and ling.is_liaison_accent_target)
+            is_liaison_source = bool(
+                chunk.linguistics
+                and s_idx + 1 < len(chunk.linguistics)
+                and chunk.linguistics[s_idx + 1].is_liaison_accent_target
+            )
 
             combined_weight = syl_weights[s_idx] * ling_stress
 
@@ -836,25 +895,49 @@ def _allocate_word_hierarchical_durations(
                 "weight": combined_weight,
                 "stress": ling_stress,
                 "midi_note": midi_note,
+                "is_liaison_source": is_liaison_source,
+                "is_priority_attack": bool(
+                    is_liaison_target
+                    or (ling and ling.is_content and ling.is_word_start and not is_liaison_source)
+                ),
                 "punct": chunk.punctuation if s_idx == len(chunk.syllables) - 1 else None,
             })
             current_syl_index += 1
 
-    # Allocate 16th-note grid slots to syllables (Option B)
+    # Allocate every syllable one slot first. A single cadence tail slot is
+    # used only after every content-word attack can receive one extra slot.
     syl_weights_list = [float(item["weight"]) for item in syl_list]
-    allocated_slots = _allocate_syllable_grid_slots(syl_weights_list, available_slots)
+    priority_indices = [
+        index for index, item in enumerate(syl_list) if item["is_priority_attack"]
+    ]
+    remaining_slots = max(0, slots_per_bar - total_syllable_count)
+    tail_slots = 1 if remaining_slots > len(priority_indices) else 0
+    available_slots = max(1, slots_per_bar - tail_slots)
+    allocated_slots = _allocate_syllable_grid_slots(
+        syl_weights_list,
+        available_slots,
+        priority_indices,
+        [index for index, item in enumerate(syl_list) if not item["is_liaison_source"]],
+    )
 
+    for index, item in enumerate(syl_list[:-1]):
+        if item["is_liaison_source"] and allocated_slots[index + 1] >= 2:
+            item["midi_note"] = 60
+            syl_list[index + 1]["midi_note"] = 62
+
+    lead_duration = 0.04
+    punctuation_duration = sum(
+        0.04 if item["punct"] == "," else 0.06
+        for item in syl_list
+        if item["punct"] in ("?", "!", ".", ",")
+    )
+    tail_duration = slot_duration * tail_slots + 0.04
     raw_syl_duration_sum = sum(slots * slot_duration for slots in allocated_slots)
-    active_duration = max(0.1, bar_duration_sec - lead_duration - tail_duration)
+    active_duration = max(0.1, bar_duration_sec - lead_duration - tail_duration - punctuation_duration)
     scale_factor = active_duration / raw_syl_duration_sum if raw_syl_duration_sum > active_duration else 1.0
 
-    items: list[dict[str, Any]] = []
-    cap_overflow = 0.0
-
+    target_durations = []
     for item, slots in zip(syl_list, allocated_slots):
-        target_dur = slots * slot_duration * scale_factor
-
-        # Genre Micro Offset Modulation (Boom Bap +12ms Layback vs Trap -10ms Early Push)
         rel_pos = item["syl_idx"] / max(1, total_syllable_count)
         is_snare_region = (0.20 <= rel_pos <= 0.35) or (0.70 <= rel_pos <= 0.85) if genre == "boom_bap" else (0.45 <= rel_pos <= 0.60)
         micro_offset = 0.0
@@ -862,13 +945,17 @@ def _allocate_word_hierarchical_durations(
             micro_offset = 0.012
         elif genre == "trap" and (item["stress"] >= 1.15 or is_snare_region):
             micro_offset = -0.010
+        target_durations.append(slots * slot_duration * scale_factor + micro_offset)
 
-        target_dur += micro_offset
+    duration_total = sum(target_durations)
+    if duration_total > 0:
+        target_durations = [duration * active_duration / duration_total for duration in target_durations]
 
-        # For sparse lines (<= 10 syllables), cap syllable duration at ~0.15s (crisp 0.14s~0.16s rap speed)
-        # while preserving genre micro_offset (+12ms layback vs -10ms early push), and push remaining time to tail rest.
-        base_cap = 0.15 if total_syllable_count <= 10 else MAX_SYLLABLE_DUR_SEC
-        max_cap = base_cap + micro_offset
+    items: list[dict[str, Any]] = []
+    cap_overflow = 0.0
+
+    for item, slots, target_dur in zip(syl_list, allocated_slots, target_durations):
+        max_cap = MAX_SYLLABLE_DUR_SEC
         if target_dur > max_cap:
             cap_overflow += (target_dur - max_cap)
             target_dur = max_cap
@@ -879,7 +966,7 @@ def _allocate_word_hierarchical_durations(
             "dur": target_dur,
             "weight": item["weight"],
             "stress": item["stress"],
-            "midi_note": item["midi_note"],
+            "midi_note": 63 if item["is_priority_attack"] and slots >= 3 else item["midi_note"],
         })
         if item["punct"] in ("?", "!", ".", ","):
             sp_dur = 0.04 if item["punct"] == "," else 0.06
