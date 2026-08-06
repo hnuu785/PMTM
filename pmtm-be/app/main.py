@@ -203,7 +203,7 @@ async def analyze_beat(beat: UploadFile = File(...)) -> BeatAnalysisResponse:
 
 @app.post("/api/v1/lyrics/analyze-rhyme", response_model=list[RhymeLineAnalysis])
 def analyze_rhyme(payload: RhymeAnalyzeRequest) -> list[RhymeLineAnalysis]:
-    return _analyze_rhyme_lines(payload.lines)
+    return _analyze_rhyme_lines(payload.lines, bpm=payload.bpm)
 
 
 @app.post("/api/v1/demos/generate-from-beat", response_model=DemoGenerateResponse)
@@ -429,52 +429,19 @@ def _extract_lyric_lines(lyrics: str) -> list[str]:
 
 def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
-    line_count = len(clean_lines)
-    parents = list(range(line_count))
+    _, calculate_syllable_score, get_phonemes, analyze_bar_end_rhyme = _load_rhyme_analysis_funcs()
+    rhyme_analysis = analyze_bar_end_rhyme(
+        clean_lines,
+        bpm=bpm,
+        threshold=RHYME_GROUP_THRESHOLD,
+    )
 
-    def find(index: int) -> int:
-        while parents[index] != index:
-            parents[index] = parents[parents[index]]
-            index = parents[index]
-        return index
-
-    def union(left: int, right: int) -> None:
-        left_root = find(left)
-        right_root = find(right)
-        if left_root != right_root:
-            parents[right_root] = left_root
-
-    get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores = _load_rhyme_analysis_funcs()
-    
-    # 1) 공통 함수를 사용하여 각 라인별 score와 best_match_indexes 계산 (BPM 정보 반영)
-    scores, best_match_indexes = calculate_line_scores(clean_lines, bpm=bpm)
-
-    # 2) 학습 기준(인접 라인 간 라임)으로 그룹 병합(union) 진행
-    for i in range(line_count - 1):
-        score = get_line_rhyme_score(clean_lines[i], clean_lines[i+1])
-        if score >= RHYME_GROUP_THRESHOLD:
-            union(i, i+1)
-
-    root_counts: dict[int, int] = {}
-    for index in range(line_count):
-        root = find(index)
-        root_counts[root] = root_counts.get(root, 0) + 1
-
-    group_ids: dict[int, int] = {}
-    next_group_id = 0
     analyses: list[RhymeLineAnalysis] = []
     for index, line in enumerate(clean_lines):
-        root = find(index)
-        rhyme_group = None
-        if root_counts[root] > 1:
-            if root not in group_ids:
-                group_ids[root] = next_group_id
-                next_group_id += 1
-            rhyme_group = group_ids[root]
-
         highlight_start, highlight_end = _find_rhyme_highlight(line)
         highlight_ranges: list[RhymeHighlightRange] = []
-        best_match_index = best_match_indexes[index]
+        rhyme_group = rhyme_analysis.rhyme_groups[index]
+        best_match_index = rhyme_analysis.best_match_indexes[index]
         if rhyme_group is not None and best_match_index is not None:
             highlight_ranges = _find_rhyme_highlight_ranges(
                 line,
@@ -486,7 +453,7 @@ def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[Rhy
             RhymeLineAnalysis(
                 text=line,
                 rhymeGroup=rhyme_group,
-                score=round(scores[index], 4),
+                score=round(rhyme_analysis.line_scores[index], 4),
                 highlightStart=highlight_start,
                 highlightEnd=highlight_end,
                 highlightRanges=highlight_ranges,
@@ -510,9 +477,9 @@ def _load_rhyme_analysis_funcs():
     # pyrefly: ignore [missing-import]
     from phonetics_utils import get_phonemes
     # pyrefly: ignore [missing-import]
-    from rhyme_engine import calculate_syllable_score, get_line_rhyme_score, calculate_line_scores
+    from rhyme_engine import analyze_bar_end_rhyme, calculate_syllable_score, get_line_rhyme_score
 
-    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, calculate_line_scores
+    return get_line_rhyme_score, calculate_syllable_score, get_phonemes, analyze_bar_end_rhyme
 
 
 

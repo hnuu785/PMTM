@@ -150,14 +150,14 @@
     <rect x="80" y="1540" width="330" height="130" class="box-amber"/>
     <text x="110" y="1578" class="label">GRPO Prompts</text>
     <text x="110" y="1610" class="body">build_prompts()</text>
-    <text x="110" y="1636" class="small">rhyme_density 상위 TOP_N=200</text>
-    <text x="110" y="1660" class="small">8마디 messages/chat-template prompt</text>
+    <text x="110" y="1636" class="small">장르·BPM·주제 조합</text>
+    <text x="110" y="1660" class="small">messages/chat-template prompt</text>
 
     <rect x="500" y="1540" width="300" height="130" class="box-rose"/>
     <text x="530" y="1578" class="label">Reward Function</text>
-    <text x="530" y="1610" class="body">rhyme_reward()</text>
-    <text x="530" y="1636" class="small">라임 + 길이 + [End]</text>
-    <text x="530" y="1660" class="small">중복/연속반복 penalty</text>
+    <text x="530" y="1610" class="body">format_reward() + rhyme_reward()</text>
+    <text x="530" y="1636" class="small">인접 마디 끝 라임 coverage</text>
+    <text x="530" y="1660" class="small">중복 penalty</text>
 
     <rect x="890" y="1540" width="330" height="130" class="box-purple"/>
     <text x="920" y="1578" class="label">GRPO Training</text>

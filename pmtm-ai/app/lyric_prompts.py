@@ -29,7 +29,7 @@ def build_user_prompt(
     target_syllables = f"{min_s}~{max_s}"
     topic_clause = f" 주제는 '{topic}'이며," if topic else ""
     base_prompt = (
-        f"{g_name} 랩 가사를 작성해 주세요.{topic_clause} "
+        f"한국어 중심의 {g_name} 랩 가사를 작성해 주세요.{topic_clause} "
         f"정확히 {target_lines}줄로 구성해야 하며, "
         f"줄당 음절 수는 {target_syllables} 범위 내로 조절해 주세요."
     )
@@ -58,4 +58,3 @@ def build_messages(
     if assistant is not None:
         messages.append({"role": "assistant", "content": assistant})
     return messages
-

@@ -12,16 +12,11 @@ from app.lyric_prompts import TARGET_BARS, build_messages
 from app.genre_rules import get_genre_rules
 from app.paths import DATA_DIR
 from app.rhyme_scoring.phonetics_utils import get_phonemes, count_syllables
-from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
-
-from app.rhyme_scoring.end_rhyme import calculate_chunk_end_rhyme_score
 from app.training.line_structurer import structure_lines
 
 DATA_PATH = DATA_DIR / "merged_final_dataset_analyzed.csv"
 OUTPUT_PATH = DATA_DIR / "prepared_dataset.jsonl"
 
-MIN_RHYME_SCORE = 0.35
-MIN_END_RHYME_SCORE = 0.30
 MIN_KOREAN_RATIO = 0.35
 MIN_MEAN_LINE_LENGTH = 6
 MAX_MEAN_LINE_LENGTH = 18
@@ -132,11 +127,7 @@ def chunk_features(lines: list[str], bpm: float | None = None) -> dict[str, floa
     lengths = [line_length(line) for line in lines]
     endings = [ending_word(line) for line in lines]
     normalized_lines = [normalize_text(line) for line in lines]
-    rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
-    end_rhyme_score = calculate_chunk_end_rhyme_score(lines, bpm=bpm)
     return {
-        "rhyme_score": rhyme_score,
-        "end_rhyme_score": end_rhyme_score,
         "duplicate_lines": len(lines) - len(set(normalized_lines)),
         "max_ending_word_count": max(Counter(endings).values()) if endings else len(lines),
         "korean_ratio": korean_ratio(lines),
@@ -321,4 +312,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

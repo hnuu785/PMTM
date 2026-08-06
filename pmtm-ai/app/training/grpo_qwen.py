@@ -5,6 +5,7 @@ import glob
 import re
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 # pyrefly: ignore [missing-import]
@@ -23,7 +24,8 @@ from trl import GRPOConfig, GRPOTrainer
 
 from app.lyric_prompts import TARGET_BARS, build_messages
 from app.paths import MODEL_ID, MODELS_DIR, OUTPUTS_DIR, PROJECT_ROOT
-from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
+from app.rhyme_scoring.rhyme_engine import analyze_bar_end_rhyme
+from app.rhyme_scoring.phonetics_utils import count_syllables
 
 sys.path.append(str(PROJECT_ROOT))
 
@@ -242,10 +244,11 @@ def build_prompts(df=None, genre: str | None = None) -> list[list[dict[str, str]
     return prompts
 
 
-_END_RE = re.compile(r"\[End\]")
 _BARS_RE = re.compile(r"\[Verse\s+(\d+)\s*마디\]")
 _LINES_RE = re.compile(r"exactly\s+(\d+)\s+lines", re.IGNORECASE)
 _KO_LINES_RE = re.compile(r"정확히\s+(\d+)줄")
+_SYLLABLE_RANGE_RE = re.compile(r"줄당\s*음절\s*수는\s*(\d+)\s*~\s*(\d+)\s*범위")
+_FORMAT_LINE_RE = re.compile(r"^(\d+)\.\s+\((\d+)음절\)\s+(.+)$")
 
 
 def _message_content(value) -> str:
@@ -269,31 +272,6 @@ def _message_content(value) -> str:
     return str(value)
 
 
-def _extract_verse(completion) -> list[str]:
-    text = _message_content(completion)
-    if "[수정된 지침에 따른 가사]" in text:
-        parts = text.split("[수정된 지침에 따른 가사]")
-        body = parts[1] if len(parts) > 1 else text
-    else:
-        body = text
-    body = _END_RE.split(body, 1)[0]
-    
-    lines = []
-    for ln in body.split("\n"):
-        ln = ln.strip()
-        if not ln:
-            continue
-        if not re.match(r"^\d+\.", ln):
-            continue
-        ln = re.sub(r"^\d+\.\s*", "", ln)  # 마디 번호 제거
-        ln = re.sub(r"^\(\d+음절\)\s*", "", ln)  # 음절 표시 제거 (앞단어)
-        ln = re.sub(r"\(\d+음절\)\s*$", "", ln)  # 음절 표시 제거 (뒷단어)
-        ln = ln.strip()
-        if ln:
-            lines.append(ln)
-    return lines
-
-
 def _parse_target_bars(prompt, default: int = TARGET_BARS) -> int:
     prompt_text = _message_content(prompt)
     for pattern in (_KO_LINES_RE, _LINES_RE, _BARS_RE):
@@ -303,53 +281,117 @@ def _parse_target_bars(prompt, default: int = TARGET_BARS) -> int:
     return default
 
 
-def _max_consecutive_duplicate_run(lines: list[str]) -> int:
-    if not lines:
+def _prompt_syllable_range(prompt) -> tuple[int, int]:
+    prompt_text = _message_content(prompt)
+    match = _SYLLABLE_RANGE_RE.search(prompt_text)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    if "붐뱁" in prompt_text:
+        return 9, 16
+    return 6, 13
+
+
+@lru_cache(maxsize=8192)
+def _strict_verse_from_text(text: str, prompt_text: str) -> tuple[str, ...] | None:
+    """Return lyric lines only when the entire completion matches the output contract."""
+    if not text:
+        return None
+
+    raw_lines = text.splitlines()
+    target_lines = _parse_target_bars(prompt_text)
+    min_syllables, max_syllables = _prompt_syllable_range(prompt_text)
+    if len(raw_lines) != target_lines:
+        return None
+
+    lyrics = []
+    for expected_number, raw_line in enumerate(raw_lines, 1):
+        match = _FORMAT_LINE_RE.fullmatch(raw_line.strip())
+        if not match or int(match.group(1)) != expected_number:
+            return None
+
+        declared_syllables = int(match.group(2))
+        lyric = match.group(3).strip()
+        actual_syllables = count_syllables(lyric)
+        if (
+            not lyric
+            or declared_syllables != actual_syllables
+            or not min_syllables <= actual_syllables <= max_syllables
+        ):
+            return None
+        lyrics.append(lyric)
+    return tuple(lyrics)
+
+
+def _strict_verse(completion, prompt) -> tuple[str, ...] | None:
+    return _strict_verse_from_text(
+        _message_content(completion).strip(),
+        _message_content(prompt),
+    )
+
+
+def _valid_format_line_count(completion, prompt) -> int:
+    """Count correctly positioned lines to preserve a learning signal for near misses."""
+    text = _message_content(completion).strip()
+    if not text:
         return 0
 
-    max_run = 1
-    current_run = 1
-    for i in range(1, len(lines)):
-        if lines[i] == lines[i - 1]:
-            current_run += 1
-            max_run = max(max_run, current_run)
-        else:
-            current_run = 1
-    return max_run
+    raw_lines = text.splitlines()
+    target_lines = _parse_target_bars(prompt)
+    min_syllables, max_syllables = _prompt_syllable_range(prompt)
+    valid_count = 0
+    for expected_number, raw_line in enumerate(raw_lines[:target_lines], 1):
+        match = _FORMAT_LINE_RE.fullmatch(raw_line.strip())
+        if not match or int(match.group(1)) != expected_number:
+            continue
+
+        lyric = match.group(3).strip()
+        actual_syllables = count_syllables(lyric)
+        if (
+            int(match.group(2)) == actual_syllables
+            and min_syllables <= actual_syllables <= max_syllables
+        ):
+            valid_count += 1
+    return valid_count
+
+
+def format_reward(completions, prompts=None, **kwargs):
+    """Reward only the exact ``N. (X음절) 가사`` output contract.
+
+    Invalid outputs receive at most +0.5, while an exact completion receives +1.0.
+    This keeps a nearly-correct SFT output useful to GRPO without allowing headers,
+    reordered tags, or wrong line counts to tie with a valid completion.
+    """
+    rewards = []
+    for idx, completion in enumerate(completions):
+        prompt = prompts[idx] if prompts and idx < len(prompts) else None
+        if _strict_verse(completion, prompt) is not None:
+            rewards.append(1.0)
+            continue
+
+        target_lines = _parse_target_bars(prompt)
+        valid_ratio = _valid_format_line_count(completion, prompt) / target_lines
+        rewards.append(-0.5 + valid_ratio)
+    return rewards
+
+
+def _genre_for_prompt(prompt) -> str:
+    prompt_text = _message_content(prompt)
+    return "트랩" if "트랩" in prompt_text else "붐뱁"
 
 
 def rhyme_reward(completions, prompts=None, **kwargs):
-    """생성된 가사의 라임 밀도를 산출하고, 중복 줄 수에 따른 단계별 차감 감점을 부여합니다."""
+    """Reward adjacent end-rhyme coverage for strictly formatted verses only."""
     rewards = []
-    
     for idx, comp in enumerate(completions):
-        lines = _extract_verse(comp)
-        
-        # 아예 한 줄도 생성하지 못한 경우 최소 보상 처리
-        if not lines:
-            rewards.append(-1.0)
+        prompt = prompts[idx] if prompts and idx < len(prompts) else None
+        lines = _strict_verse(comp, prompt)
+        if lines is None:
+            rewards.append(0.0)
             continue
-            
-        bpm = None
-        genre = None
-        if prompts and idx < len(prompts):
-            p_text = str(prompts[idx])
-            m = re.search(r"BPM:\s*(\d+(?:\.\d+)?)", p_text) or re.search(r"bpm[=:]\s*(\d+(?:\.\d+)?)", p_text)
-            if m:
-                bpm = float(m.group(1))
-            elif "트랩" in p_text:
-                genre = "트랩"
-            elif "붐뱁" in p_text:
-                genre = "붐뱁"
 
-        # 1) 공백/특수문자를 제거한 정규화 문장 기반으로 중복 줄 수 계산
         norm_lines = [re.sub(r"[^\w]", "", line) for line in lines if line.strip()]
         dup_count = (len(norm_lines) - len(set(norm_lines))) if norm_lines else 0
-        
-        # 2) 전체 생성 라인의 평균 라임 점수 계산 (BPM/장르 정보 반영)
-        rhyme_score = calculate_rhyme_density(lines, bpm=bpm, genre=genre)
 
-        # 3) 중복 줄 수에 따른 단계별 차감 페널티 (Subtractive Penalty Gradient)
         if dup_count == 0:
             dup_penalty = 0.0
         elif dup_count == 1:
@@ -359,11 +401,11 @@ def rhyme_reward(completions, prompts=None, **kwargs):
         elif dup_count == 3:
             dup_penalty = 0.8
         else:
-            dup_penalty = 1.2  # 4줄 이상 중복 도배 시 강력 차단
+            dup_penalty = 1.2
 
+        rhyme_score = analyze_bar_end_rhyme(lines, genre=_genre_for_prompt(prompt)).coverage_score
         final_reward = rhyme_score - dup_penalty
         rewards.append(float(final_reward))
-        
     return rewards
 
 
@@ -515,7 +557,7 @@ def _build_grpo_trainer(
 
     trainer = GRPOTrainer(
         model=model,
-        reward_funcs=rhyme_reward,
+        reward_funcs=[format_reward, rhyme_reward],
         args=cfg,
         train_dataset=dataset,
         processing_class=tokenizer,
