@@ -29,7 +29,6 @@ from app.rhyme_scoring.rhyme_engine import (
     calculate_syllable_score,
     get_line_rhyme_score,
     calculate_line_scores,
-    calculate_rhyme_density,
 )
 
 
@@ -173,7 +172,7 @@ s = get_line_rhyme_score("강산", "방판")
 check("'강산'↔'방판' = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "방물")
-check("'강물'↔'방물' (끝 음절 '물' 자모음 완전 동일 감점) = 0.2", approx(s, 0.2), f"got {s}")
+check("'강물'↔'방물' (어근이 다른 같은 끝음절 라임) = 1.0", approx(s, 1.0), f"got {s}")
 
 s = get_line_rhyme_score("강물", "강물")
 check("'강물'↔'강물' (동일 단어 반복 감점) = 0.2", approx(s, 0.2), f"got {s}")
@@ -182,7 +181,7 @@ s = get_line_rhyme_score("오늘 밤 너를 사랑해!", "내일도 너를 사�
 check("동일 끝단어 단순 반복 감점 ('사랑해!'↔'사랑해') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("뭐뭐했네", "그랬네")
-check("끝 음절 자음과 모음 완전 동일 감점 ('했네'↔'그랬네' - '네' 동일) = 0.2", approx(s, 0.2), f"got {s}")
+check("문법 종결어미 반복 감점 ('했네'↔'그랬네' - '-네') = 0.2", approx(s, 0.2), f"got {s}")
 
 s = get_line_rhyme_score("뭐뭐했네", "됐세")
 check("모음만 동일하고 초성 자음 다름 ('했네'↔'됐세') = 1.0", approx(s, 1.0), f"got {s}")
@@ -228,16 +227,6 @@ check("인접 라임 최적 매치 인덱스 = 2", best_indexes[3] == 2, f"got {
 trap_scores, _ = calculate_line_scores(lines, bpm=130)
 check("트랩 장르 건너뛴 라임 점수 산정 (A - B - A) = 0.8", approx(trap_scores[0], 0.8), f"got {trap_scores[0]}")
 
-# ─── 5.6 라임 밀도 및 무라임 패널티 테스트 ───────────────
-print("\n=== 라임 밀도 및 무라임 패널티 ===")
-# AABBCDEF 형태 (8줄 중 A, A, B, B 라임, C, D, E, F 무라임 4줄 -> 3연속 무라임 트립렛 2회 발생)
-# line_scores: [0.6, 0.6, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0] -> base_density = 2.4 / 8 = 0.30
-# penalty: 2 * 0.05 = 0.10 -> final_density = 0.20
-aabbcdef_lines = ["강", "방", "봄", "곰", "집", "책", "달", "물"]
-d_score = calculate_rhyme_density(aabbcdef_lines)
-check("AABBCDEF 패턴 라임 밀도 (-0.05 x 2 페널티 적용 = 0.20)", approx(d_score, 0.20), f"got {d_score}")
-
-
 # ─── 6. 그룹 정의 sanity ─────────────────────────────────
 print("\n=== 그룹 정의 ===")
 check("VOWEL_GROUPS 비어있지 않음", len(VOWEL_GROUPS) > 0)
@@ -258,4 +247,3 @@ if failures:
 print("모든 테스트 통과 OK")
 if __name__ == "__main__":
     sys.exit(0)
-

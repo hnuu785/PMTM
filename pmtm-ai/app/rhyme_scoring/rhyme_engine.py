@@ -1,3 +1,6 @@
+import re
+from dataclasses import dataclass
+
 try:
     from phonetics_utils import VOWEL_GROUPS, get_phonemes
 except ImportError:
@@ -40,24 +43,33 @@ def _match_with_offset(p1: list[dict], p2: list[dict], offset1: int, offset2: in
     return total_score / max_possible if max_possible > 0 else 0.0
 
 
+def _terminal_ending_group(word: str) -> str | None:
+    """Return a grammatical ending family that should not count as a lyric rhyme."""
+    if word.endswith(("습니다", "니다")):
+        return "formal"
+    if word.endswith(("요", "죠")):
+        return "polite"
+    if word.endswith("네"):
+        return "exclamatory"
+    return None
+
+
 def get_line_rhyme_score(line1, line2):
     """두 문장 끝단어 간의 라임 점수 계산 (끝에서 최대 3음절, 우측 정렬 매칭)"""
-    # 0) 어미/동일 단어 단순 반복 감점: 마지막 어절이 철자법상 완전히 동일한 경우 0점 처리
+    # 0) 동일 단어 또는 같은 문법 종결어미 반복은 라임으로 보지 않는다.
     w1 = line1.strip().split()[-1] if line1.strip().split() else ""
     w2 = line2.strip().split()[-1] if line2.strip().split() else ""
-    
-    import re
+
     w1_clean = re.sub(r"[^\w]", "", w1).lower()
     w2_clean = re.sub(r"[^\w]", "", w2).lower()
-    
+
     if w1_clean == w2_clean and w1_clean != "":
         return 0.2  # 동일 단어 단순 반복 시 낮은 점수(0.2) 부여
 
-    # 끝 음절 글자(자음과 모음) 완전 동일 시 어미 반복 감점 (0.2점 부여)
-    line1_clean = re.sub(r"[^\w]", "", line1).lower()
-    line2_clean = re.sub(r"[^\w]", "", line2).lower()
-    if line1_clean and line2_clean and line1_clean[-1] == line2_clean[-1]:
-        return 0.2  # 끝 음절 동일 시 0.2점 부여
+    ending1 = _terminal_ending_group(w1_clean)
+    ending2 = _terminal_ending_group(w2_clean)
+    if ending1 is not None and ending1 == ending2:
+        return 0.2
 
     p1 = get_phonemes(line1)
     p2 = get_phonemes(line2)
@@ -67,6 +79,124 @@ def get_line_rhyme_score(line1, line2):
     
     # 오프셋 0 (우측 정렬 매칭만 수행)
     return round(_match_with_offset(p1, p2, 0, 0), 4)
+
+
+@dataclass(frozen=True)
+class BarEndRhymeAnalysis:
+    coverage_score: float
+    selected_line_indexes: tuple[int, ...]
+    line_scores: tuple[float, ...]
+    rhyme_groups: tuple[int | None, ...]
+    best_match_indexes: tuple[int | None, ...]
+
+
+def check_end_rhyme_pair(line1: str, line2: str, threshold: float = 0.5) -> bool:
+    """두 문장 끝단어 간의 라임 점수가 임계값 이상인지 검증합니다."""
+    return get_line_rhyme_score(line1, line2) >= threshold
+
+
+def _is_trap(bpm: float | None, genre: str | None) -> bool:
+    if genre is not None:
+        return genre.lower() in ("trap", "트랩")
+    if bpm is None:
+        return False
+    judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
+    return judgment_bpm >= 115
+
+
+def get_bar_end_indexes(
+    lines: list[str],
+    bpm: float | None = None,
+    genre: str | None = None,
+) -> tuple[int, ...]:
+    """Return all boombap line indexes or even trap line indexes."""
+    if _is_trap(bpm, genre) and len(lines) >= 10:
+        return tuple(range(1, len(lines), 2))
+    return tuple(range(len(lines)))
+
+
+def analyze_bar_end_rhyme(
+    lines: list[str],
+    bpm: float | None = None,
+    genre: str | None = None,
+    threshold: float = 0.5,
+) -> BarEndRhymeAnalysis:
+    """Analyze adjacent bar-ending rhymes using the shared GRPO policy.
+
+    A bar ending is covered when it rhymes with its previous or next bar ending.
+    Trap uses the second line of each two-line bar; boombap uses every line.
+    Only covered bar endings are assigned groups and highlight matches.
+    """
+    line_count = len(lines)
+    selected = get_bar_end_indexes(lines, bpm=bpm, genre=genre)
+    line_scores = [0.0] * line_count
+    rhyme_groups: list[int | None] = [None] * line_count
+    best_match_indexes: list[int | None] = [None] * line_count
+    if len(selected) < 2:
+        return BarEndRhymeAnalysis(
+            coverage_score=0.0,
+            selected_line_indexes=selected,
+            line_scores=tuple(line_scores),
+            rhyme_groups=tuple(rhyme_groups),
+            best_match_indexes=tuple(best_match_indexes),
+        )
+
+    parents = list(range(len(selected)))
+
+    def find(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root, right_root = find(left), find(right)
+        if left_root != right_root:
+            parents[right_root] = left_root
+
+    adjacent_scores = []
+    for position in range(len(selected) - 1):
+        score = get_line_rhyme_score(lines[selected[position]], lines[selected[position + 1]])
+        adjacent_scores.append(score)
+        if score >= threshold:
+            union(position, position + 1)
+
+    covered_positions = []
+    for position, line_index in enumerate(selected):
+        candidates: list[tuple[float, int | None]] = []
+        if position > 0:
+            candidates.append((adjacent_scores[position - 1], selected[position - 1]))
+        if position < len(adjacent_scores):
+            candidates.append((adjacent_scores[position], selected[position + 1]))
+        score, best_index = max(candidates, default=(0.0, None))
+        if score >= threshold:
+            covered_positions.append(position)
+            line_scores[line_index] = score
+            best_match_indexes[line_index] = best_index
+
+    group_ids: dict[int, int] = {}
+    for position in covered_positions:
+        root = find(position)
+        if root not in group_ids:
+            group_ids[root] = len(group_ids)
+        rhyme_groups[selected[position]] = group_ids[root]
+
+    return BarEndRhymeAnalysis(
+        coverage_score=round(len(covered_positions) / len(selected), 4),
+        selected_line_indexes=selected,
+        line_scores=tuple(line_scores),
+        rhyme_groups=tuple(rhyme_groups),
+        best_match_indexes=tuple(best_match_indexes),
+    )
+
+
+def calculate_chunk_end_rhyme_score(
+    lines: list[str],
+    bpm: float | None = None,
+    genre: str | None = None,
+) -> float:
+    """Backward-compatible shared bar-ending rhyme coverage score."""
+    return analyze_bar_end_rhyme(lines, bpm=bpm, genre=genre).coverage_score
 
 def calculate_line_scores(
     actual_lines: list[str],
@@ -188,44 +318,4 @@ def calculate_line_scores(
         line_scores.append(line_score)
 
     return line_scores, best_match_indexes
-
-
-def calculate_rhyme_density(
-    lines: list[str],
-    bpm: float | None = None,
-    genre: str | None = None,
-) -> float:
-    """마디 리스트 전체의 평균 복합 라임 점수를 산출합니다. (3연속 완전 무라임 구간당 -0.05점 감점)"""
-    actual_len = len(lines)
-    if actual_len <= 1:
-        return 0.0
-
-    # 장르 판별 (트랩 여부 확인)
-    is_trap = False
-    if genre is not None:
-        is_trap = genre.lower() in ("trap", "트랩")
-    elif bpm is not None:
-        judgment_bpm = bpm * 2.0 if 60.0 <= bpm < 80.0 else bpm
-        is_trap = judgment_bpm >= 115
-
-    if is_trap and actual_len >= 10:
-        # 트랩 16줄 가사의 경우 짝수번째 라인(마디 끝단어)만 추출하여 8마디 표준 밀도로 산출
-        even_lines = [lines[i] for i in range(1, actual_len, 2)]
-        return calculate_rhyme_density(even_lines, bpm=bpm, genre="붐뱁")
-
-    line_scores, _ = calculate_line_scores(lines, bpm=bpm, genre=genre)
-    base_density = sum(line_scores) / actual_len
-
-    if actual_len < 3:
-        return round(base_density, 4)
-
-    # 3연속 완전 무라임(line_score == 0.0) 구간 탐지 및 -0.05점 감점
-    no_rhyme_triplets = 0
-    for i in range(actual_len - 2):
-        if line_scores[i] == 0.0 and line_scores[i+1] == 0.0 and line_scores[i+2] == 0.0:
-            no_rhyme_triplets += 1
-
-    penalty = no_rhyme_triplets * 0.05
-    return round(max(0.0, base_density - penalty), 4)
-
 

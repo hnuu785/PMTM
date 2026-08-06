@@ -61,6 +61,8 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertEqual(_english_word_to_syllables("love"), [["l", "eo", "b"]])
         # 'beat' -> ['b', 'i', 't']
         self.assertEqual(_english_word_to_syllables("beat"), [["b", "i", "t"]])
+        # /eɪ/ keeps its closing glide, so 'someday' is '썸-데-이'.
+        self.assertEqual(_english_word_to_syllables("someday"), [["sc", "eo", "m"], ["d", "e"], ["i"]])
 
     def test_korean_number_conversion(self):
         self.assertEqual(convert_numbers_to_hangul("1 2 3"), "일 이 삼")
@@ -214,6 +216,32 @@ class FlowAdapterTests(unittest.TestCase):
         syllable_dur = sum(p.durationSec for p in bar0_sparse.phonemes if p.symbol != "SP")
         self.assertLessEqual(syllable_dur, 0.600001)
 
+    def test_sparse_boom_bap_syllables_are_not_capped_at_150ms(self):
+        lyrics = "\n".join([
+            "가나다라마바사아자",
+            "고개를 들고 앞을 봐",
+            "작은 불씨 크게 번져",
+            "흔들림 없이 길을 가",
+            "다시 박자 위에 올라",
+            "숨을 고르고 말을 해",
+            "오늘보다 멀리 날아",
+            "마지막까지 나를 믿어",
+        ])
+        plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+        assert bar.phNum is not None
+
+        cursor = bar.phNum[0]
+        syllable_durations = []
+        for phoneme_count in bar.phNum[1:-1]:
+            syllable_durations.append(sum(
+                phoneme.durationSec
+                for phoneme in bar.phonemes[cursor : cursor + phoneme_count]
+            ))
+            cursor += phoneme_count
+
+        self.assertGreater(max(syllable_durations), 0.18)
+
     def test_diffsinger_score_contains_eight_manual_sections(self):
         plan = build_flow_plan(EIGHT_BARS, 90, 2.0, "rang", base_f0_hz=145.0)
         with TemporaryDirectory() as tmp:
@@ -246,7 +274,6 @@ class FlowAdapterTests(unittest.TestCase):
         bar0 = plan.bars[0]
         self.assertIsNotNone(bar0.noteSeq)
         self.assertIn("rest", bar0.noteSeq)
-        # Check pitch notes are unified to C4
         self.assertTrue(all(note in ("C4", "D4", "D#4", "rest") for note in bar0.noteSeq))
 
 
@@ -281,6 +308,46 @@ class FlowAdapterTests(unittest.TestCase):
         slots = _allocate_syllable_grid_slots(weights, 14)
         self.assertEqual(sum(slots), 14)
         self.assertEqual(len(slots), 10)
+
+    def test_content_word_attacks_receive_spare_slots_first(self):
+        from app.flow_adapter import _allocate_syllable_grid_slots
+
+        slots = _allocate_syllable_grid_slots(
+            [1.1, 1.0, 0.65, 1.1, 1.0, 0.65, 1.1, 1.0, 0.65],
+            12,
+            priority_indices=[0, 3, 6],
+        )
+
+        self.assertEqual(slots, [2, 1, 1, 2, 1, 1, 2, 1, 1])
+
+    def test_three_slot_content_word_attack_uses_d_sharp_four(self):
+        lyrics = "\n".join(["이건 우리 쟁반밥이잖아"] * 8)
+        plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+        slot_duration = plan.beatMap.barDurationSec / 16
+
+        self.assertEqual(bar.noteSeq[5], "D#4")
+        self.assertGreater(bar.noteDur[5], slot_duration * 2)
+        self.assertLess(bar.noteDur[5], slot_duration * 3)
+
+    def test_liaison_moves_extra_slot_and_pitch_to_surface_syllable(self):
+        lyrics = "\n".join(["내 손이 놓인 건 절대 아니다"] * 8)
+        plan = build_flow_plan(lyrics, 91, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+
+        # 손이 -> 소니: the extra slot and D4 accent land on 니, not 소.
+        self.assertEqual(bar.noteSeq[2:4], ["C4", "D4"])
+        self.assertGreater(bar.noteDur[3], bar.noteDur[2])
+
+    def test_thirteen_syllable_line_uses_full_grid_without_reserved_rests(self):
+        lyrics = "\n".join(["네가 내게 했던 사랑을 못 믿을 때"] * 8)
+        plan = build_flow_plan(lyrics, 91, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+        voiced_duration = sum(
+            duration for note, duration in zip(bar.noteSeq, bar.noteDur) if note != "rest"
+        )
+
+        self.assertGreater(voiced_duration, plan.beatMap.barDurationSec * 0.95)
 
     def test_dense_bar_syllables_not_truncated(self):
         dense_lyrics = "\n".join([
@@ -475,6 +542,14 @@ class GuideDemoApiTests(unittest.TestCase):
                 "potg",
             )
 
+            expected_plan = build_flow_plan(EIGHT_BARS, 90, 1.0, "potg", base_f0_hz=190.0)
+            expected_mix_duration = (
+                1.0
+                + expected_plan.beatMap.barDurationSec * expected_plan.beatMap.barCount
+                + guide_pipeline.MIX_TAIL_SECONDS
+            )
+            self.assertAlmostEqual(trim.call_args.args[2], expected_mix_duration)
+            self.assertAlmostEqual(fit_vocal.call_args.args[2], expected_mix_duration)
             self.assertTrue((work_dir / "flow-plan.json").is_file())
             self.assertTrue((work_dir / "score.ds").is_file())
             self.assertTrue((work_dir / "vocal.wav").is_file())

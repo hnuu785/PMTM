@@ -112,7 +112,7 @@ class InferencePromptingTests(unittest.TestCase):
 
         self.assertEqual([message["role"] for message in messages], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("8~16 범위 내로", messages[0]["content"])
+        self.assertIn("9~16 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_use_training_prompt_shape(self):
         args = SimpleNamespace(
@@ -128,7 +128,7 @@ class InferencePromptingTests(unittest.TestCase):
 
         self.assertEqual([message["role"] for message in messages], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("8~16 범위 내로", messages[0]["content"])
+        self.assertIn("9~16 범위 내로", messages[0]["content"])
 
     def test_local_cli_messages_omit_bpm_when_unspecified(self):
         args = SimpleNamespace(bpm=None, bars=None)
@@ -137,26 +137,26 @@ class InferencePromptingTests(unittest.TestCase):
         self.assertEqual([message["role"] for message in messages], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
         self.assertIn("정확히 16줄로 구성해야 하며", messages[0]["content"])
-        self.assertIn("6~14 범위 내로", messages[0]["content"])
+        self.assertIn("6~13 범위 내로", messages[0]["content"])
 
     def test_bpm_threshold_distinction(self):
-        # 114 BPM should be Boombap (8 lines, 8~16 syllables)
+        # 114 BPM should be Boombap (8 lines, 9~16 syllables)
         args_114 = SimpleNamespace(bpm=114, bars=None)
         messages_114 = generate.build_messages(args_114)
         self.assertIn("정확히 8줄로 구성해야 하며", messages_114[0]["content"])
-        self.assertIn("8~16 범위 내로", messages_114[0]["content"])
+        self.assertIn("9~16 범위 내로", messages_114[0]["content"])
 
-        # 115 BPM should be Trap (16 lines, 6~14 syllables)
+        # 115 BPM should be Trap (16 lines, 6~13 syllables)
         args_115 = SimpleNamespace(bpm=115, bars=None)
         messages_115 = generate.build_messages(args_115)
         self.assertIn("정확히 16줄로 구성해야 하며", messages_115[0]["content"])
-        self.assertIn("6~14 범위 내로", messages_115[0]["content"])
+        self.assertIn("6~13 범위 내로", messages_115[0]["content"])
 
     def test_parse_target_bars_korean_prompt(self):
         import re
         ko_lines_re = re.compile(r"정확히\s+(\d+)줄")
-        prompt_16 = "트랩 랩 가사를 작성해 주세요. 정확히 16줄로 구성해야 하며, 줄당 음절 수는 6~14 범위 내로 조절해 주세요."
-        prompt_8 = "붐뱁 랩 가사를 작성해 주세요. 정확히 8줄로 구성해야 하며, 줄당 음절 수는 8~16 범위 내로 조절해 주세요."
+        prompt_16 = "트랩 랩 가사를 작성해 주세요. 정확히 16줄로 구성해야 하며, 줄당 음절 수는 6~13 범위 내로 조절해 주세요."
+        prompt_8 = "붐뱁 랩 가사를 작성해 주세요. 정확히 8줄로 구성해야 하며, 줄당 음절 수는 9~16 범위 내로 조절해 주세요."
         self.assertEqual(int(ko_lines_re.search(prompt_16).group(1)), 16)
         self.assertEqual(int(ko_lines_re.search(prompt_8).group(1)), 8)
 

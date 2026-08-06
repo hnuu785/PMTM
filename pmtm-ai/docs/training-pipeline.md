@@ -47,8 +47,8 @@ flowchart LR
     SFTOut["models[/experiment]/sft_rap_qwen<br/>SFT LoRA adapter + tokenizer"]
     SFTCkpt["outputs[/experiment]/sft_qwen<br/>checkpoint-*"]
 
-    PromptBuild["grpo_qwen.py build_prompts()<br/>rhyme_density 상위 TOP_N=200<br/>8마디 messages/chat-template prompt"]
-    Reward["rhyme_reward()<br/>라임 점수 + 길이(8마디)<br/>중복/연속반복 penalty"]
+    PromptBuild["grpo_qwen.py build_prompts()<br/>장르·BPM·주제 조합 prompt<br/>messages/chat-template prompt"]
+    Reward["format_reward() + rhyme_reward()<br/>인접 마디 끝 라임 coverage<br/>중복 penalty"]
     GRPOTrain["GRPOTrainer<br/>SFT adapter에서 시작<br/>num_generations=4"]
     GRPOOut["models[/experiment]/grpo_rap_qwen<br/>GRPO adapter"]
     GRPOCkpt["outputs[/experiment]/grpo_qwen<br/>checkpoint-*"]

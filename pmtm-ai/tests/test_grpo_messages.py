@@ -9,8 +9,10 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.lyric_prompts import build_messages
+from app.rhyme_scoring.rhyme_engine import analyze_bar_end_rhyme
 from app.training.grpo_qwen import _format_finite_summary
-from app.training.grpo_qwen import _summarize_tensors, build_prompts, rhyme_reward
+from app.training.grpo_qwen import _summarize_tensors, build_prompts, format_reward, rhyme_reward
+from app.rhyme_scoring.phonetics_utils import count_syllables
 
 
 class GrpoMessagesTests(unittest.TestCase):
@@ -35,158 +37,139 @@ class GrpoMessagesTests(unittest.TestCase):
         # 1st prompt (bpm=90, 붐뱁)
         msg1 = prompts[0]
         self.assertEqual([m["role"] for m in msg1], ["user"])
+        self.assertIn("한국어 중심의", msg1[0]["content"])
         self.assertIn("랩 가사를 작성해 주세요", msg1[0]["content"])
-        self.assertIn("8~16 범위 내로", msg1[0]["content"])
+        self.assertIn("9~16 범위 내로", msg1[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg1[0]["content"])
 
         # 140 BPM, 트랩 prompt (5th prompt in 2x4 combination)
         msg2 = prompts[4]
         self.assertEqual([m["role"] for m in msg2], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", msg2[0]["content"])
-        self.assertIn("6~14 범위 내로", msg2[0]["content"])
+        self.assertIn("6~13 범위 내로", msg2[0]["content"])
         self.assertNotIn("AAAABBBB 스키마를 준수", msg2[0]["content"])
 
     def test_build_prompts_doubles_halftime_bpm(self):
-        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (6~14 syllables)
+        # 70 BPM should be doubled to 140 BPM, resulting in "트랩" (6~13 syllables)
         messages = build_messages(bpm=70)
         self.assertEqual(len(messages), 1)
         self.assertEqual([m["role"] for m in messages], ["user"])
         self.assertIn("랩 가사를 작성해 주세요", messages[0]["content"])
-        self.assertIn("6~14 범위 내로", messages[0]["content"])
+        self.assertIn("6~13 범위 내로", messages[0]["content"])
 
-    def test_rhyme_reward_accepts_conversational_completion(self):
+    @staticmethod
+    def _line(index: int, ending: str) -> str:
+        prefixes = "가나다라마바사아자차카타파하거너더러"
+        return f"{prefixes[index]}라마바사아자차카 {ending}"
+
+    @staticmethod
+    def _completion(lines: list[str]):
+        content = "\n".join(
+            f"{index}. ({count_syllables(line)}음절) {line}"
+            for index, line in enumerate(lines, 1)
+        )
+        return [[{"role": "assistant", "content": content}]]
+
+    @staticmethod
+    def _same_ending_rhyme(line1: str, line2: str) -> float:
+        return 1.0 if line1.rsplit(maxsplit=1)[-1] == line2.rsplit(maxsplit=1)[-1] else 0.0
+
+    def test_format_reward_requires_exact_contract(self):
         prompt = build_messages(bpm=90)
-        raw_lines = [
-            "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
-            "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
-            "과거의 기억들을 저 멀리 버렸지",
-            "내 앞을 막아선 저 쇠창살을 막았지",
-        ]
-        formatted_lines = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(raw_lines, 1)]
-        content = "\n".join(formatted_lines)
-        
-        completion = [[
-            {
-                "role": "assistant",
-                "content": content,
-            }
-        ]]
+        lines = [self._line(index, "가") for index in range(8)]
+        valid = self._completion(lines)
+        self.assertEqual(format_reward(valid, prompts=[prompt]), [1.0])
 
-        rewards = rhyme_reward(completion, prompts=[prompt])
+        content = valid[0][0]["content"]
+        trailing_tag = "\n".join(
+            f"{index}. {line.rsplit(' ', 1)[-1]} ({count_syllables(lines[index - 1])}음절)"
+            for index, line in enumerate(lines, 1)
+        )
+        header = f"가사입니다:\n{content}"
 
-        self.assertEqual(len(rewards), 1)
-        self.assertIsInstance(rewards[0], float)
-        # 이 가사는 AAAA BBBB 형태이므로 높은 점수(>0.75)가 기대됨
-        self.assertGreater(rewards[0], 0.70)
+        self.assertLess(format_reward([[{"role": "assistant", "content": trailing_tag}]], prompts=[prompt])[0], 1.0)
+        self.assertLess(format_reward([[{"role": "assistant", "content": header}]], prompts=[prompt])[0], 1.0)
+        self.assertEqual(rhyme_reward([[{"role": "assistant", "content": header}]], prompts=[prompt]), [0.0])
 
-    def test_rhyme_reward_penalizes_abab_and_rewards_aa_and_aaaa(self):
-        # 1. AAAA BBBB 가사 (1~4행 -가 라임, 5~8행 -다 라임)
-        lines_aaaa_bbbb = [
-            "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
-            "차가운 빗줄기가 어깨에 내렸다",
-            "이 밤이 흐르기 전 모든 걸 바쳤다",
-            "과거의 기억들을 저 멀리 버렸다",
-            "내 앞을 막아선 저 쇠창살을 막았다",
-        ]
-        
-        # 2. AA BB CC DD 가사 (2줄 단위 라임)
-        lines_aabb_ccdd = [
-            "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
-            "그 누구도 내 앞길을 막지 못해",
-            "끝까지 가겠어 난 절대 안 멈춰",  # 라임 안맞음 (못해/멈춰)
-            "새로운 세상을 향해서 가겠어",
-            "꿈을 향해 한 걸음 더 내딛겠어",  # 가겠어/내딛겠어 (라임 맞음 -어)
-        ]
-
-        # 3. ABAB CDCD 가사 (교차 라임)
-        lines_abab_cdcd = [
-            "밤을 지나 나는 다시 올라가",      # A
-            "차가운 빗줄기가 어깨에 내렸다",    # B
-            "맘을 비워도 박자는 돌아가",        # A
-            "이 밤이 흐르기 전 모든 걸 바쳤다",  # B
-            "그 누구도 내 앞길을 막지 못해",    # C
-            "새로운 세상을 향해서 가겠어",      # D
-            "이 모든 두려움을 뛰어 넘게",      # C
-            "꿈을 향해 한 걸음 더 내딛겠어",    # D
-        ]
-
-        def format_comp(lines):
-            formatted = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(lines, 1)]
-            return [[{"role": "assistant", "content": "\n".join(formatted)}]]
-
+    def test_rhyme_reward_gives_aabb_and_aaaa_the_same_full_score(self):
         prompt = build_messages(bpm=90)
-        
-        reward_aaaa = rhyme_reward(format_comp(lines_aaaa_bbbb), prompts=[prompt])[0]
-        reward_aabb = rhyme_reward(format_comp(lines_aabb_ccdd), prompts=[prompt])[0]
-        reward_abab = rhyme_reward(format_comp(lines_abab_cdcd), prompts=[prompt])[0]
-        # AAAA BBBB는 0.70 이상의 높은 점수여야 함
-        self.assertGreater(reward_aaaa, 0.70)
-        # AA BB CC DD는 중간 정도의 점수여야 함
-        self.assertTrue(0.4 <= reward_aabb <= 0.85)
-        # ABAB CDCD는 상대적으로 낮아야 함
-        self.assertLess(reward_abab, 0.65)
-        # 서열 관계 검증: 각각 AAAA보다는 작아야 함
-        self.assertLess(reward_abab, reward_aaaa)
-        self.assertLess(reward_aabb, reward_aaaa)
+        aabb_lines = [self._line(index, ending) for index, ending in enumerate("가가나나다다라라")]
+        aaaa_lines = [self._line(index, ending) for index, ending in enumerate("가가가가나나나나")]
 
-    def test_rhyme_reward_stepwise_duplicate_penalty(self):
-        base_lines = [
-            "밤을 지나 나는 다시 올라가",
-            "맘을 비워도 박자는 돌아가",
-            "길 위의 불빛이 나를 불러가",
-            "진심을 눌러도 rhyme은 흘러가",
-            "차가운 빗줄기가 어깨에 내렸지",
-            "이 밤이 흐르기 전 모든 걸 바쳤지",
-            "과거의 기억들을 저 멀리 버렸지",
-            "내 앞을 막아선 저 쇠창살을 막았지",
-        ]
-        
-        def make_comp(lines):
-            formatted = [f"{i}. ({len(ln)}음절) {ln}" for i, ln in enumerate(lines, 1)]
-            return [[{"role": "assistant", "content": "\n".join(formatted)}]]
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            aabb_reward = rhyme_reward(self._completion(aabb_lines), prompts=[prompt])[0]
+            aaaa_reward = rhyme_reward(self._completion(aaaa_lines), prompts=[prompt])[0]
 
+        self.assertEqual(aabb_reward, 1.0)
+        self.assertEqual(aaaa_reward, 1.0)
+
+    def test_rhyme_reward_penalizes_uncovered_endings(self):
         prompt = build_messages(bpm=90)
-        
-        # 0줄 중복
-        r0 = rhyme_reward(make_comp(base_lines), prompts=[prompt])[0]
-        
-        # 1줄 중복 (마지막 줄을 1번 줄과 동일하게 만듦)
-        lines_1dup = list(base_lines)
-        lines_1dup[7] = base_lines[0]
-        r1 = rhyme_reward(make_comp(lines_1dup), prompts=[prompt])[0]
-        
-        # 2줄 중복 (7, 8번 줄을 1, 2번 줄과 동일하게 만듦)
-        lines_2dup = list(base_lines)
-        lines_2dup[6] = base_lines[0]
-        lines_2dup[7] = base_lines[1]
-        r2 = rhyme_reward(make_comp(lines_2dup), prompts=[prompt])[0]
+        aaabccdd_lines = [self._line(index, ending) for index, ending in enumerate("가가가나다다라라")]
+        abab_lines = [self._line(index, ending) for index, ending in enumerate("가나가나다라다라")]
 
-        # 3줄 중복
-        lines_3dup = list(base_lines)
-        lines_3dup[5] = base_lines[0]
-        lines_3dup[6] = base_lines[1]
-        lines_3dup[7] = base_lines[2]
-        r3 = rhyme_reward(make_comp(lines_3dup), prompts=[prompt])[0]
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            aaabccdd_reward = rhyme_reward(self._completion(aaabccdd_lines), prompts=[prompt])[0]
+            abab_reward = rhyme_reward(self._completion(abab_lines), prompts=[prompt])[0]
 
-        # 차감 보상 경사 검증 (중복이 늘어날수록 단조 감소: r0 > r1 > r2 > r3)
-        self.assertGreater(r0, 0.70)
-        self.assertGreater(r0, r1)
-        self.assertGreater(r1, r2)
-        self.assertGreater(r2, r3)
-        self.assertLess(r3, 0.10)
+        self.assertEqual(aaabccdd_reward, 0.875)
+        self.assertEqual(abab_reward, 0.0)
+
+    def test_trap_rhyme_uses_even_numbered_lines_only(self):
+        prompt = build_messages(bpm=140)
+        even_endings = "가가나나다다라라"
+        lines = []
+        for index in range(16):
+            ending = "고" if index % 2 == 0 else even_endings[index // 2]
+            lines.append(self._line(index, ending))
+
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            reward = rhyme_reward(self._completion(lines), prompts=[prompt])[0]
+            analysis = analyze_bar_end_rhyme(lines, bpm=140)
+
+        self.assertEqual(reward, 1.0)
+        self.assertEqual(analysis.selected_line_indexes, (1, 3, 5, 7, 9, 11, 13, 15))
+        self.assertTrue(all(analysis.rhyme_groups[index] is None for index in range(0, 16, 2)))
+        self.assertTrue(all(analysis.rhyme_groups[index] is not None for index in range(1, 16, 2)))
+
+    def test_shared_analysis_uses_all_boombap_lines(self):
+        lines = [self._line(index, ending) for index, ending in enumerate("가가나나다다라라")]
+
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            analysis = analyze_bar_end_rhyme(lines, bpm=90)
+
+        self.assertEqual(analysis.selected_line_indexes, tuple(range(8)))
+        self.assertTrue(all(group is not None for group in analysis.rhyme_groups))
+
+    def test_rhyme_reward_penalizes_duplicate_lines(self):
+        prompt = build_messages(bpm=90)
+        lines = [self._line(index, "가") for index in range(8)]
+        duplicated = list(lines)
+        duplicated[-1] = duplicated[0]
+
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            unique_reward = rhyme_reward(self._completion(lines), prompts=[prompt])[0]
+            duplicate_reward = rhyme_reward(self._completion(duplicated), prompts=[prompt])[0]
+
+        self.assertEqual(unique_reward, 1.0)
+        self.assertEqual(duplicate_reward, 0.8)
 
 
 
 if __name__ == "__main__":
     unittest.main()
-

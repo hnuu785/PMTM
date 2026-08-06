@@ -12,7 +12,7 @@ from app.lyric_prompts import (
     find_unsupported_characters,
 )
 from app.paths import MODEL_ID
-from app.rhyme_scoring.rhyme_engine import calculate_rhyme_density
+from app.rhyme_scoring.rhyme_engine import analyze_bar_end_rhyme
 
 PROMPT_FORMATS = ("auto", "chat", "raw")
 
@@ -39,10 +39,10 @@ def parse_args():
         help="Number of candidates to generate for Best-of-N reward selection (default: 4)",
     )
     p.add_argument(
-        "--min-rhyme-density",
+        "--min-rhyme-coverage",
         type=float,
-        default=0.35,
-        help="Minimum rhyme density required to accept generation (default: 0.35)",
+        default=0.5,
+        help="Minimum adjacent end-rhyme coverage required to accept generation (default: 0.5)",
     )
     p.add_argument(
         "--max-retries",
@@ -236,7 +236,7 @@ def post_process_lyrics(raw_text: str) -> str:
 
 def score_lyric_completion(raw_text: str, bpm: float | None = None) -> float:
     """
-    생성된 가사(raw_text)의 라임 밀도와 구조적 완성도를 채점하여 Reward 점수를 반환합니다.
+    생성된 가사(raw_text)의 끝 라임 커버리지와 구조적 완성도를 채점하여 Reward 점수를 반환합니다.
     (GRPO 학습 시 rhyme_reward 채점 기준과 동일)
     """
     # 허용되지 않는 이상 문자가 포함되어 있는지 체크하여 페널티 부여
@@ -263,10 +263,10 @@ def score_lyric_completion(raw_text: str, bpm: float | None = None) -> float:
     else:
         dup_penalty = 1.2
 
-    # 2) 전체 생성 라인의 라임 밀도 계산
-    rhyme_score = calculate_rhyme_density(lines, bpm=bpm)
+    # 2) 전체 생성 라인에서 인접 마디 끝 라임 커버리지 계산
+    rhyme_coverage = analyze_bar_end_rhyme(lines, bpm=bpm).coverage_score
 
-    final_reward = rhyme_score - dup_penalty - unsupported_penalty
+    final_reward = rhyme_coverage - dup_penalty - unsupported_penalty
     return float(final_reward)
 
 
@@ -305,7 +305,7 @@ def main():
         print("-" * 60, file=sys.stderr)
 
     num_candidates = max(1, getattr(args, "num_candidates", 4))
-    min_rhyme_density = getattr(args, "min_rhyme_density", 0.35)
+    min_rhyme_coverage = getattr(args, "min_rhyme_coverage", 0.5)
     max_retries = max(1, getattr(args, "max_retries", 5))
     candidates = []
     best_cand = ""
@@ -329,10 +329,10 @@ def main():
             best_cand, best_reward, scored = cand, reward, scored_items
 
         clean_lines = [line.strip() for line in post_process_lyrics(cand).split("\n") if line.strip()]
-        rhyme_density = calculate_rhyme_density(clean_lines, bpm=args.bpm)
+        rhyme_coverage = analyze_bar_end_rhyme(clean_lines, bpm=args.bpm).coverage_score
         unsupported = find_unsupported_characters(cand)
 
-        if not unsupported and rhyme_density >= min_rhyme_density:
+        if not unsupported and rhyme_coverage >= min_rhyme_coverage:
             break
 
         print(f"[Attempt {attempt}/{max_retries}] Candidate rejected. Retrying...", file=sys.stderr)
@@ -352,4 +352,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

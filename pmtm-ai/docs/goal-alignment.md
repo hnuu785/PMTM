@@ -270,9 +270,9 @@ eval dataset을 만들지만 `eval_strategy="no"`이므로 실제 validation을 
 
 ### 9.6 목표와 어긋난 GRPO prompt와 reward
 
-`app/training/grpo_qwen.py`는 `rhyme_density` 상위 200곡을 선택하지만 prompt에는 각 행의 BPM만 사용한다. 선택한 곡의 주제, 라임 구조와 가사는 GRPO 조건에 반영되지 않는다.
+`app/training/grpo_qwen.py`는 장르·BPM·주제 조합으로 prompt를 만들며, SFT 어댑터에서 시작해 GRPO를 수행한다.
 
-현재 reward는 인접 줄 끝 라임, 줄 수, `[End]`, 완전 중복, 2~4-gram 반복과 극단적으로 짧은 줄을 평가한다. 주제, 의미 연결, 자연스러움, 내부 라임과 라임 스킴은 평가하지 않는다. 특히 짧은 줄 페널티를 발화 밀도나 플로우의 대리 지표로 사용하지 않는다.
+현재 reward는 strict 포맷, 인접 마디 끝 라임 coverage, 완전 중복을 평가한다. 주제, 의미 연결, 자연스러움, 내부 라임은 별도 reward로 평가하지 않는다.
 
 ### 9.7 혼합된 GRPO 실험 이력
 

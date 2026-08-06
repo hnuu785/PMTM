@@ -272,7 +272,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ lines: lyricLines }),
+          body: JSON.stringify({ lines: lyricLines, bpm: result.bpm }),
           signal: controller.signal,
         });
 
@@ -483,6 +483,13 @@ export default function Home() {
     setLyricLines((current) => current.map((line, lineIndex) => (lineIndex === index ? value : line)));
     setCopyLabel("Copy");
   }
+
+  const effectiveVerseBpm =
+    result && 60 <= result.bpm && result.bpm < 80 ? result.bpm * 2 : result?.bpm;
+  const isTrapVerse = effectiveVerseBpm !== undefined && effectiveVerseBpm >= 115 && lyricLines.length === 16;
+  const verseRows = isTrapVerse
+    ? Array.from({ length: 8 }, (_, row) => [row * 2, row * 2 + 1])
+    : lyricLines.map((_, index) => [index]);
 
   return (
     <main className="pmtm-stage min-h-screen overflow-hidden text-[#fff6df]">
@@ -772,45 +779,53 @@ export default function Home() {
                       <span>[Verse]</span>
                       <span>{isAnalyzingRhyme ? "Analyzing rhyme" : "Rhyme view"}</span>
                     </div>
-                    {lyricLines.map((line, index) => {
-                      const analysis = rhymeAnalysis[index];
-                      const isEditing = editingLineIndex === index;
+                    {verseRows.map((row, rowIndex) => (
+                      <div
+                        key={rowIndex}
+                        className={isTrapVerse ? "grid grid-cols-2 gap-3" : undefined}
+                      >
+                        {row.map((index) => {
+                          const line = lyricLines[index];
+                          const analysis = rhymeAnalysis[index];
+                          const isEditing = editingLineIndex === index;
 
-                      return (
-                        <div
-                          key={index}
-                          className="border border-[#f5b950]/20 bg-[#130806]/58 px-3 py-3"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            {isEditing ? (
-                              <textarea
-                                value={line}
-                                rows={1}
-                                onChange={(event) => updateLyricLine(index, event.target.value)}
-                                className="block min-h-10 min-w-0 flex-1 resize-y border border-[#f5b950]/25 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-[#fff6df] outline-none transition focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.14)]"
-                                aria-label={`Lyric line ${index + 1}`}
-                              />
-                            ) : (
-                              <div className="min-w-0 flex-1 font-mono text-sm leading-7 text-[#fff6df]">
-                                {renderHighlightedLine(line, analysis)}
-                              </div>
-                            )}
-                            <span className="shrink-0 border border-[#f5b950]/25 bg-black/25 px-2 py-1 text-[11px] font-bold text-[#b9865f]">
-                              {analysis?.rhymeGroup == null
-                                ? `score ${formatScore(analysis?.score)}`
-                                : `R${analysis.rhymeGroup + 1} · ${formatScore(analysis.score)}`}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setEditingLineIndex(isEditing ? null : index)}
-                              className="h-8 shrink-0 border border-[#f5b950]/45 px-3 text-xs font-bold text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
+                          return (
+                            <div
+                              key={index}
+                              className="border border-[#f5b950]/20 bg-[#130806]/58 px-3 py-3"
                             >
-                              {isEditing ? "완료" : "수정"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                {isEditing ? (
+                                  <textarea
+                                    value={line}
+                                    rows={1}
+                                    onChange={(event) => updateLyricLine(index, event.target.value)}
+                                    className="block min-h-10 min-w-0 flex-1 resize-y border border-[#f5b950]/25 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-[#fff6df] outline-none transition focus:border-[#ffb23f] focus:shadow-[0_0_0_3px_rgba(255,178,63,0.14)]"
+                                    aria-label={`Lyric line ${index + 1}`}
+                                  />
+                                ) : (
+                                  <div className="min-w-0 flex-1 font-mono text-sm leading-7 text-[#fff6df]">
+                                    {renderHighlightedLine(line, analysis)}
+                                  </div>
+                                )}
+                                <span className="shrink-0 border border-[#f5b950]/25 bg-black/25 px-2 py-1 text-[11px] font-bold text-[#b9865f]">
+                                  {analysis?.rhymeGroup == null
+                                    ? `score ${formatScore(analysis?.score)}`
+                                    : `R${analysis.rhymeGroup + 1} · ${formatScore(analysis.score)}`}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingLineIndex(isEditing ? null : index)}
+                                  className="h-8 shrink-0 border border-[#f5b950]/45 px-3 text-xs font-bold text-[#fff3ca] transition hover:border-[#ffb23f] hover:bg-[#23100b]"
+                                >
+                                  {isEditing ? "완료" : "수정"}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="font-mono text-sm leading-8 text-[#fff6df]">

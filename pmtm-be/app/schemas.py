@@ -12,6 +12,7 @@ class LyricGenerateRequest(BaseModel):
 
 class RhymeAnalyzeRequest(BaseModel):
     lines: list[str] = Field(default_factory=list, max_length=32)
+    bpm: float | None = Field(default=None, ge=40, le=220)
 
 
 class RhymeHighlightRange(BaseModel):
