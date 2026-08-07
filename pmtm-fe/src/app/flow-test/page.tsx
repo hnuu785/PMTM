@@ -73,7 +73,7 @@ export default function FlowTestPage() {
   const [rvcModelId, setRvcModelId] = useState("none");
   const [useIndex, setUseIndex] = useState(false);
   const [beatFile, setBeatFile] = useState<File | null>(null);
-  
+
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
     DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
   );
@@ -413,10 +413,7 @@ export default function FlowTestPage() {
             <div className="pmtm-panel p-5 border border-[#52d4c8]/25 bg-black/15">
               <h2 className="text-md font-black text-[#52d4c8] uppercase tracking-wider">💡 안내 및 규칙</h2>
               <ul className="mt-3 text-xs leading-relaxed text-[#d8b993] list-disc list-inside space-y-2">
-                <li>가사는 **8줄(붐뱁) 또는 16줄(트랩)**이어야 하며, 공백 라인은 제외됩니다.</li>
-                <li>**1줄은 정확히 1마디(1 Bar)**로 자동 변환되어 리듬을 타고 노래합니다.</li>
-
-                <li>마디 당 음절 수에 따라 **스윙 그루브 템플릿**이 동적으로 적용됩니다.</li>
+                <li>가사는 8줄(붐뱁) 또는 16줄(트랩)이어야 하며, 공백 라인은 제외됩니다.</li>
                 <li>로컬 서버의 렌더링 워커(`rq worker`)가 실행 중이어야 결과물이 나옵니다.</li>
               </ul>
             </div>
@@ -426,17 +423,15 @@ export default function FlowTestPage() {
               <div className="pmtm-panel p-5 space-y-4">
                 <h2 className="text-lg font-black text-[#fff3ca] flex items-center gap-2">
                   <span>작업 현황</span>
-                  <span className={`inline-block h-2 w-2 rounded-full ${
-                    demoJob.status === "succeeded" ? "bg-[#52d4c8]" : demoJob.status === "failed" ? "bg-[#ff5a1f]" : "bg-[#f5b950] animate-pulse"
-                  }`} />
+                  <span className={`inline-block h-2 w-2 rounded-full ${demoJob.status === "succeeded" ? "bg-[#52d4c8]" : demoJob.status === "failed" ? "bg-[#ff5a1f]" : "bg-[#f5b950] animate-pulse"
+                    }`} />
                 </h2>
 
                 <div className="space-y-2 text-xs font-mono text-[#d8b993]">
                   <div>작업 ID: <span className="text-white">{demoJob.jobId}</span></div>
-                  <div>현재 상태: <span className={`font-bold ${
-                    demoJob.status === "succeeded" ? "text-[#52d4c8]" : demoJob.status === "failed" ? "text-[#ff5a1f]" : "text-[#f5b950]"
-                  }`}>{demoJob.status.toUpperCase()}</span></div>
-                  
+                  <div>현재 상태: <span className={`font-bold ${demoJob.status === "succeeded" ? "text-[#52d4c8]" : demoJob.status === "failed" ? "text-[#ff5a1f]" : "text-[#f5b950]"
+                    }`}>{demoJob.status.toUpperCase()}</span></div>
+
                   {/* Progress bar */}
                   <div className="w-full bg-black/55 h-1.5 rounded-full overflow-hidden mt-1 border border-white/5">
                     <div
