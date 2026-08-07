@@ -14,7 +14,8 @@ from app.schemas import DemoStatus
 from app.utils.redis import update_redis_status
 
 
-MIX_TAIL_SECONDS = 3.0
+MIX_TAIL_SECONDS = 2.0
+VOCAL_TAIL_SECONDS = 0.1
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,7 @@ def run_guide_demo_generation(
 
         render_duration_sec = max(bar.endSec for bar in plan.bars)
         mix_duration_sec = render_duration_sec + MIX_TAIL_SECONDS
+        vocal_duration_sec = render_duration_sec + VOCAL_TAIL_SECONDS
         _trim_beat(beat_file, work_path / "beat_segment.wav", mix_duration_sec)
 
         _set_status(
@@ -142,7 +144,7 @@ def run_guide_demo_generation(
         raw_vocal_path = work_path / "vocal_raw.wav"
         vocal_path = work_path / "vocal.wav"
         render_diffsinger(score_path, raw_vocal_path, voicebank_id)
-        _fit_vocal_to_duration(raw_vocal_path, vocal_path, mix_duration_sec)
+        _fit_vocal_to_duration(raw_vocal_path, vocal_path, vocal_duration_sec)
 
         rvc_applied_note = None
         if rvc_model_id:

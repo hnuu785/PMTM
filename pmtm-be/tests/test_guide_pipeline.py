@@ -593,9 +593,10 @@ class GuideDemoApiTests(unittest.TestCase):
                 base_f0_hz=190.0,
                 beat_analysis={"bpm": {"fixed_integer": 90}, "downbeat_offset_sec": 2.0},
             )
-            expected_mix_duration = expected_plan.bars[-1].endSec + 3.0
+            expected_mix_duration = expected_plan.bars[-1].endSec + 2.0
+            expected_vocal_duration = expected_plan.bars[-1].endSec + 0.1
             self.assertAlmostEqual(trim.call_args.args[2], expected_mix_duration)
-            self.assertAlmostEqual(fit_vocal.call_args.args[2], expected_mix_duration)
+            self.assertAlmostEqual(fit_vocal.call_args.args[2], expected_vocal_duration)
             self.assertTrue((work_dir / "flow-plan.json").is_file())
             self.assertTrue((work_dir / "score.ds").is_file())
             self.assertTrue((work_dir / "vocal.wav").is_file())
@@ -621,7 +622,8 @@ class BeatIntegrationTests(unittest.TestCase):
         }
         beat_map = build_beat_map(90, 1.0, bar_count=2, beat_analysis=sample_analysis)
         self.assertEqual(beat_map.bpm, 95)
-        self.assertEqual(beat_map.firstBarStartSec, 1.25)
+        self.assertEqual(beat_map.firstBarStartSec, 1.0)
+        self.assertEqual(beat_map.barStartTimes[0], 1.0)
         self.assertIsNotNone(beat_map.slotDurations)
         self.assertEqual(beat_map.snareTimes, [1.88, 4.4])
 
@@ -648,7 +650,8 @@ class BeatIntegrationTests(unittest.TestCase):
             base_f0_hz=190.0,
             beat_analysis=sample_analysis,
         )
-        self.assertEqual(plan.beatMap.firstBarStartSec, 0.5)
+        self.assertEqual(plan.beatMap.firstBarStartSec, 1.0)
+        self.assertEqual(plan.bars[0].startSec, 1.0)
         self.assertEqual(len(plan.bars), 8)
 
 

@@ -528,10 +528,6 @@ def build_beat_map(
             beat_duration = 60.0 / actual_bpm
             bar_duration = beat_duration * beats_per_unit
 
-        downbeat_offset = beat_analysis.get("downbeat_offset_sec")
-        if downbeat_offset is not None and math.isfinite(downbeat_offset) and downbeat_offset >= 0:
-            first_bar_start_sec = downbeat_offset
-
         absolute_grid = beat_analysis.get("absolute_grid", [])
         if absolute_grid:
             grid_times = [float(slot["time_sec"]) for slot in absolute_grid][::half_time_multiplier]
@@ -547,6 +543,14 @@ def build_beat_map(
                 slot["time_sec"] for slot in absolute_grid
                 if slot.get("subdivision") == 0
             ][::half_time_multiplier]
+
+            grid_shift = (
+                first_bar_start_sec - float(extracted_bar_starts[0])
+                if extracted_bar_starts
+                else 0.0
+            )
+            extracted_bar_starts = [float(value) + grid_shift for value in extracted_bar_starts]
+            extracted_beat_times = [float(value) + grid_shift for value in extracted_beat_times]
 
             if len(extracted_bar_starts) >= bar_count:
                 bar_starts = extracted_bar_starts[:bar_count]
