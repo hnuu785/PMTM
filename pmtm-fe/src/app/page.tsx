@@ -76,12 +76,7 @@ type ApiErrorResponse = {
 type GenerateMode = "beat" | "manual";
 
 const BPM_PRESETS = [80, 90, 120, 140];
-const DIFFSINGER_VOICEBANKS = [
-  { value: "potg", label: "POTG" },
-  { value: "kitane", label: "KITANE" },
-  { value: "rang", label: "RANG" },
-  { value: "lunar", label: "LUNAR" },
-];
+const DIFFSINGER_VOICEBANK = "potg";
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
   { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
@@ -126,12 +121,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
   const [llmOptions, setLlmOptions] = useState<LlmOption[]>(DEFAULT_LLM_OPTIONS);
-  const [voicebank, setVoicebank] = useState("potg");
-  const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
-    DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
-  );
   const [rvcModelId, setRvcModelId] = useState("none");
-  const [useIndex, setUseIndex] = useState(false);
   const [rvcModelOptions, setRvcModelOptions] = useState<VoicebankInfo[]>([]);
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
@@ -162,23 +152,6 @@ export default function Home() {
 
     return () => window.clearInterval(intervalId);
   }, [isLoading]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBaseUrl}/api/v1/guide-demos/voicebanks`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("voicebank lookup failed"))))
-      .then((items: VoicebankInfo[]) => {
-        setVoicebankOptions(items);
-        const firstAvailable = items.find((item) => item.available);
-        setVoicebank((current) =>
-          firstAvailable && !items.some((item) => item.id === current && item.available)
-            ? firstAvailable.id
-            : current,
-        );
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [apiBaseUrl]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -438,10 +411,10 @@ export default function Home() {
     body.append("lyrics", ["[Verse]", ...lyricLines].join("\n"));
     body.append("bpm", String(result.bpm));
     body.append("firstBarStartSec", String(parsedStart));
-    body.append("voicebank", voicebank);
+    body.append("voicebank", DIFFSINGER_VOICEBANK);
     if (rvcModelId && rvcModelId !== "none") {
       body.append("rvcModelId", rvcModelId);
-      body.append("useIndex", String(useIndex));
+      body.append("useIndex", "true");
     }
 
     setError("");
@@ -466,7 +439,7 @@ export default function Home() {
         audioUrl: null,
         vocalUrl: null,
         flowPlanUrl: null,
-        voicebank,
+        voicebank: DIFFSINGER_VOICEBANK,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "가이드 랩 생성 중 오류가 발생했습니다.");
@@ -569,8 +542,8 @@ export default function Home() {
                     type="button"
                     onClick={() => handleModeChange("beat")}
                     className={`h-10 border text-sm font-bold transition ${mode === "beat"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                      ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                      : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
                       }`}
                   >
                     비트 분석
@@ -579,8 +552,8 @@ export default function Home() {
                     type="button"
                     onClick={() => handleModeChange("manual")}
                     className={`h-10 border text-sm font-bold transition ${mode === "manual"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca] disabled:cursor-not-allowed disabled:text-[#6d4530]"
+                      ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                      : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca] disabled:cursor-not-allowed disabled:text-[#6d4530]"
                       }`}
                   >
                     직접 입력
@@ -645,8 +618,8 @@ export default function Home() {
                             setRhymeError("");
                           }}
                           className={`h-10 border text-sm font-bold transition ${bpm === String(preset)
-                              ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                              : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                            ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                            : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
                             }`}
                         >
                           {preset}
@@ -665,8 +638,8 @@ export default function Home() {
                         type="button"
                         onClick={() => setTopic(opt.value)}
                         className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${topic === opt.value
-                            ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
-                            : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                          ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
+                          : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
                           }`}
                       >
                         {opt.label}
@@ -687,8 +660,8 @@ export default function Home() {
                       <label
                         key={option.value}
                         className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${llm === option.value
-                            ? "border-[#f5b950] bg-[#f5b950] text-[#170906]"
-                            : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
+                          ? "border-[#f5b950] bg-[#f5b950] text-[#170906]"
+                          : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
                           }`}
                       >
                         <span className="min-w-0 flex-1">
@@ -873,22 +846,14 @@ export default function Home() {
             {result && mode === "beat" ? (
               <div className="mt-4 space-y-3 border border-[#52d4c8]/35 bg-[#071b1a]/70 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="min-w-40 flex-1">
+                  <div className="min-w-40 flex-1">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
                       DiffSinger voicebank
                     </span>
-                    <select
-                      value={voicebank}
-                      onChange={(event) => setVoicebank(event.target.value)}
-                      className="mt-2 h-10 w-full border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none focus:border-[#52d4c8]"
-                    >
-                      {voicebankOptions.map((option) => (
-                        <option key={option.id} value={option.id} disabled={!option.available}>
-                          {option.label}{option.available ? "" : " (not installed)"}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <div className="mt-2 flex h-10 w-full items-center border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca]">
+                      POTG
+                    </div>
+                  </div>
                   <label className="min-w-40 flex-1">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
                       RVC Voice Model
@@ -905,17 +870,6 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
-                    {rvcModelId !== "none" && (
-                      <label className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#8fcac4] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={useIndex}
-                          onChange={(e) => setUseIndex(e.target.checked)}
-                          className="h-3 w-3 rounded border-[#52d4c8]/35 bg-[#130806] accent-[#169c91]"
-                        />
-                        <span>인덱스 적용</span>
-                      </label>
-                    )}
                   </label>
                   <label className="w-36">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
@@ -935,7 +889,6 @@ export default function Home() {
                     disabled={
                       isGeneratingDemo ||
                       !beatAnalysis ||
-                      !voicebankOptions.some((option) => option.id === voicebank && option.available) ||
                       (lyricLines.length !== 8 && lyricLines.length !== 16) ||
                       lyricLines.some((line) => !line.trim())
                     }
@@ -944,9 +897,6 @@ export default function Home() {
                     {isGeneratingDemo ? "Rendering 8 Bars" : "Make Guide Rap"}
                   </button>
                 </div>
-                <p className="text-xs leading-5 text-[#8fcac4]">
-                  편집된 가사(붐뱁 8줄 / 트랩 16줄)를 사용합니다. 첫 마디 시작점을 직접 보정할 수 있습니다.
-                </p>
                 {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-[#b9eee9]">
@@ -1004,12 +954,6 @@ export default function Home() {
                   RQ worker가 감지되지 않았습니다. 별도 터미널에서 demo-generation worker를 실행해야 합니다.
                 </p>
               ) : null}
-              {demoJob?.notes.map((note) => (
-                <p key={note}>{note}</p>
-              ))}
-              {!demoJob && result?.notes.map((note) => (
-                <p key={note}>{note}</p>
-              ))}
             </div>
           </section>
         </div>
