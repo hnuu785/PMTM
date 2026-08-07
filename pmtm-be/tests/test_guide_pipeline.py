@@ -12,6 +12,7 @@ from app.flow_adapter import (
     MIN_VOWEL_DUR_SEC,
     _english_word_to_syllables,
     _get_word_syllable_weights,
+    _plan_syllable_onset_slots,
     _phoneme_weight,
     _syllable_to_phonemes,
     build_beat_map,
@@ -87,7 +88,8 @@ class FlowAdapterTests(unittest.TestCase):
         )
         self.assertEqual(plan.bars[0].text, "저버")
         symbols = [p.symbol for p in plan.bars[0].phonemes]
-        self.assertEqual(symbols, ["SP", "jh", "eo", "b", "eo", "SP"])
+        self.assertEqual([symbol for symbol in symbols if symbol != "SP"], ["jh", "eo", "b", "eo"])
+        self.assertGreaterEqual(symbols.count("SP"), 2)
 
     def test_flow_plan_is_exactly_eight_aligned_bars(self):
         plan = build_flow_plan(EIGHT_BARS, 120, 1.25, "potg", base_f0_hz=190.0)
@@ -137,6 +139,8 @@ class FlowAdapterTests(unittest.TestCase):
         ])
         plan = build_flow_plan(dense_lyrics, 90, 0, "potg", base_f0_hz=190.0)
         self.assertEqual(len(plan.bars), 8)
+        self.assertIn("onset32", plan.bars[0].template)
+        self.assertTrue(all(phoneme.durationSec > 0 for phoneme in plan.bars[0].phonemes))
 
     def test_flow_plan_supports_7_syllables(self):
         # 7 syllables should compile successfully and use the 7-syllable template
@@ -168,9 +172,9 @@ class FlowAdapterTests(unittest.TestCase):
         plan = build_flow_plan(test_lyrics, 90, 0, "potg", base_f0_hz=190.0)
         bar0 = plan.bars[0]
         self.assertIn("adaptive_hierarchical_boom_bap_13syl_5words", bar0.template)
-        # Check that inter-word SPs are removed for legato flow (only lead & tail SP remain)
+        # The onset planner represents gaps between attacks as explicit SPs.
         sp_count = sum(1 for p in bar0.phonemes if p.symbol == "SP")
-        self.assertEqual(sp_count, 2)
+        self.assertGreater(sp_count, 2)
         self.assertAlmostEqual(
             sum(p.durationSec for p in bar0.phonemes),
             plan.beatMap.barDurationSec,
@@ -231,13 +235,12 @@ class FlowAdapterTests(unittest.TestCase):
         bar = plan.bars[0]
         assert bar.phNum is not None
 
-        cursor = bar.phNum[0]
+        cursor = 0
         syllable_durations = []
-        for phoneme_count in bar.phNum[1:-1]:
-            syllable_durations.append(sum(
-                phoneme.durationSec
-                for phoneme in bar.phonemes[cursor : cursor + phoneme_count]
-            ))
+        for phoneme_count in bar.phNum:
+            group = bar.phonemes[cursor : cursor + phoneme_count]
+            if [phoneme.symbol for phoneme in group] != ["SP"]:
+                syllable_durations.append(sum(phoneme.durationSec for phoneme in group))
             cursor += phoneme_count
 
         self.assertGreater(max(syllable_durations), 0.18)
@@ -294,6 +297,15 @@ class FlowAdapterTests(unittest.TestCase):
         dur_bb = [p.durationSec for p in plan_bb.bars[0].phonemes]
         dur_trap = [p.durationSec for p in plan_trap.bars[0].phonemes]
         self.assertNotEqual(dur_bb, dur_trap)
+        onset_bb = []
+        onset_trap = []
+        for bar, output in ((plan_bb.bars[0], onset_bb), (plan_trap.bars[0], onset_trap)):
+            cursor = 0.0
+            for note, duration in zip(bar.noteSeq, bar.noteDur):
+                if note != "rest":
+                    output.append(round(cursor, 4))
+                cursor += duration
+        self.assertNotEqual(onset_bb, onset_trap)
 
     def test_bpm_115_threshold_tempo_scaling(self):
         from app.flow_adapter import _phoneme_weight_v2
@@ -331,9 +343,14 @@ class FlowAdapterTests(unittest.TestCase):
         bar = plan.bars[0]
         slot_duration = plan.beatMap.barDurationSec / 16
 
-        self.assertEqual(bar.noteSeq[3], "D#4")
-        self.assertGreater(bar.noteDur[3], slot_duration * 2)
-        self.assertLess(bar.noteDur[3], slot_duration * 3.5)
+        d_sharp_durations = [
+            duration
+            for note, duration in zip(bar.noteSeq, bar.noteDur)
+            if note == "D#4"
+        ]
+        self.assertTrue(d_sharp_durations)
+        self.assertGreater(max(d_sharp_durations), slot_duration * 2)
+        self.assertLessEqual(max(d_sharp_durations), 0.60)
 
     def test_liaison_moves_extra_slot_and_pitch_to_surface_syllable(self):
         lyrics = "\n".join(["내 손이 놓인 건 절대 아니다"] * 8)
@@ -341,8 +358,59 @@ class FlowAdapterTests(unittest.TestCase):
         bar = plan.bars[0]
 
         # 손이 -> 소니: the extra slot and D4 accent land on 니, not 소.
-        self.assertEqual(bar.noteSeq[2:4], ["C4", "D4"])
-        self.assertGreater(bar.noteDur[3], bar.noteDur[2])
+        voiced_notes = [
+            (note, duration)
+            for note, duration in zip(bar.noteSeq, bar.noteDur)
+            if note != "rest"
+        ]
+        self.assertEqual([note for note, _ in voiced_notes[1:3]], ["C4", "D4"])
+        self.assertGreater(voiced_notes[2][1], voiced_notes[1][1])
+
+    def test_onset_planner_creates_non_uniform_attacks_and_real_rests(self):
+        plan = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+        onsets = []
+        cursor = 0.0
+        internal_rests = []
+        for index, (note, duration) in enumerate(zip(bar.noteSeq, bar.noteDur)):
+            if note == "rest" and 0 < index < len(bar.noteSeq) - 1:
+                internal_rests.append(duration)
+            elif note != "rest":
+                onsets.append(cursor)
+            cursor += duration
+
+        intervals = [round(right - left, 3) for left, right in zip(onsets, onsets[1:])]
+        self.assertGreaterEqual(len(internal_rests), 2)
+        self.assertGreater(max(internal_rests), 0.04)
+        self.assertGreater(len(set(intervals)), 1)
+
+    def test_onset_planner_uses_detected_snare_positions_as_accents(self):
+        syllables = [
+            {
+                "stress": 1.1 if index % 3 == 0 else 0.65,
+                "is_content": index % 3 == 0,
+                "is_word_start": index % 3 == 0,
+                "is_priority_attack": False,
+            }
+            for index in range(10)
+        ]
+
+        backbeat_onsets, _ = _plan_syllable_onset_slots(
+            syllables, "boom_bap", [0.25, 0.75]
+        )
+        shifted_snare_onsets, _ = _plan_syllable_onset_slots(
+            syllables, "boom_bap", [0.375, 0.875]
+        )
+
+        self.assertNotEqual(backbeat_onsets, shifted_snare_onsets)
+
+    def test_sparse_phrase_finishes_early_and_keeps_cadence_rest(self):
+        lyrics = "\n".join(["접어"] * 8)
+        plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
+        bar = plan.bars[0]
+
+        self.assertEqual(bar.noteSeq[-1], "rest")
+        self.assertGreater(bar.noteDur[-1], plan.beatMap.barDurationSec * 0.4)
 
     def test_thirteen_syllable_line_uses_full_grid_without_reserved_rests(self):
         lyrics = "\n".join(["네가 내게 했던 사랑을 못 믿을 때"] * 8)

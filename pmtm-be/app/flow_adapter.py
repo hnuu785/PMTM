@@ -614,14 +614,25 @@ def build_flow_plan(
                 f"{index + 1}마디가 너무 조밀합니다. 한 마디는 {MAX_SYLLABLES_PER_BAR}음절 이하로 수정해주세요."
             )
 
+        start = beat_map.barStartTimes[index]
+        analysis_time_shift = (
+            beat_map.firstBarStartSec - beat_map.gridTimes[0]
+            if beat_map.gridTimes
+            else 0.0
+        )
+        accent_fractions = [
+            (snare_time + analysis_time_shift - start) / beat_map.barDurationSec
+            for snare_time in (beat_map.snareTimes or [])
+            if start <= snare_time + analysis_time_shift < start + beat_map.barDurationSec
+        ]
         phonemes, ph_num, durations, template, note_seq, note_dur = _allocate_word_hierarchical_durations(
             word_chunks,
             beat_map.barDurationSec,
             index,
             genre=genre,
             bpm=beat_map.bpm,
+            accent_fractions=accent_fractions,
         )
-        start = beat_map.barStartTimes[index]
         bars.append(
             FlowBar(
                 barIndex=index + 1,
@@ -748,6 +759,8 @@ MIN_PLOSIVE_DUR_SEC = 0.030
 MIN_FRICATIVE_DUR_SEC = 0.040
 MIN_NASAL_DUR_SEC = 0.035
 MAX_SYLLABLE_DUR_SEC = 0.60
+MIN_TIMELINE_REST_SEC = 0.02
+MIN_LEAD_REST_SEC = 0.01
 
 PLOSIVE_SYMBOLS = {"g", "kk", "d", "tt", "b", "pp", "k", "t", "p", "kcl", "tcl", "pcl", "cl", "K", "P", "T"}
 FRICATIVE_SYMBOLS = {"sc", "s", "sh", "sy", "hh", "jh", "ch", "jj"}
@@ -829,6 +842,122 @@ def _allocate_syllable_grid_slots(
     return durations
 
 
+def _onset_grid_size(syllable_count: int) -> int:
+    return 16 if syllable_count <= 16 else 32
+
+
+def _onset_tail_slots(syllable_count: int, grid_size: int) -> int:
+    if syllable_count <= grid_size // 2:
+        return max(2, grid_size // 8)
+    if syllable_count <= grid_size * 3 // 4:
+        return 1
+    return 0
+
+
+def _plan_syllable_onset_slots(
+    syllables: list[dict[str, Any]],
+    genre: str,
+    accent_fractions: list[float] | None = None,
+) -> tuple[list[int], int]:
+    """Place syllable attacks on a beat grid while leaving explicit gaps."""
+    count = len(syllables)
+    if count == 0:
+        return [], 16
+
+    grid_size = _onset_grid_size(count)
+    tail_slots = _onset_tail_slots(count, grid_size)
+    available_last_tick = grid_size - tail_slots - 1
+    if count <= grid_size // 2:
+        # Sparse phrases should finish early instead of stretching two or three
+        # syllables across an entire bar.
+        last_tick = min(available_last_tick, max(count - 1, count * 2 - 1))
+    else:
+        last_tick = available_last_tick
+    if count == 1:
+        return [0], grid_size
+
+    beat_slots = grid_size // 4
+    default_accents = {beat_slots, beat_slots * 3}
+    accent_slots = {
+        min(grid_size - 1, max(0, round(fraction * grid_size)))
+        for fraction in (accent_fractions or [])
+        if 0.0 <= fraction < 1.0
+    } or default_accents
+    genre_offsets = (
+        (0.0, -0.35, 0.20, -0.15, 0.30, -0.25, 0.15, 0.0)
+        if genre == "boom_bap"
+        else (0.0, -0.45, 0.30, -0.30, 0.15, -0.40, 0.35, -0.10)
+    )
+    ideal_gap = last_tick / float(count - 1)
+
+    # Dynamic programming keeps attacks ordered while allowing morphology and
+    # groove anchors to move them away from uniform spacing.
+    costs: list[dict[int, float]] = [{0: 0.0}]
+    parents: list[dict[int, int]] = [{}]
+    for index in range(1, count):
+        remaining = count - index - 1
+        min_tick = index
+        max_tick = last_tick - remaining
+        ideal_tick = index * ideal_gap + genre_offsets[index % len(genre_offsets)]
+        current_costs: dict[int, float] = {}
+        current_parents: dict[int, int] = {}
+        current = syllables[index]
+
+        for tick in range(min_tick, max_tick + 1):
+            position_cost = (tick - ideal_tick) ** 2 * 0.32
+            nearest_accent = min(abs(tick - accent) for accent in accent_slots)
+            on_beat = tick % beat_slots == 0
+            on_eighth = tick % max(1, beat_slots // 2) == 0
+
+            if current.get("is_content") and current.get("is_word_start"):
+                position_cost += nearest_accent * 0.16
+                if on_beat:
+                    position_cost -= 0.45
+            elif current.get("is_word_start") and on_eighth:
+                position_cost -= 0.16
+            elif float(current.get("stress", 1.0)) <= 0.75 and on_beat:
+                position_cost += 0.30
+
+            subdivision = tick % beat_slots
+            if genre == "boom_bap" and subdivision == beat_slots - 1:
+                position_cost -= 0.12
+            elif genre == "trap" and subdivision in {1, beat_slots - 1}:
+                position_cost -= 0.16
+
+            best: tuple[float, int] | None = None
+            for previous_tick, previous_cost in costs[-1].items():
+                if previous_tick >= tick:
+                    continue
+                gap = tick - previous_tick
+                transition_cost = (gap - ideal_gap) ** 2 * 0.10
+                previous = syllables[index - 1]
+                if current.get("is_word_start"):
+                    transition_cost += 0.30 if gap == 1 and ideal_gap > 1.25 else -0.08 * min(gap - 1, 2)
+                elif gap > math.ceil(ideal_gap):
+                    transition_cost += 0.18 * (gap - math.ceil(ideal_gap))
+                if previous.get("is_priority_attack"):
+                    transition_cost += 0.35 if gap == 1 else -0.28
+
+                candidate = previous_cost + position_cost + transition_cost
+                if best is None or candidate < best[0]:
+                    best = (candidate, previous_tick)
+
+            if best is not None:
+                current_costs[tick] = best[0]
+                current_parents[tick] = best[1]
+
+        costs.append(current_costs)
+        parents.append(current_parents)
+
+    final_tick = min(costs[-1], key=costs[-1].get)
+    onsets = [final_tick]
+    for index in range(count - 1, 0, -1):
+        final_tick = parents[index][final_tick]
+        onsets.append(final_tick)
+    onsets.reverse()
+    return onsets, grid_size
+
+
 def _get_word_syllable_weights(syllable_count: int) -> list[float]:
     return [1.0] * max(1, syllable_count)
 
@@ -850,6 +979,7 @@ def _allocate_word_hierarchical_durations(
     bar_index: int,
     genre: str = "boom_bap",
     bpm: float = 120.0,
+    accent_fractions: list[float] | None = None,
 ) -> tuple[list[str], list[int], list[float], str, list[str], list[float]]:
     total_syllable_count = sum(len(w.syllables) for w in word_chunks)
     word_count = len(word_chunks)
@@ -882,6 +1012,8 @@ def _allocate_word_hierarchical_durations(
                 "phones": syl_phones,
                 "weight": combined_weight,
                 "stress": ling_stress,
+                "is_content": bool(ling and ling.is_content),
+                "is_word_start": bool(ling and ling.is_word_start),
                 "midi_note": midi_note,
                 "is_liaison_source": is_liaison_source,
                 "is_priority_attack": bool(is_liaison_target),
@@ -889,83 +1021,90 @@ def _allocate_word_hierarchical_durations(
             })
             current_syl_index += 1
 
-    # Allocate every syllable one slot first. A single cadence tail slot is
-    # used only after every content-word attack can receive one extra slot.
-    syl_weights_list = [float(item["weight"]) for item in syl_list]
-    priority_indices = [
-        index for index, item in enumerate(syl_list) if item["is_priority_attack"]
-    ]
-    remaining_slots = max(0, slots_per_bar - total_syllable_count)
-    tail_slots = 1 if remaining_slots >= 4 else 0
-    available_slots = max(1, slots_per_bar - tail_slots)
-    allocated_slots = _allocate_syllable_grid_slots(
-        syl_weights_list,
-        available_slots,
-        priority_indices,
-        [index for index, item in enumerate(syl_list) if not item["is_liaison_source"]],
+    onset_slots, onset_grid_size = _plan_syllable_onset_slots(
+        syl_list,
+        genre,
+        accent_fractions,
     )
+    onset_slot_duration = bar_duration_sec / float(onset_grid_size)
+    onset_times: list[float] = []
+    for item, onset_slot in zip(syl_list, onset_slots):
+        micro_offset = 0.0
+        if float(item["stress"]) >= 1.0:
+            micro_offset = 0.012 if genre == "boom_bap" else -0.010
+        onset = onset_slot * onset_slot_duration + micro_offset
+        if not onset_times:
+            onset = max(MIN_LEAD_REST_SEC, onset)
+        else:
+            onset = max(onset, onset_times[-1] + onset_slot_duration * 0.55)
+        onset_times.append(min(onset, bar_duration_sec - MIN_TIMELINE_REST_SEC))
 
     for index, item in enumerate(syl_list[:-1]):
-        if item["is_liaison_source"] and allocated_slots[index + 1] >= 2:
+        if not item["is_liaison_source"]:
+            continue
+        following_interval_slots = (
+            onset_slots[index + 2] - onset_slots[index + 1]
+            if index + 2 < len(onset_slots)
+            else onset_grid_size - onset_slots[index + 1]
+        )
+        if following_interval_slots >= 2:
             item["midi_note"] = 60
             syl_list[index + 1]["midi_note"] = 62
 
-    lead_duration = 0.04
-    punctuation_duration = sum(
-        0.04 if item["punct"] == "," else 0.06
-        for item in syl_list
-        if item["punct"] in ("?", "!", ".", ",")
-    )
-    tail_duration = slot_duration * tail_slots + 0.04
-    raw_syl_duration_sum = sum(slots * slot_duration for slots in allocated_slots)
-    active_duration = max(0.1, bar_duration_sec - lead_duration - tail_duration - punctuation_duration)
-    scale_factor = active_duration / raw_syl_duration_sum if raw_syl_duration_sum > active_duration else 1.0
-
-    target_durations = []
-    for item, slots in zip(syl_list, allocated_slots):
-        rel_pos = item["syl_idx"] / max(1, total_syllable_count)
-        is_snare_region = (0.20 <= rel_pos <= 0.35) or (0.70 <= rel_pos <= 0.85) if genre == "boom_bap" else (0.45 <= rel_pos <= 0.60)
-        micro_offset = 0.0
-        if genre == "boom_bap" and (item["stress"] >= 1.15 or is_snare_region):
-            micro_offset = 0.012
-        elif genre == "trap" and (item["stress"] >= 1.15 or is_snare_region):
-            micro_offset = -0.010
-        target_durations.append(slots * slot_duration * scale_factor + micro_offset)
-
-    duration_total = sum(target_durations)
-    if duration_total > 0:
-        target_durations = [duration * active_duration / duration_total for duration in target_durations]
-
     items: list[dict[str, Any]] = []
-    cap_overflow = 0.0
+    density = total_syllable_count / float(onset_grid_size)
+    for index, (item, onset) in enumerate(zip(syl_list, onset_times)):
+        next_onset = onset_times[index + 1] if index + 1 < len(onset_times) else bar_duration_sec
+        interval = max(0.001, next_onset - onset)
+        next_is_word_start = bool(
+            index + 1 < len(syl_list) and syl_list[index + 1]["is_word_start"]
+        )
 
-    for item, slots, target_dur in zip(syl_list, allocated_slots, target_durations):
-        max_cap = MAX_SYLLABLE_DUR_SEC
-        if target_dur > max_cap:
-            cap_overflow += (target_dur - max_cap)
-            target_dur = max_cap
+        gate_ratio = 0.88 if genre == "trap" else 0.84
+        if density >= 0.75:
+            gate_ratio = max(gate_ratio, 0.94)
+        elif next_is_word_start:
+            gate_ratio -= 0.10
+        if float(item["stress"]) <= 0.75:
+            gate_ratio -= 0.04
+        if item["is_priority_attack"]:
+            gate_ratio += 0.05
+        if item["punct"] in ("?", "!", ".", ","):
+            gate_ratio = min(gate_ratio, 0.58 if item["punct"] == "," else 0.50)
+        gate_ratio = min(0.97, max(0.50, gate_ratio))
 
+        target_dur = min(MAX_SYLLABLE_DUR_SEC, interval * gate_ratio)
+        target_dur = min(interval, max(min(ABSOLUTE_MIN_DUR_SEC, interval), target_dur))
+        rest_duration = interval - target_dur
+        if index == len(syl_list) - 1:
+            required_tail = min(MIN_TIMELINE_REST_SEC, interval * 0.35)
+            if rest_duration < required_tail:
+                target_dur -= required_tail - rest_duration
+                rest_duration = required_tail
+        elif rest_duration < MIN_TIMELINE_REST_SEC:
+            target_dur = interval
+            rest_duration = 0.0
+
+        long_attack_threshold = bar_duration_sec / slots_per_bar * 2.5
         items.append({
             "type": "SYLLABLE",
             "phones": item["phones"],
             "dur": target_dur,
             "weight": item["weight"],
             "stress": item["stress"],
-            "midi_note": 63 if slots >= 3 else item["midi_note"],
+            "midi_note": 63 if target_dur >= long_attack_threshold else item["midi_note"],
         })
-        if item["punct"] in ("?", "!", ".", ","):
-            sp_dur = 0.04 if item["punct"] == "," else 0.06
+        if rest_duration > 0.0:
             items.append({
                 "type": "SP",
                 "phones": None,
-                "dur": sp_dur,
+                "dur": rest_duration,
                 "weight": 0.0,
                 "midi_note": 0,
             })
 
-    tail_duration += cap_overflow
-
     # Prepare outputs
+    lead_duration = onset_times[0]
     phonemes: list[str] = ["SP"]
     ph_num: list[int] = [1]
     durations: list[float] = [lead_duration]
@@ -1024,18 +1163,22 @@ def _allocate_word_hierarchical_durations(
             note_seq.append(note_name)
             note_dur.append(syl_dur)
 
-    phonemes.append("SP")
-    ph_num.append(1)
-    durations.append(tail_duration)
-    note_seq.append("rest")
-    note_dur.append(tail_duration)
+    if items[-1]["type"] != "SP":
+        phonemes.append("SP")
+        ph_num.append(1)
+        durations.append(MIN_TIMELINE_REST_SEC)
+        note_seq.append("rest")
+        note_dur.append(MIN_TIMELINE_REST_SEC)
 
     rounded_durations = [round(v, 6) for v in durations]
     rounded_durations[-1] = round(rounded_durations[-1] + (bar_duration_sec - sum(rounded_durations)), 6)
     rounded_note_durs = [round(v, 6) for v in note_dur]
     rounded_note_durs[-1] = round(rounded_note_durs[-1] + (bar_duration_sec - sum(rounded_note_durs)), 6)
 
-    template_name = f"adaptive_hierarchical_{genre}_{total_syllable_count}syl_{word_count}words"
+    template_name = (
+        f"adaptive_hierarchical_{genre}_{total_syllable_count}syl_"
+        f"{word_count}words_onset{onset_grid_size}"
+    )
     return phonemes, ph_num, rounded_durations, template_name, note_seq, rounded_note_durs
 
 
