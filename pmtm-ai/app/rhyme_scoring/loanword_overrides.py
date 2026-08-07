@@ -328,7 +328,7 @@ MANUAL_LOANWORD_OVERRIDES = {
     "top": "탑",
     "track": "트랙",
     "try": "트라이",
-    "tryna": "트라이나",
+    "tryna": "트라나",
     "turn": "턴",
     "tv": "티비",
     "two": "투",
