@@ -430,10 +430,14 @@ def _extract_lyric_lines(lyrics: str) -> list[str]:
 def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     _, calculate_syllable_score, get_phonemes, analyze_bar_end_rhyme = _load_rhyme_analysis_funcs()
+    # Deliberate web-presentation exception: this response also links rhymes with one
+    # intervening selected bar. GRPO/training/inference evaluation must keep the shared
+    # max_gap=1 default so their rhyme-scoring policy remains adjacent-only.
     rhyme_analysis = analyze_bar_end_rhyme(
         clean_lines,
         bpm=bpm,
         threshold=RHYME_GROUP_THRESHOLD,
+        max_gap=2,
     )
 
     analyses: list[RhymeLineAnalysis] = []

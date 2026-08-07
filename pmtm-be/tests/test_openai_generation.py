@@ -512,6 +512,18 @@ class RhymeAnalysisTests(unittest.TestCase):
         self.assertEqual(body[0]["highlightRanges"], [])
         self.assertEqual(body[1]["highlightRanges"], [])
 
+    def test_analyze_rhyme_groups_non_adjacent_gap_1_rhymes(self):
+        client = TestClient(main.app)
+
+        # ABAC: A(ㅏ), B(ㅣ), A(ㅏ), C(ㅡ)
+        response = client.post("/api/v1/lyrics/analyze-rhyme", json={"lines": ["달려가", "푸른 피", "날아가", "밝은 구름"]})
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body[0]["rhymeGroup"], body[2]["rhymeGroup"])
+        self.assertIsNotNone(body[0]["rhymeGroup"])
+        self.assertIsNone(body[1]["rhymeGroup"])
+        self.assertIsNone(body[3]["rhymeGroup"])
+
     def test_generate_lyrics_response_includes_rhyme_analysis(self):
         client = TestClient(main.app)
 
