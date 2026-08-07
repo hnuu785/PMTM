@@ -719,10 +719,6 @@ export default function Home() {
                 </button>
               </form>
             </div>
-
-            <p className="border-t border-[#f5b950]/20 pt-4 text-xs leading-5 text-[#a97859]">
-              API: <span className="break-all font-mono text-[#d8b993]">{apiBaseUrl}</span>
-            </p>
           </aside>
 
           <section className="pmtm-panel flex min-h-[560px] flex-col p-4 sm:p-5">
