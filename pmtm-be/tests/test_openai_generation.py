@@ -161,6 +161,23 @@ class BeatGenerationTests(unittest.TestCase):
 
         self.assertEqual(frame, 40)
 
+    def test_select_drop_beat_skips_percussive_intro_without_bass(self):
+        bass_energy = [1.0] * 40 + [10.0] * 60
+        percussive_rms = [1.0] * 40 + [10.0] * 60
+        for intro_hit in (10, 20, 30):
+            percussive_rms[intro_hit] = 10.0
+
+        frame = main._select_drop_beat(
+            beat_frames=[10, 20, 30, 40, 50, 60],
+            bass_energy=bass_energy,
+            percussive_rms=percussive_rms,
+            sample_rate=100,
+            hop_length=10,
+            tempo=120.0,
+        )
+
+        self.assertEqual(frame, 40)
+
     def test_build_first_bar_uses_four_detected_beats_and_next_boundary(self):
         beats, end = main._build_first_bar(
             beat_times=[1.0, 1.5, 2.0, 2.5, 3.0, 3.5],
