@@ -500,7 +500,7 @@ export default function Home() {
                 PMTM
               </p>
               <h1 className="mt-1.5 text-2xl leading-tight font-black text-[#fff3ca] sm:text-3xl">
-                랩 벌스 만들기
+                프메더머니
               </h1>
               <p className="mt-1.5 max-w-xl text-sm leading-6 text-[#d8b993]">
                 비트 분석 또는 직접 조건 입력으로 8마디 초안을 생성합니다.
