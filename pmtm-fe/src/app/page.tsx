@@ -369,7 +369,7 @@ export default function Home() {
       }
       const analysis = (await response.json()) as BeatAnalysis;
       setBeatAnalysis(analysis);
-      setBpm(String(Math.round(analysis.tempo)));
+      setBpm(String(analysis.tempo));
       setFirstBarStartSec(String(analysis.firstBarStartSec));
     } catch (err) {
       setError(err instanceof Error ? err.message : "비트 분석 중 오류가 발생했습니다.");
@@ -386,7 +386,7 @@ export default function Home() {
       body.append("topic", topic);
     }
     if (beatAnalysis?.tempo) {
-      body.append("bpm", String(Math.round(beatAnalysis.tempo)));
+      body.append("bpm", String(beatAnalysis.tempo));
     }
 
     return fetch(`${apiBaseUrl}/api/v1/lyrics/generate-from-beat`, {
@@ -474,6 +474,7 @@ export default function Home() {
 
   const effectiveVerseBpm =
     result && 60 <= result.bpm && result.bpm < 80 ? result.bpm * 2 : result?.bpm;
+  const displayedBpm = beatAnalysis?.tempo ?? demoJob?.bpm ?? result?.bpm;
   const isTrapVerse = effectiveVerseBpm !== undefined && effectiveVerseBpm >= 115 && lyricLines.length === 16;
   const verseRows = isTrapVerse
     ? Array.from({ length: 8 }, (_, row) => [row * 2, row * 2 + 1])
@@ -729,10 +730,14 @@ export default function Home() {
               <div>
                 <p className="text-sm font-semibold text-[#52d4c8]">Generated verse</p>
                 <h2 className="mt-1 text-xl font-black text-[#fff3ca]">
-                  {isLoading ? "8마디 벌스를 만들고 있습니다" : result ? result.title : "결과가 여기에 표시됩니다"}
+                  {isLoading
+                    ? "8마디 벌스를 만들고 있습니다"
+                    : result && displayedBpm !== undefined
+                      ? `${displayedBpm.toFixed(1)} BPM Verse`
+                      : "결과가 여기에 표시됩니다"}
                 </h2>
                 <p className="mt-1 text-xs font-semibold tracking-[0.14em] text-[#b9865f] uppercase">
-                  {demoJob?.bpm ? `${demoJob.bpm} BPM` : result ? `${result.bpm} BPM` : "-- BPM"} · {llm}
+                  {displayedBpm !== undefined ? `${displayedBpm.toFixed(1)} BPM` : "-- BPM"} · {llm}
                 </p>
               </div>
               <button
