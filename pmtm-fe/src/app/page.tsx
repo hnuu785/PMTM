@@ -568,22 +568,20 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleModeChange("beat")}
-                    className={`h-10 border text-sm font-bold transition ${
-                      mode === "beat"
+                    className={`h-10 border text-sm font-bold transition ${mode === "beat"
                         ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
                         : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                    }`}
+                      }`}
                   >
                     비트 분석
                   </button>
                   <button
                     type="button"
                     onClick={() => handleModeChange("manual")}
-                    className={`h-10 border text-sm font-bold transition ${
-                      mode === "manual"
+                    className={`h-10 border text-sm font-bold transition ${mode === "manual"
                         ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
                         : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca] disabled:cursor-not-allowed disabled:text-[#6d4530]"
-                    }`}
+                      }`}
                   >
                     직접 입력
                   </button>
@@ -646,11 +644,10 @@ export default function Home() {
                             setError("");
                             setRhymeError("");
                           }}
-                          className={`h-10 border text-sm font-bold transition ${
-                            bpm === String(preset)
+                          className={`h-10 border text-sm font-bold transition ${bpm === String(preset)
                               ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
                               : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                          }`}
+                            }`}
                         >
                           {preset}
                         </button>
@@ -667,11 +664,10 @@ export default function Home() {
                         key={opt.value}
                         type="button"
                         onClick={() => setTopic(opt.value)}
-                        className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${
-                          topic === opt.value
+                        className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${topic === opt.value
                             ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
                             : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                        }`}
+                          }`}
                       >
                         {opt.label}
                       </button>
@@ -690,11 +686,10 @@ export default function Home() {
                     {llmOptions.map((option) => (
                       <label
                         key={option.value}
-                        className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${
-                          llm === option.value
+                        className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${llm === option.value
                             ? "border-[#f5b950] bg-[#f5b950] text-[#170906]"
                             : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
-                        }`}
+                          }`}
                       >
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-1.5 text-sm leading-5 font-semibold break-all">
@@ -716,9 +711,8 @@ export default function Home() {
                             )}
                           </span>
                           <span
-                            className={`block text-[11px] leading-4 break-all ${
-                              llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
-                            }`}
+                            className={`block text-[11px] leading-4 break-all ${llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
+                              }`}
                           >
                             {option.detail}
                           </span>
@@ -994,15 +988,6 @@ export default function Home() {
                       className="inline-flex h-10 items-center border border-[#52d4c8]/55 bg-[#126c65] px-4 text-xs font-black tracking-[0.08em] text-white uppercase transition hover:bg-[#18877e]"
                     >
                       Download vocal
-                    </a>
-                  ) : null}
-                  {demoJob.flowPlanUrl ? (
-                    <a
-                      href={toAbsoluteApiUrl(apiBaseUrl, demoJob.flowPlanUrl)}
-                      download
-                      className="inline-flex h-10 items-center border border-[#f5b950]/45 px-4 text-xs font-black tracking-[0.08em] text-[#fff3ca] uppercase transition hover:bg-[#23100b]"
-                    >
-                      FlowPlan JSON
                     </a>
                   ) : null}
                 </div>
