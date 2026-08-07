@@ -143,10 +143,25 @@ export default function Home() {
   const [isAnalyzingBeat, setIsAnalyzingBeat] = useState(false);
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
   const [isAnalyzingRhyme, setIsAnalyzingRhyme] = useState(false);
+  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setGenerationElapsedSeconds(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      setGenerationElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isLoading]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -724,8 +739,14 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={isLoading || isAnalyzingBeat || (mode === "beat" && !beatFile)}
-                  className="h-12 w-full border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-sm font-black tracking-[0.08em] text-white uppercase shadow-[0_14px_34px_rgba(255,90,31,0.28)] transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:border-[#6d4530] disabled:bg-[#6d4530] disabled:text-[#c39a75] disabled:shadow-none"
+                  className="flex h-12 w-full items-center justify-center gap-2 border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-sm font-black tracking-[0.08em] text-white uppercase shadow-[0_14px_34px_rgba(255,90,31,0.28)] transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:border-[#6d4530] disabled:bg-[#6d4530] disabled:text-[#c39a75] disabled:shadow-none"
                 >
+                  {isLoading ? (
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   {isLoading ? "Generating" : "Generate 8 Bars"}
                 </button>
               </form>
@@ -741,7 +762,7 @@ export default function Home() {
               <div>
                 <p className="text-sm font-semibold text-[#52d4c8]">Generated verse</p>
                 <h2 className="mt-1 text-xl font-black text-[#fff3ca]">
-                  {result ? result.title : "결과가 여기에 표시됩니다"}
+                  {isLoading ? "8마디 벌스를 만들고 있습니다" : result ? result.title : "결과가 여기에 표시됩니다"}
                 </h2>
                 <p className="mt-1 text-xs font-semibold tracking-[0.14em] text-[#b9865f] uppercase">
                   {demoJob?.bpm ? `${demoJob.bpm} BPM` : result ? `${result.bpm} BPM` : "-- BPM"} · {llm}
@@ -766,12 +787,32 @@ export default function Home() {
             <div className="lyric-paper mt-5 flex-1 border border-[#f5b950]/35">
               <div className="min-h-[420px] px-5 py-5 sm:px-7 sm:py-6">
                 {isLoading ? (
-                  <div className="space-y-3 font-mono text-sm leading-8 text-[#fff6df]">
-                    <p>
-                      {mode === "beat"
-                        ? "비트를 분석하고 8마디 벌스를 구성하는 중..."
-                        : "입력 조건에 맞춰 8마디 벌스를 구성하는 중..."}
+                  <div
+                    className="flex min-h-[370px] flex-col items-center justify-center px-4 text-center"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="가사 생성 중"
+                  >
+                    <div className="pmtm-loading-bars" aria-hidden="true">
+                      {Array.from({ length: 8 }, (_, index) => (
+                        <span key={index} />
+                      ))}
+                    </div>
+                    <p className="mt-8 text-xs font-bold tracking-[0.22em] text-[#52d4c8] uppercase">
+                      Writing your verse
                     </p>
+                    <p className="mt-3 text-xl font-black text-[#fff3ca] sm:text-2xl">
+                      {mode === "beat"
+                        ? "비트 위에 라임을 쌓는 중"
+                        : "입력한 조건으로 라임을 쌓는 중"}
+                    </p>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-[#d8b993]">
+                      AI가 8마디 가사를 생성하고 있습니다. 모델에 따라 잠시 시간이 걸릴 수 있어요.
+                    </p>
+                    <div className="mt-7 flex items-center gap-3 border border-[#f5b950]/25 bg-black/25 px-4 py-2 font-mono text-xs text-[#b9865f]">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-[#ff5a1f] shadow-[0_0_12px_rgba(255,90,31,0.9)]" />
+                      <span>{formatElapsedTime(generationElapsedSeconds)} 경과</span>
+                    </div>
                   </div>
                 ) : lyricLines.length > 0 ? (
                   <div className="space-y-3">
@@ -1098,6 +1139,12 @@ function formatScore(score?: number) {
     return "0.00";
   }
   return score.toFixed(2);
+}
+
+function formatElapsedTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatDemoStatus(status?: DemoStatus) {
