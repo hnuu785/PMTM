@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument("--lang", default="ko")
     parser.add_argument("--acoustic-steps", type=int, default=30)
     parser.add_argument("--variance-steps", type=int, default=20)
-    parser.add_argument("--use-ai-dur", action="store_true", default=True, help="Enable hybrid AI duration scaling")
+    parser.add_argument("--use-ai-dur", action="store_true", default=False, help="Enable hybrid AI duration scaling")
     parser.add_argument("--no-ai-dur", action="store_false", dest="use_ai_dur", help="Disable hybrid AI duration scaling")
     return parser.parse_args()
 
