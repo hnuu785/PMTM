@@ -898,6 +898,11 @@ export default function Home() {
                     {isGeneratingDemo ? "Rendering 8 Bars" : "Make Guide Rap"}
                   </button>
                 </div>
+                {demoJob ? (
+                  <p className="text-xs font-mono text-[#d8b993]">
+                    작업 ID: <span className="break-all text-white">{demoJob.jobId}</span>
+                  </p>
+                ) : null}
                 {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-[#b9eee9]">
@@ -947,9 +952,9 @@ export default function Home() {
 
             <div className="mt-4 min-h-12 space-y-1 text-sm text-[#b9865f]">
               {rhymeError ? <p className="text-[#ffb6a2]">{rhymeError}</p> : null}
-              {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
+              {/* {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                 <p>{formatDemoStatus(demoJob.status)} · {Math.round((demoJob.progress ?? 0) * 100)}%</p>
-              ) : null}
+              ) : null} */}
               {demoJob?.status === "queued" && demoJob.workerAvailable === false ? (
                 <p className="text-[#ffb6a2]">
                   RQ worker가 감지되지 않았습니다. 별도 터미널에서 demo-generation worker를 실행해야 합니다.

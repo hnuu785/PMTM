@@ -14,7 +14,7 @@ from app.schemas import DemoStatus
 from app.utils.redis import update_redis_status
 
 
-MIX_TAIL_SECONDS = 0.1
+MIX_TAIL_SECONDS = 3.0
 
 
 @dataclass(frozen=True)

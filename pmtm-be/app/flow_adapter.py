@@ -663,24 +663,12 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
         if bar.noteSeq is not None and bar.noteDur is not None:
             note_seq_list = bar.noteSeq
             note_dur_list = bar.noteDur
-            note_slur_list = []
-            is_after_rest = True
-            for note in note_seq_list:
-                if note == "rest":
-                    note_slur_list.append(0)
-                    is_after_rest = True
-                else:
-                    if is_after_rest:
-                        note_slur_list.append(0)
-                        is_after_rest = False
-                    else:
-                        note_slur_list.append(1)
+            note_slur_list = [0] * len(note_seq_list)
         else:
             note_seq_list = []
             note_dur_list = []
             note_slur_list = []
             cursor = 0
-            is_after_rest = True
             for count in ph_num:
                 group_symbols = symbols[cursor : cursor + count]
                 group_durs = durations[cursor : cursor + count]
@@ -690,15 +678,10 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
                     note_seq_list.append("rest")
                     note_dur_list.append(group_dur_sum)
                     note_slur_list.append(0)
-                    is_after_rest = True
                 else:
                     note_seq_list.append("C4")
                     note_dur_list.append(group_dur_sum)
-                    if is_after_rest:
-                        note_slur_list.append(0)
-                        is_after_rest = False
-                    else:
-                        note_slur_list.append(1)
+                    note_slur_list.append(0)
 
                 cursor += count
 

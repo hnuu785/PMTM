@@ -268,6 +268,11 @@ class FlowAdapterTests(unittest.TestCase):
             len(sections[0]["f0_seq"].split()),
             len(sections[0]["energy"].split()),
         )
+        self.assertTrue(all(
+            value == "0"
+            for section in sections
+            for value in section["note_slur"].split()
+        ))
 
     def test_kiwi_morpheme_stress_and_dynamic_pitch_cadence(self):
         plan = build_flow_plan(EIGHT_BARS, 90, 0, "potg", base_f0_hz=190.0)
@@ -588,7 +593,7 @@ class GuideDemoApiTests(unittest.TestCase):
                 base_f0_hz=190.0,
                 beat_analysis={"bpm": {"fixed_integer": 90}, "downbeat_offset_sec": 2.0},
             )
-            expected_mix_duration = expected_plan.bars[-1].endSec + guide_pipeline.MIX_TAIL_SECONDS
+            expected_mix_duration = expected_plan.bars[-1].endSec + 3.0
             self.assertAlmostEqual(trim.call_args.args[2], expected_mix_duration)
             self.assertAlmostEqual(fit_vocal.call_args.args[2], expected_mix_duration)
             self.assertTrue((work_dir / "flow-plan.json").is_file())
