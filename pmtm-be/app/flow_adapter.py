@@ -390,20 +390,71 @@ def convert_numbers_to_hangul(text: str) -> str:
     return re.sub(r"\d+", repl, text)
 
 
+def _spoken_korean_tokens(text: str) -> dict[tuple[int, int], str]:
+    """Apply G2P across Korean words, stopping at punctuation or other languages."""
+    content_tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", text))
+    spoken_by_span: dict[tuple[int, int], str] = {}
+    korean_run: list[re.Match[str]] = []
+
+    def flush_run() -> None:
+        if not korean_run:
+            return
+
+        run_start = korean_run[0].start()
+        run_end = korean_run[-1].end()
+        spoken_chars = re.findall(r"[가-힣]", g2p(text[run_start:run_end]))
+        source_lengths = [len(match.group(0)) for match in korean_run]
+        if len(spoken_chars) != sum(source_lengths):
+            raise ValueError("한국어 G2P 결과를 원래 단어 경계에 맞출 수 없습니다.")
+
+        cursor = 0
+        for match, source_length in zip(korean_run, source_lengths):
+            spoken_by_span[(match.start(), match.end())] = "".join(
+                spoken_chars[cursor : cursor + source_length]
+            )
+            cursor += source_length
+        korean_run.clear()
+
+    for token in content_tokens:
+        is_korean = bool(re.fullmatch(r"[가-힣]+", token.group(0)))
+        continues_run = (
+            is_korean
+            and korean_run
+            and text[korean_run[-1].end() : token.start()].isspace()
+        )
+        if is_korean and (not korean_run or continues_run):
+            korean_run.append(token)
+            continue
+
+        flush_run()
+        if is_korean:
+            korean_run.append(token)
+
+    flush_run()
+    return spoken_by_span
+
+
 def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     text = convert_numbers_to_hangul(text)
     unsupported = find_unsupported_characters(text)
     if unsupported:
         raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
-    raw_words = text.strip().split()
+    raw_word_matches = list(re.finditer(r"\S+", text))
     word_chunks: list[WordChunk] = []
+    spoken_korean_tokens = _spoken_korean_tokens(text)
     g2p_parts: list[str] = []
 
-    for raw_word in raw_words:
-        tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", raw_word)
-        for token in tokens:
-            if re.match(r"^[가-힣]+$", token):
-                g2p_parts.append(g2p(token))
+    for raw_word_match in raw_word_matches:
+        raw_word = raw_word_match.group(0)
+        tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", raw_word))
+        for token_match in tokens:
+            token = token_match.group(0)
+            if re.fullmatch(r"[가-힣]+", token):
+                token_span = (
+                    raw_word_match.start() + token_match.start(),
+                    raw_word_match.start() + token_match.end(),
+                )
+                g2p_parts.append(spoken_korean_tokens[token_span])
             else:
                 g2p_parts.append(token)
 
@@ -411,17 +462,23 @@ def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     line_linguistics = _analyze_korean_line_linguistics(text, g2p_line)
     ling_cursor = 0
 
-    for raw_word in raw_words:
+    for raw_word_match in raw_word_matches:
+        raw_word = raw_word_match.group(0)
         punct_match = re.search(r"([?,!.])+$", raw_word)
         punct = punct_match.group(1) if punct_match else None
 
-        tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", raw_word)
+        tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", raw_word))
         current_word_syllables: list[list[str]] = []
         current_word_ling: list[SyllableLinguisticInfo] = []
 
-        for token in tokens:
-            if re.match(r"^[가-힣]+$", token):
-                g2p_token = g2p(token)
+        for token_match in tokens:
+            token = token_match.group(0)
+            if re.fullmatch(r"[가-힣]+", token):
+                token_span = (
+                    raw_word_match.start() + token_match.start(),
+                    raw_word_match.start() + token_match.end(),
+                )
+                g2p_token = spoken_korean_tokens[token_span]
                 syllables = re.findall(r"[가-힣]", g2p_token)
                 for syl in syllables:
                     current_word_syllables.append(_syllable_to_phonemes(syl))
@@ -761,6 +818,11 @@ MIN_NASAL_DUR_SEC = 0.035
 MAX_SYLLABLE_DUR_SEC = 0.60
 MIN_TIMELINE_REST_SEC = 0.02
 MIN_LEAD_REST_SEC = 0.01
+MIN_WORD_GROUP_SYLLABLES = 3
+MAX_WORD_GROUP_SYLLABLES = 5
+MIN_GROUP_REST_SEC = 0.03
+MAX_GROUP_REST_SEC = 0.07
+ARTICULATION_COMFORT_BUFFER_SEC = 0.03
 
 PLOSIVE_SYMBOLS = {"g", "kk", "d", "tt", "b", "pp", "k", "t", "p", "kcl", "tcl", "pcl", "cl", "K", "P", "T"}
 FRICATIVE_SYMBOLS = {"sc", "s", "sh", "sy", "hh", "jh", "ch", "jj"}
@@ -772,6 +834,123 @@ VOWEL_SYMBOLS = {
     "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
 }
 CODA_SYMBOLS = {"ng", "l", "n", "m", "kcl", "tcl", "pcl", "cl", "K", "N", "M", "P"}
+
+
+def _plan_word_group_boundaries(word_chunks: list[WordChunk]) -> dict[int, str | None]:
+    """Return word indices that end a connected three-to-five-syllable phrase."""
+    boundaries: dict[int, str | None] = {}
+    group_syllable_count = 0
+
+    for word_index, chunk in enumerate(word_chunks):
+        word_syllable_count = len(chunk.syllables)
+        exceeds_maximum = (
+            group_syllable_count > 0
+            and group_syllable_count + word_syllable_count > MAX_WORD_GROUP_SYLLABLES
+        )
+        allow_six_syllable_exception = (
+            group_syllable_count == 1
+            and word_syllable_count == MAX_WORD_GROUP_SYLLABLES
+        )
+        if exceeds_maximum and not allow_six_syllable_exception:
+            boundaries[word_index - 1] = None
+            group_syllable_count = 0
+
+        group_syllable_count += word_syllable_count
+        if chunk.punctuation or group_syllable_count >= MIN_WORD_GROUP_SYLLABLES:
+            boundaries[word_index] = chunk.punctuation
+            group_syllable_count = 0
+
+    if word_chunks and len(word_chunks) - 1 not in boundaries:
+        boundaries[len(word_chunks) - 1] = word_chunks[-1].punctuation
+
+    total_syllable_count = sum(len(chunk.syllables) for chunk in word_chunks)
+    if total_syllable_count <= 10:
+        internal_rest_budget = 3
+    elif total_syllable_count <= 15:
+        internal_rest_budget = 2
+    else:
+        internal_rest_budget = None
+
+    if internal_rest_budget is not None and word_chunks:
+        last_word_index = len(word_chunks) - 1
+        regular_internal_boundaries = [
+            word_index
+            for word_index, punctuation in boundaries.items()
+            if word_index < last_word_index and punctuation is None
+        ]
+        for word_index in regular_internal_boundaries[internal_rest_budget:]:
+            del boundaries[word_index]
+    return boundaries
+
+
+def _phoneme_duration_floor(symbol: str) -> float:
+    if symbol in VOWEL_SYMBOLS:
+        return MIN_VOWEL_DUR_SEC
+    if symbol in FRICATIVE_SYMBOLS:
+        return MIN_FRICATIVE_DUR_SEC
+    if symbol in PLOSIVE_SYMBOLS:
+        return MIN_PLOSIVE_DUR_SEC
+    if symbol in NASAL_LIQUID_SYMBOLS:
+        return MIN_NASAL_DUR_SEC
+    return 0.0
+
+
+def _minimum_phoneme_duration(symbols: list[str]) -> float:
+    return max(ABSOLUTE_MIN_DUR_SEC, sum(_phoneme_duration_floor(symbol) for symbol in symbols))
+
+
+def _comfortable_phoneme_duration(symbols: list[str]) -> float:
+    return _minimum_phoneme_duration(symbols) + ARTICULATION_COMFORT_BUFFER_SEC
+
+
+def _boundary_rest_duration(
+    interval: float,
+    punctuation: str | None,
+    minimum_voiced_duration: float = ABSOLUTE_MIN_DUR_SEC,
+) -> float:
+    if punctuation == ",":
+        ratio, minimum, maximum = 0.35, 0.04, 0.07
+    elif punctuation in (".", "?", "!"):
+        ratio, minimum, maximum = 0.45, 0.05, 0.09
+    else:
+        ratio, minimum, maximum = 0.25, MIN_GROUP_REST_SEC, MAX_GROUP_REST_SEC
+
+    requested = min(maximum, max(minimum, interval * ratio))
+    max_safe_rest = max(0.0, interval - min(minimum_voiced_duration, interval))
+    if punctuation is None and max_safe_rest < MIN_GROUP_REST_SEC:
+        return 0.0
+    rest_duration = min(requested, max_safe_rest)
+    return rest_duration if rest_duration >= MIN_TIMELINE_REST_SEC else 0.0
+
+
+def _advance_short_syllable_onsets_at_optional_boundaries(
+    syllables: list[dict[str, Any]],
+    onset_times: list[float],
+    bar_duration_sec: float,
+) -> list[float]:
+    adjusted = list(onset_times)
+    for index, item in enumerate(syllables[:-1]):
+        if not item["is_group_boundary"] or item["boundary_punctuation"] is not None:
+            continue
+
+        boundary_interval = adjusted[index + 1] - adjusted[index]
+        available_boundary_time = max(
+            0.0,
+            boundary_interval - _comfortable_phoneme_duration(item["phones"]),
+        )
+        next_interval_end = (
+            adjusted[index + 2]
+            if index + 2 < len(adjusted)
+            else bar_duration_sec
+        )
+        next_interval = next_interval_end - adjusted[index + 1]
+        next_deficit = max(
+            0.0,
+            _comfortable_phoneme_duration(syllables[index + 1]["phones"])
+            - next_interval,
+        )
+        adjusted[index + 1] -= min(available_boundary_time, next_deficit)
+    return adjusted
 
 
 def _phoneme_weight(symbol: str) -> float:
@@ -797,6 +976,36 @@ def _phoneme_weight_v2(symbol: str, bpm: float = 120.0, stress: float = 1.0) -> 
     elif symbol in NASAL_LIQUID_SYMBOLS:
         return 0.15
     return 0.18
+
+
+def _allocate_phoneme_durations(
+    symbols: list[str],
+    syllable_duration: float,
+    *,
+    bpm: float,
+    stress: float,
+) -> list[float]:
+    weights = [_phoneme_weight_v2(symbol, bpm=bpm, stress=stress) for symbol in symbols]
+    floors = [_phoneme_duration_floor(symbol) for symbol in symbols]
+    floor_sum = sum(floors)
+
+    if floor_sum <= syllable_duration:
+        remaining = syllable_duration - floor_sum
+        weight_sum = sum(weights)
+        return [
+            floor + remaining * weight / weight_sum
+            for floor, weight in zip(floors, weights)
+        ]
+
+    # The timeline can be denser than the configured floors permit. Scale all
+    # requested minima together instead of satisfying later phones by stealing
+    # duration from phones whose floors were already applied.
+    positive_floors = [max(floor, 0.001) for floor in floors]
+    positive_floor_sum = sum(positive_floors)
+    return [
+        syllable_duration * floor / positive_floor_sum
+        for floor in positive_floors
+    ]
 
 
 def _allocate_syllable_grid_slots(
@@ -990,6 +1199,7 @@ def _allocate_word_hierarchical_durations(
     slot_duration = bar_duration_sec / float(slots_per_bar)
 
     # Collect flat list of syllables and linguistic stress
+    word_group_boundaries = _plan_word_group_boundaries(word_chunks)
     syl_list: list[dict[str, Any]] = []
     current_syl_index = 0
     for w_idx, chunk in enumerate(word_chunks):
@@ -1018,6 +1228,15 @@ def _allocate_word_hierarchical_durations(
                 "is_liaison_source": is_liaison_source,
                 "is_priority_attack": bool(is_liaison_target),
                 "punct": chunk.punctuation if s_idx == len(chunk.syllables) - 1 else None,
+                "is_group_boundary": (
+                    s_idx == len(chunk.syllables) - 1
+                    and w_idx in word_group_boundaries
+                ),
+                "boundary_punctuation": (
+                    word_group_boundaries[w_idx]
+                    if s_idx == len(chunk.syllables) - 1 and w_idx in word_group_boundaries
+                    else None
+                ),
             })
             current_syl_index += 1
 
@@ -1038,6 +1257,12 @@ def _allocate_word_hierarchical_durations(
         else:
             onset = max(onset, onset_times[-1] + onset_slot_duration * 0.55)
         onset_times.append(min(onset, bar_duration_sec - MIN_TIMELINE_REST_SEC))
+
+    onset_times = _advance_short_syllable_onsets_at_optional_boundaries(
+        syl_list,
+        onset_times,
+        bar_duration_sec,
+    )
 
     for index, item in enumerate(syl_list[:-1]):
         if not item["is_liaison_source"]:
@@ -1073,15 +1298,31 @@ def _allocate_word_hierarchical_durations(
             gate_ratio = min(gate_ratio, 0.58 if item["punct"] == "," else 0.50)
         gate_ratio = min(0.97, max(0.50, gate_ratio))
 
-        target_dur = min(MAX_SYLLABLE_DUR_SEC, interval * gate_ratio)
-        target_dur = min(interval, max(min(ABSOLUTE_MIN_DUR_SEC, interval), target_dur))
-        rest_duration = interval - target_dur
+        # Preserve the existing duration-based pitch accent decision while
+        # limiting explicit silence to planned word-group boundaries.
+        accent_duration = min(MAX_SYLLABLE_DUR_SEC, interval * gate_ratio)
+        accent_duration = min(
+            interval,
+            max(min(ABSOLUTE_MIN_DUR_SEC, interval), accent_duration),
+        )
         if index == len(syl_list) - 1:
+            target_dur = accent_duration
+            rest_duration = interval - target_dur
             required_tail = min(MIN_TIMELINE_REST_SEC, interval * 0.35)
             if rest_duration < required_tail:
                 target_dur -= required_tail - rest_duration
                 rest_duration = required_tail
-        elif rest_duration < MIN_TIMELINE_REST_SEC:
+        elif item["is_group_boundary"]:
+            minimum_voiced_duration = _minimum_phoneme_duration(item["phones"])
+            if item["boundary_punctuation"] is None:
+                minimum_voiced_duration = _comfortable_phoneme_duration(item["phones"])
+            rest_duration = _boundary_rest_duration(
+                interval,
+                item["boundary_punctuation"],
+                minimum_voiced_duration,
+            )
+            target_dur = interval - rest_duration
+        else:
             target_dur = interval
             rest_duration = 0.0
 
@@ -1092,7 +1333,7 @@ def _allocate_word_hierarchical_durations(
             "dur": target_dur,
             "weight": item["weight"],
             "stress": item["stress"],
-            "midi_note": 63 if target_dur >= long_attack_threshold else item["midi_note"],
+            "midi_note": 63 if accent_duration >= long_attack_threshold else item["midi_note"],
         })
         if rest_duration > 0.0:
             items.append({
@@ -1128,33 +1369,12 @@ def _allocate_word_hierarchical_durations(
             phonemes.extend(syl_phones)
             ph_num.append(len(syl_phones))
 
-            # Enhanced Option A phoneme weighting with category & BPM scaling (115 BPM threshold)
-            phone_weights = [_phoneme_weight_v2(sym, bpm=bpm, stress=ling_stress) for sym in syl_phones]
-            pw_sum = sum(phone_weights)
-            syl_phone_durs = [syl_dur * pw / pw_sum for pw in phone_weights]
-
-            # Enforce minimum duration floors (Vowel: 85ms, Fricative: 40ms, Plosive: 30ms, Nasal/Liquid: 35ms)
-            for i, sym in enumerate(syl_phones):
-                floor = 0.0
-                if sym in VOWEL_SYMBOLS:
-                    floor = MIN_VOWEL_DUR_SEC
-                elif sym in FRICATIVE_SYMBOLS:
-                    floor = MIN_FRICATIVE_DUR_SEC
-                elif sym in PLOSIVE_SYMBOLS:
-                    floor = MIN_PLOSIVE_DUR_SEC
-                elif sym in NASAL_LIQUID_SYMBOLS:
-                    floor = MIN_NASAL_DUR_SEC
-
-                if floor > 0.0 and syl_phone_durs[i] < floor:
-                    target_floor = min(floor, syl_dur * 0.75)
-                    if target_floor > syl_phone_durs[i]:
-                        diff = target_floor - syl_phone_durs[i]
-                        other_indices = [k for k in range(len(syl_phones)) if k != i]
-                        other_sum = sum(syl_phone_durs[k] for k in other_indices)
-                        if other_sum > 0:
-                            syl_phone_durs[i] = target_floor
-                            for k in other_indices:
-                                syl_phone_durs[k] -= diff * (syl_phone_durs[k] / other_sum)
+            syl_phone_durs = _allocate_phoneme_durations(
+                syl_phones,
+                syl_dur,
+                bpm=bpm,
+                stress=ling_stress,
+            )
 
             durations.extend(syl_phone_durs)
 
