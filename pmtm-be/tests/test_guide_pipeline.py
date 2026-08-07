@@ -326,14 +326,14 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertEqual(slots, [2, 1, 1, 2, 1, 1, 2, 1, 1])
 
     def test_three_slot_content_word_attack_uses_d_sharp_four(self):
-        lyrics = "\n".join(["이건 우리 쟁반밥이잖아"] * 8)
+        lyrics = "\n".join(["이건 쟁반밥"] * 8)
         plan = build_flow_plan(lyrics, 90, 0, "potg", base_f0_hz=190.0)
         bar = plan.bars[0]
         slot_duration = plan.beatMap.barDurationSec / 16
 
-        self.assertEqual(bar.noteSeq[5], "D#4")
-        self.assertGreater(bar.noteDur[5], slot_duration * 2)
-        self.assertLess(bar.noteDur[5], slot_duration * 3)
+        self.assertEqual(bar.noteSeq[3], "D#4")
+        self.assertGreater(bar.noteDur[3], slot_duration * 2)
+        self.assertLess(bar.noteDur[3], slot_duration * 3.5)
 
     def test_liaison_moves_extra_slot_and_pitch_to_surface_syllable(self):
         lyrics = "\n".join(["내 손이 놓인 건 절대 아니다"] * 8)

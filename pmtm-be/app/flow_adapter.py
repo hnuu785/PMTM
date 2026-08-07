@@ -884,10 +884,7 @@ def _allocate_word_hierarchical_durations(
                 "stress": ling_stress,
                 "midi_note": midi_note,
                 "is_liaison_source": is_liaison_source,
-                "is_priority_attack": bool(
-                    is_liaison_target
-                    or (ling and ling.is_content and ling.is_word_start and not is_liaison_source)
-                ),
+                "is_priority_attack": bool(is_liaison_target),
                 "punct": chunk.punctuation if s_idx == len(chunk.syllables) - 1 else None,
             })
             current_syl_index += 1
@@ -899,7 +896,7 @@ def _allocate_word_hierarchical_durations(
         index for index, item in enumerate(syl_list) if item["is_priority_attack"]
     ]
     remaining_slots = max(0, slots_per_bar - total_syllable_count)
-    tail_slots = 1 if remaining_slots > len(priority_indices) else 0
+    tail_slots = 1 if remaining_slots >= 4 else 0
     available_slots = max(1, slots_per_bar - tail_slots)
     allocated_slots = _allocate_syllable_grid_slots(
         syl_weights_list,
@@ -954,7 +951,7 @@ def _allocate_word_hierarchical_durations(
             "dur": target_dur,
             "weight": item["weight"],
             "stress": item["stress"],
-            "midi_note": 63 if item["is_priority_attack"] and slots >= 3 else item["midi_note"],
+            "midi_note": 63 if slots >= 3 else item["midi_note"],
         })
         if item["punct"] in ("?", "!", ".", ","):
             sp_dur = 0.04 if item["punct"] == "," else 0.06
