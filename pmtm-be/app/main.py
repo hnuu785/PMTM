@@ -274,7 +274,11 @@ async def generate_guide_demo(
             for line in lyrics.splitlines()
             if line.strip() and not line.strip().lower().startswith("[verse")
         ]
-        genre_value = genre.strip() if genre and genre.strip() else ("trap" if len(lines) == 16 else "boom_bap")
+        genre_value = (
+            genre.strip()
+            if genre and genre.strip()
+            else ("trap" if bpm_value >= 115 else "boom_bap")
+        )
         validate_guide_flow(lyrics, bpm_value, first_bar_start_sec, voicebank_id, genre=genre_value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -706,6 +706,17 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertIn("나는 비트 위를 달려", plan.bars[0].text)
         self.assertIn("고개를 들고", plan.bars[0].text)
 
+    def test_sixteen_lines_boom_bap_keeps_sixteen_bars(self):
+        sixteen_bars = "\n".join(EIGHT_BARS.splitlines() * 2)
+        plan = build_flow_plan(sixteen_bars, 90, 1.0, "potg", base_f0_hz=190.0, genre="boom_bap")
+        # 16 lines should remain 16 separate bars
+        self.assertEqual(plan.beatMap.barCount, 16)
+        self.assertEqual(len(plan.bars), 16)
+        self.assertEqual(plan.beatMap.beatsPerBar, 4)
+        self.assertIn("나는 비트 위를 달려", plan.bars[0].text)
+        self.assertNotIn("고개를 들고", plan.bars[0].text)
+        self.assertIn("고개를 들고", plan.bars[1].text)
+
     def test_trap_half_time_grid_does_not_overlap_paired_lines(self):
         source_bpm = 140
         source_sixteenth_duration = 60.0 / source_bpm / 4.0

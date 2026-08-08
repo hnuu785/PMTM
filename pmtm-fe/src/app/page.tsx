@@ -75,7 +75,7 @@ type ApiErrorResponse = {
 
 type GenerateMode = "beat" | "manual";
 
-const BPM_PRESETS = [80, 90, 120, 140];
+const BPM_PRESETS = [80, 90, 130, 140, 150];
 const DIFFSINGER_VOICEBANK = "potg";
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
@@ -412,10 +412,15 @@ export default function Home() {
     body.append("bpm", String(result.bpm));
     body.append("firstBarStartSec", String(parsedStart));
     body.append("voicebank", DIFFSINGER_VOICEBANK);
+    if (activeGenre) {
+      body.append("genre", activeGenre === "boombap" ? "boom_bap" : "trap");
+    }
     if (rvcModelId && rvcModelId !== "none") {
       body.append("rvcModelId", rvcModelId);
       body.append("useIndex", "true");
     }
+
+    const demoBarCount = lyricLines.length === 16 && activeGenre === "boombap" ? 16 : 8;
 
     setError("");
     setIsGeneratingDemo(true);
@@ -423,7 +428,7 @@ export default function Home() {
     try {
       const response = await fetch(`${apiBaseUrl}/api/v1/guide-demos`, { method: "POST", body });
       if (!response.ok) {
-        throw new Error((await readErrorMessage(response)) || "8마디 가이드 랩 생성 요청에 실패했습니다.");
+        throw new Error((await readErrorMessage(response)) || `${demoBarCount}마디 가이드 랩 생성 요청에 실패했습니다.`);
       }
       const data = (await response.json()) as DemoGenerateResponse;
       setDemoJob({
@@ -434,7 +439,7 @@ export default function Home() {
         workerCount: 0,
         bpm: result.bpm,
         lyrics: ["[Verse]", ...lyricLines].join("\n"),
-        notes: ["8마디 SVS 작업이 대기열에 등록되었습니다."],
+        notes: [`${demoBarCount}마디 SVS 작업이 대기열에 등록되었습니다.`],
         error: null,
         audioUrl: null,
         vocalUrl: null,
@@ -468,7 +473,21 @@ export default function Home() {
   }
 
   function updateLyricLine(index: number, value: string) {
-    setLyricLines((current) => current.map((line, lineIndex) => (lineIndex === index ? value : line)));
+    let nextLines: string[];
+    const updated = lyricLines.map((line, lineIndex) => (lineIndex === index ? value : line));
+
+    if (value.includes("\n")) {
+      nextLines = parseLyricLines(updated.join("\n"));
+    } else if (updated.length === 16 && updated.slice(8).every((line) => !line.trim())) {
+      nextLines = updated.slice(0, 8);
+    } else {
+      nextLines = updated;
+    }
+
+    setLyricLines(nextLines);
+    if (editingLineIndex !== null && editingLineIndex >= nextLines.length) {
+      setEditingLineIndex(null);
+    }
     setCopyLabel("Copy");
   }
 
@@ -605,7 +624,7 @@ export default function Home() {
                       />
                     </label>
 
-                    <div className="grid grid-cols-4 gap-2 rounded-sm border border-[#f5b950]/25 bg-black/25 p-1">
+                    <div className="grid grid-cols-5 gap-2 rounded-sm border border-[#f5b950]/25 bg-black/25 p-1">
                       {BPM_PRESETS.map((preset) => (
                         <button
                           key={preset}

@@ -179,7 +179,7 @@ def run_guide_demo_generation(
             if line.strip() and not line.strip().lower().startswith("[verse")
         ])
         bar_count = len(plan.bars)
-        rule_desc = "2줄=1마디(트랩)" if line_count == 16 else "1줄=1마디(붐뱁)"
+        rule_desc = "2줄=1마디(트랩)" if (line_count == 16 and genre == "trap") else "1줄=1마디(붐뱁)"
         notes = [
             f"편집된 {line_count}줄({bar_count}마디, {rule_desc})을 렌더링했습니다.",
             f"첫 마디 시작: {plan.beatMap.firstBarStartSec:.3f}초",

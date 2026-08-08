@@ -654,7 +654,7 @@ def build_flow_plan(
     beat_analysis: dict[str, Any] | None = None,
 ) -> FlowPlan:
     lines = parse_eight_bar_lyrics(lyrics)
-    if len(lines) == 16:
+    if len(lines) == 16 and genre == "trap":
         bar_lines = [f"{lines[i]} {lines[i+1]}" for i in range(0, 16, 2)]
     else:
         bar_lines = lines
