@@ -161,6 +161,23 @@ class BeatGenerationTests(unittest.TestCase):
 
         self.assertEqual(frame, 40)
 
+    def test_select_drop_beat_skips_percussive_intro_without_bass(self):
+        bass_energy = [1.0] * 40 + [10.0] * 60
+        percussive_rms = [1.0] * 40 + [10.0] * 60
+        for intro_hit in (10, 20, 30):
+            percussive_rms[intro_hit] = 10.0
+
+        frame = main._select_drop_beat(
+            beat_frames=[10, 20, 30, 40, 50, 60],
+            bass_energy=bass_energy,
+            percussive_rms=percussive_rms,
+            sample_rate=100,
+            hop_length=10,
+            tempo=120.0,
+        )
+
+        self.assertEqual(frame, 40)
+
     def test_build_first_bar_uses_four_detected_beats_and_next_boundary(self):
         beats, end = main._build_first_bar(
             beat_times=[1.0, 1.5, 2.0, 2.5, 3.0, 3.5],
@@ -494,6 +511,18 @@ class RhymeAnalysisTests(unittest.TestCase):
         self.assertIsNone(body[1]["rhymeGroup"])
         self.assertEqual(body[0]["highlightRanges"], [])
         self.assertEqual(body[1]["highlightRanges"], [])
+
+    def test_analyze_rhyme_groups_non_adjacent_gap_1_rhymes(self):
+        client = TestClient(main.app)
+
+        # ABAC: A(ㅏ), B(ㅣ), A(ㅏ), C(ㅡ)
+        response = client.post("/api/v1/lyrics/analyze-rhyme", json={"lines": ["달려가", "푸른 피", "날아가", "밝은 구름"]})
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body[0]["rhymeGroup"], body[2]["rhymeGroup"])
+        self.assertIsNotNone(body[0]["rhymeGroup"])
+        self.assertIsNone(body[1]["rhymeGroup"])
+        self.assertIsNone(body[3]["rhymeGroup"])
 
     def test_generate_lyrics_response_includes_rhyme_analysis(self):
         client = TestClient(main.app)

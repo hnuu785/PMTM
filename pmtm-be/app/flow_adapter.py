@@ -390,20 +390,71 @@ def convert_numbers_to_hangul(text: str) -> str:
     return re.sub(r"\d+", repl, text)
 
 
+def _spoken_korean_tokens(text: str) -> dict[tuple[int, int], str]:
+    """Apply G2P across Korean words, stopping at punctuation or other languages."""
+    content_tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", text))
+    spoken_by_span: dict[tuple[int, int], str] = {}
+    korean_run: list[re.Match[str]] = []
+
+    def flush_run() -> None:
+        if not korean_run:
+            return
+
+        run_start = korean_run[0].start()
+        run_end = korean_run[-1].end()
+        spoken_chars = re.findall(r"[가-힣]", g2p(text[run_start:run_end]))
+        source_lengths = [len(match.group(0)) for match in korean_run]
+        if len(spoken_chars) != sum(source_lengths):
+            raise ValueError("한국어 G2P 결과를 원래 단어 경계에 맞출 수 없습니다.")
+
+        cursor = 0
+        for match, source_length in zip(korean_run, source_lengths):
+            spoken_by_span[(match.start(), match.end())] = "".join(
+                spoken_chars[cursor : cursor + source_length]
+            )
+            cursor += source_length
+        korean_run.clear()
+
+    for token in content_tokens:
+        is_korean = bool(re.fullmatch(r"[가-힣]+", token.group(0)))
+        continues_run = (
+            is_korean
+            and korean_run
+            and text[korean_run[-1].end() : token.start()].isspace()
+        )
+        if is_korean and (not korean_run or continues_run):
+            korean_run.append(token)
+            continue
+
+        flush_run()
+        if is_korean:
+            korean_run.append(token)
+
+    flush_run()
+    return spoken_by_span
+
+
 def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     text = convert_numbers_to_hangul(text)
     unsupported = find_unsupported_characters(text)
     if unsupported:
         raise ValueError(f"현재 SVS 테스트는 한글과 영문 가사만 지원합니다. 지원하지 않는 문자: {unsupported[:20]}")
-    raw_words = text.strip().split()
+    raw_word_matches = list(re.finditer(r"\S+", text))
     word_chunks: list[WordChunk] = []
+    spoken_korean_tokens = _spoken_korean_tokens(text)
     g2p_parts: list[str] = []
 
-    for raw_word in raw_words:
-        tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", raw_word)
-        for token in tokens:
-            if re.match(r"^[가-힣]+$", token):
-                g2p_parts.append(g2p(token))
+    for raw_word_match in raw_word_matches:
+        raw_word = raw_word_match.group(0)
+        tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", raw_word))
+        for token_match in tokens:
+            token = token_match.group(0)
+            if re.fullmatch(r"[가-힣]+", token):
+                token_span = (
+                    raw_word_match.start() + token_match.start(),
+                    raw_word_match.start() + token_match.end(),
+                )
+                g2p_parts.append(spoken_korean_tokens[token_span])
             else:
                 g2p_parts.append(token)
 
@@ -411,17 +462,23 @@ def _extract_word_syllables_and_text(text: str) -> tuple[list[WordChunk], str]:
     line_linguistics = _analyze_korean_line_linguistics(text, g2p_line)
     ling_cursor = 0
 
-    for raw_word in raw_words:
+    for raw_word_match in raw_word_matches:
+        raw_word = raw_word_match.group(0)
         punct_match = re.search(r"([?,!.])+$", raw_word)
         punct = punct_match.group(1) if punct_match else None
 
-        tokens = re.findall(r"[가-힣]+|[a-zA-Z']+", raw_word)
+        tokens = list(re.finditer(r"[가-힣]+|[a-zA-Z']+", raw_word))
         current_word_syllables: list[list[str]] = []
         current_word_ling: list[SyllableLinguisticInfo] = []
 
-        for token in tokens:
-            if re.match(r"^[가-힣]+$", token):
-                g2p_token = g2p(token)
+        for token_match in tokens:
+            token = token_match.group(0)
+            if re.fullmatch(r"[가-힣]+", token):
+                token_span = (
+                    raw_word_match.start() + token_match.start(),
+                    raw_word_match.start() + token_match.end(),
+                )
+                g2p_token = spoken_korean_tokens[token_span]
                 syllables = re.findall(r"[가-힣]", g2p_token)
                 for syl in syllables:
                     current_word_syllables.append(_syllable_to_phonemes(syl))
@@ -528,10 +585,6 @@ def build_beat_map(
             beat_duration = 60.0 / actual_bpm
             bar_duration = beat_duration * beats_per_unit
 
-        downbeat_offset = beat_analysis.get("downbeat_offset_sec")
-        if downbeat_offset is not None and math.isfinite(downbeat_offset) and downbeat_offset >= 0:
-            first_bar_start_sec = downbeat_offset
-
         absolute_grid = beat_analysis.get("absolute_grid", [])
         if absolute_grid:
             grid_times = [float(slot["time_sec"]) for slot in absolute_grid][::half_time_multiplier]
@@ -547,6 +600,14 @@ def build_beat_map(
                 slot["time_sec"] for slot in absolute_grid
                 if slot.get("subdivision") == 0
             ][::half_time_multiplier]
+
+            grid_shift = (
+                first_bar_start_sec - float(extracted_bar_starts[0])
+                if extracted_bar_starts
+                else 0.0
+            )
+            extracted_bar_starts = [float(value) + grid_shift for value in extracted_bar_starts]
+            extracted_beat_times = [float(value) + grid_shift for value in extracted_beat_times]
 
             if len(extracted_bar_starts) >= bar_count:
                 bar_starts = extracted_bar_starts[:bar_count]
@@ -610,14 +671,25 @@ def build_flow_plan(
                 f"{index + 1}마디가 너무 조밀합니다. 한 마디는 {MAX_SYLLABLES_PER_BAR}음절 이하로 수정해주세요."
             )
 
+        start = beat_map.barStartTimes[index]
+        analysis_time_shift = (
+            beat_map.firstBarStartSec - beat_map.gridTimes[0]
+            if beat_map.gridTimes
+            else 0.0
+        )
+        accent_fractions = [
+            (snare_time + analysis_time_shift - start) / beat_map.barDurationSec
+            for snare_time in (beat_map.snareTimes or [])
+            if start <= snare_time + analysis_time_shift < start + beat_map.barDurationSec
+        ]
         phonemes, ph_num, durations, template, note_seq, note_dur = _allocate_word_hierarchical_durations(
             word_chunks,
             beat_map.barDurationSec,
             index,
             genre=genre,
             bpm=beat_map.bpm,
+            accent_fractions=accent_fractions,
         )
-        start = beat_map.barStartTimes[index]
         bars.append(
             FlowBar(
                 barIndex=index + 1,
@@ -663,24 +735,12 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
         if bar.noteSeq is not None and bar.noteDur is not None:
             note_seq_list = bar.noteSeq
             note_dur_list = bar.noteDur
-            note_slur_list = []
-            is_after_rest = True
-            for note in note_seq_list:
-                if note == "rest":
-                    note_slur_list.append(0)
-                    is_after_rest = True
-                else:
-                    if is_after_rest:
-                        note_slur_list.append(0)
-                        is_after_rest = False
-                    else:
-                        note_slur_list.append(1)
+            note_slur_list = [0] * len(note_seq_list)
         else:
             note_seq_list = []
             note_dur_list = []
             note_slur_list = []
             cursor = 0
-            is_after_rest = True
             for count in ph_num:
                 group_symbols = symbols[cursor : cursor + count]
                 group_durs = durations[cursor : cursor + count]
@@ -690,15 +750,10 @@ def write_diffsinger_ds(plan: FlowPlan, path: Path, *, base_f0_hz: float) -> Non
                     note_seq_list.append("rest")
                     note_dur_list.append(group_dur_sum)
                     note_slur_list.append(0)
-                    is_after_rest = True
                 else:
                     note_seq_list.append("C4")
                     note_dur_list.append(group_dur_sum)
-                    if is_after_rest:
-                        note_slur_list.append(0)
-                        is_after_rest = False
-                    else:
-                        note_slur_list.append(1)
+                    note_slur_list.append(0)
 
                 cursor += count
 
@@ -761,6 +816,13 @@ MIN_PLOSIVE_DUR_SEC = 0.030
 MIN_FRICATIVE_DUR_SEC = 0.040
 MIN_NASAL_DUR_SEC = 0.035
 MAX_SYLLABLE_DUR_SEC = 0.60
+MIN_TIMELINE_REST_SEC = 0.02
+MIN_LEAD_REST_SEC = 0.01
+MIN_WORD_GROUP_SYLLABLES = 3
+MAX_WORD_GROUP_SYLLABLES = 5
+MIN_GROUP_REST_SEC = 0.03
+MAX_GROUP_REST_SEC = 0.07
+ARTICULATION_COMFORT_BUFFER_SEC = 0.03
 
 PLOSIVE_SYMBOLS = {"g", "kk", "d", "tt", "b", "pp", "k", "t", "p", "kcl", "tcl", "pcl", "cl", "K", "P", "T"}
 FRICATIVE_SYMBOLS = {"sc", "s", "sh", "sy", "hh", "jh", "ch", "jj"}
@@ -772,6 +834,232 @@ VOWEL_SYMBOLS = {
     "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
 }
 CODA_SYMBOLS = {"ng", "l", "n", "m", "kcl", "tcl", "pcl", "cl", "K", "N", "M", "P"}
+
+
+def _plan_word_group_boundaries(word_chunks: list[WordChunk]) -> dict[int, str | None]:
+    """Return word indices that end a connected three-to-five-syllable phrase."""
+    boundaries: dict[int, str | None] = {}
+    group_syllable_count = 0
+
+    for word_index, chunk in enumerate(word_chunks):
+        word_syllable_count = len(chunk.syllables)
+        exceeds_maximum = (
+            group_syllable_count > 0
+            and group_syllable_count + word_syllable_count > MAX_WORD_GROUP_SYLLABLES
+        )
+        allow_six_syllable_exception = (
+            group_syllable_count == 1
+            and word_syllable_count == MAX_WORD_GROUP_SYLLABLES
+        )
+        if exceeds_maximum and not allow_six_syllable_exception:
+            boundaries[word_index - 1] = None
+            group_syllable_count = 0
+
+        group_syllable_count += word_syllable_count
+        if chunk.punctuation or group_syllable_count >= MIN_WORD_GROUP_SYLLABLES:
+            boundaries[word_index] = chunk.punctuation
+            group_syllable_count = 0
+
+    if word_chunks and len(word_chunks) - 1 not in boundaries:
+        boundaries[len(word_chunks) - 1] = word_chunks[-1].punctuation
+
+    total_syllable_count = sum(len(chunk.syllables) for chunk in word_chunks)
+    if total_syllable_count <= 10:
+        internal_rest_budget = 3
+    elif total_syllable_count <= 15:
+        internal_rest_budget = 2
+    else:
+        internal_rest_budget = None
+
+    if internal_rest_budget is not None and word_chunks:
+        last_word_index = len(word_chunks) - 1
+        regular_internal_boundaries = [
+            word_index
+            for word_index, punctuation in boundaries.items()
+            if word_index < last_word_index and punctuation is None
+        ]
+        for word_index in regular_internal_boundaries[internal_rest_budget:]:
+            del boundaries[word_index]
+    return boundaries
+
+
+def _phoneme_duration_floor(symbol: str) -> float:
+    if symbol in VOWEL_SYMBOLS:
+        return MIN_VOWEL_DUR_SEC
+    if symbol in FRICATIVE_SYMBOLS:
+        return MIN_FRICATIVE_DUR_SEC
+    if symbol in PLOSIVE_SYMBOLS:
+        return MIN_PLOSIVE_DUR_SEC
+    if symbol in NASAL_LIQUID_SYMBOLS:
+        return MIN_NASAL_DUR_SEC
+    return 0.0
+
+
+def _minimum_phoneme_duration(symbols: list[str]) -> float:
+    return max(ABSOLUTE_MIN_DUR_SEC, sum(_phoneme_duration_floor(symbol) for symbol in symbols))
+
+
+def _comfortable_phoneme_duration(symbols: list[str]) -> float:
+    return _minimum_phoneme_duration(symbols) + ARTICULATION_COMFORT_BUFFER_SEC
+
+
+def _minimum_required_rest_after(
+    syllables: list[dict[str, Any]],
+    index: int,
+) -> float:
+    punctuation = syllables[index]["boundary_punctuation"]
+    if punctuation == ",":
+        return 0.04
+    if punctuation in (".", "?", "!"):
+        return 0.05
+    if index == len(syllables) - 1:
+        return MIN_TIMELINE_REST_SEC
+    return 0.0
+
+
+def _weighted_isotonic_non_decreasing(
+    values: list[float],
+    weights: list[float],
+) -> list[float]:
+    blocks: list[dict[str, float | int]] = []
+    for index, (value, weight) in enumerate(zip(values, weights)):
+        blocks.append({
+            "start": index,
+            "end": index,
+            "weight": weight,
+            "weighted_sum": value * weight,
+        })
+        while len(blocks) >= 2:
+            previous = blocks[-2]
+            current = blocks[-1]
+            previous_mean = float(previous["weighted_sum"]) / float(previous["weight"])
+            current_mean = float(current["weighted_sum"]) / float(current["weight"])
+            if previous_mean <= current_mean:
+                break
+            blocks[-2:] = [{
+                "start": int(previous["start"]),
+                "end": int(current["end"]),
+                "weight": float(previous["weight"]) + float(current["weight"]),
+                "weighted_sum": (
+                    float(previous["weighted_sum"])
+                    + float(current["weighted_sum"])
+                ),
+            }]
+
+    result = [0.0] * len(values)
+    for block in blocks:
+        mean = float(block["weighted_sum"]) / float(block["weight"])
+        for index in range(int(block["start"]), int(block["end"]) + 1):
+            result[index] = mean
+    return result
+
+
+def _project_onsets_to_phoneme_floors(
+    syllables: list[dict[str, Any]],
+    onset_times: list[float],
+    bar_duration_sec: float,
+) -> list[float]:
+    """Move target onsets as little as possible while protecting all syllables."""
+    if not syllables:
+        return onset_times
+
+    voiced_minimums = [
+        _minimum_phoneme_duration(item["phones"])
+        for item in syllables
+    ]
+    required_rests = [
+        _minimum_required_rest_after(syllables, index)
+        for index in range(len(syllables))
+    ]
+    available_duration = max(0.001, bar_duration_sec - onset_times[0])
+    available_voiced_duration = max(0.001, available_duration - sum(required_rests))
+    voiced_floor_sum = sum(voiced_minimums)
+    if voiced_floor_sum > available_voiced_duration:
+        scale = available_voiced_duration / voiced_floor_sum
+        voiced_minimums = [minimum * scale for minimum in voiced_minimums]
+
+    interval_minimums = [
+        voiced + rest
+        for voiced, rest in zip(voiced_minimums, required_rests)
+    ]
+    cumulative_minimums = [0.0]
+    for minimum in interval_minimums:
+        cumulative_minimums.append(cumulative_minimums[-1] + minimum)
+
+    target_boundaries = list(onset_times) + [bar_duration_sec]
+    transformed_targets = [
+        target - cumulative
+        for target, cumulative in zip(target_boundaries, cumulative_minimums)
+    ]
+    endpoint_weight = 1_000_000_000.0
+    weights = [1.0] * len(target_boundaries)
+    weights[0] = endpoint_weight
+    weights[-1] = endpoint_weight
+    if len(weights) > 2:
+        weights[-2] = 3.0
+
+    projected = _weighted_isotonic_non_decreasing(transformed_targets, weights)
+    projected_boundaries = [
+        value + cumulative
+        for value, cumulative in zip(projected, cumulative_minimums)
+    ]
+    projected_boundaries[0] = onset_times[0]
+    projected_boundaries[-1] = bar_duration_sec
+    return projected_boundaries[:-1]
+
+
+def _boundary_rest_duration(
+    interval: float,
+    punctuation: str | None,
+    minimum_voiced_duration: float = ABSOLUTE_MIN_DUR_SEC,
+) -> float:
+    if punctuation == ",":
+        ratio, minimum, maximum = 0.35, 0.04, 0.07
+    elif punctuation in (".", "?", "!"):
+        ratio, minimum, maximum = 0.45, 0.05, 0.09
+    else:
+        ratio, minimum, maximum = 0.25, MIN_GROUP_REST_SEC, MAX_GROUP_REST_SEC
+
+    requested = min(maximum, max(minimum, interval * ratio))
+    max_safe_rest = max(0.0, interval - min(minimum_voiced_duration, interval))
+    if punctuation is None and max_safe_rest < MIN_GROUP_REST_SEC:
+        return 0.0
+    rest_duration = min(requested, max_safe_rest)
+    return rest_duration if rest_duration >= MIN_TIMELINE_REST_SEC else 0.0
+
+
+def _advance_short_syllable_onsets_at_optional_boundaries(
+    syllables: list[dict[str, Any]],
+    onset_times: list[float],
+    bar_duration_sec: float,
+) -> list[float]:
+    adjusted = list(onset_times)
+    for index, item in enumerate(syllables[:-1]):
+        if not item["is_group_boundary"] or item["boundary_punctuation"] is not None:
+            continue
+
+        boundary_interval = adjusted[index + 1] - adjusted[index]
+        available_boundary_time = max(
+            0.0,
+            boundary_interval - _comfortable_phoneme_duration(item["phones"]),
+        )
+        next_interval_end = (
+            adjusted[index + 2]
+            if index + 2 < len(adjusted)
+            else bar_duration_sec
+        )
+        next_interval = (
+            next_interval_end
+            - adjusted[index + 1]
+            - _minimum_required_rest_after(syllables, index + 1)
+        )
+        next_deficit = max(
+            0.0,
+            _comfortable_phoneme_duration(syllables[index + 1]["phones"])
+            - next_interval,
+        )
+        adjusted[index + 1] -= min(available_boundary_time, next_deficit)
+    return adjusted
 
 
 def _phoneme_weight(symbol: str) -> float:
@@ -797,6 +1085,36 @@ def _phoneme_weight_v2(symbol: str, bpm: float = 120.0, stress: float = 1.0) -> 
     elif symbol in NASAL_LIQUID_SYMBOLS:
         return 0.15
     return 0.18
+
+
+def _allocate_phoneme_durations(
+    symbols: list[str],
+    syllable_duration: float,
+    *,
+    bpm: float,
+    stress: float,
+) -> list[float]:
+    weights = [_phoneme_weight_v2(symbol, bpm=bpm, stress=stress) for symbol in symbols]
+    floors = [_phoneme_duration_floor(symbol) for symbol in symbols]
+    floor_sum = sum(floors)
+
+    if floor_sum <= syllable_duration:
+        remaining = syllable_duration - floor_sum
+        weight_sum = sum(weights)
+        return [
+            floor + remaining * weight / weight_sum
+            for floor, weight in zip(floors, weights)
+        ]
+
+    # The timeline can be denser than the configured floors permit. Scale all
+    # requested minima together instead of satisfying later phones by stealing
+    # duration from phones whose floors were already applied.
+    positive_floors = [max(floor, 0.001) for floor in floors]
+    positive_floor_sum = sum(positive_floors)
+    return [
+        syllable_duration * floor / positive_floor_sum
+        for floor in positive_floors
+    ]
 
 
 def _allocate_syllable_grid_slots(
@@ -842,6 +1160,122 @@ def _allocate_syllable_grid_slots(
     return durations
 
 
+def _onset_grid_size(syllable_count: int) -> int:
+    return 16 if syllable_count <= 16 else 32
+
+
+def _onset_tail_slots(syllable_count: int, grid_size: int) -> int:
+    if syllable_count <= grid_size // 2:
+        return max(2, grid_size // 8)
+    if syllable_count <= grid_size * 3 // 4:
+        return 1
+    return 0
+
+
+def _plan_syllable_onset_slots(
+    syllables: list[dict[str, Any]],
+    genre: str,
+    accent_fractions: list[float] | None = None,
+) -> tuple[list[int], int]:
+    """Place syllable attacks on a beat grid while leaving explicit gaps."""
+    count = len(syllables)
+    if count == 0:
+        return [], 16
+
+    grid_size = _onset_grid_size(count)
+    tail_slots = _onset_tail_slots(count, grid_size)
+    available_last_tick = grid_size - tail_slots - 1
+    if count <= grid_size // 2:
+        # Sparse phrases should finish early instead of stretching two or three
+        # syllables across an entire bar.
+        last_tick = min(available_last_tick, max(count - 1, count * 2 - 1))
+    else:
+        last_tick = available_last_tick
+    if count == 1:
+        return [0], grid_size
+
+    beat_slots = grid_size // 4
+    default_accents = {beat_slots, beat_slots * 3}
+    accent_slots = {
+        min(grid_size - 1, max(0, round(fraction * grid_size)))
+        for fraction in (accent_fractions or [])
+        if 0.0 <= fraction < 1.0
+    } or default_accents
+    genre_offsets = (
+        (0.0, -0.35, 0.20, -0.15, 0.30, -0.25, 0.15, 0.0)
+        if genre == "boom_bap"
+        else (0.0, -0.45, 0.30, -0.30, 0.15, -0.40, 0.35, -0.10)
+    )
+    ideal_gap = last_tick / float(count - 1)
+
+    # Dynamic programming keeps attacks ordered while allowing morphology and
+    # groove anchors to move them away from uniform spacing.
+    costs: list[dict[int, float]] = [{0: 0.0}]
+    parents: list[dict[int, int]] = [{}]
+    for index in range(1, count):
+        remaining = count - index - 1
+        min_tick = index
+        max_tick = last_tick - remaining
+        ideal_tick = index * ideal_gap + genre_offsets[index % len(genre_offsets)]
+        current_costs: dict[int, float] = {}
+        current_parents: dict[int, int] = {}
+        current = syllables[index]
+
+        for tick in range(min_tick, max_tick + 1):
+            position_cost = (tick - ideal_tick) ** 2 * 0.32
+            nearest_accent = min(abs(tick - accent) for accent in accent_slots)
+            on_beat = tick % beat_slots == 0
+            on_eighth = tick % max(1, beat_slots // 2) == 0
+
+            if current.get("is_content") and current.get("is_word_start"):
+                position_cost += nearest_accent * 0.16
+                if on_beat:
+                    position_cost -= 0.45
+            elif current.get("is_word_start") and on_eighth:
+                position_cost -= 0.16
+            elif float(current.get("stress", 1.0)) <= 0.75 and on_beat:
+                position_cost += 0.30
+
+            subdivision = tick % beat_slots
+            if genre == "boom_bap" and subdivision == beat_slots - 1:
+                position_cost -= 0.12
+            elif genre == "trap" and subdivision in {1, beat_slots - 1}:
+                position_cost -= 0.16
+
+            best: tuple[float, int] | None = None
+            for previous_tick, previous_cost in costs[-1].items():
+                if previous_tick >= tick:
+                    continue
+                gap = tick - previous_tick
+                transition_cost = (gap - ideal_gap) ** 2 * 0.10
+                previous = syllables[index - 1]
+                if current.get("is_word_start"):
+                    transition_cost += 0.30 if gap == 1 and ideal_gap > 1.25 else -0.08 * min(gap - 1, 2)
+                elif gap > math.ceil(ideal_gap):
+                    transition_cost += 0.18 * (gap - math.ceil(ideal_gap))
+                if previous.get("is_priority_attack"):
+                    transition_cost += 0.35 if gap == 1 else -0.28
+
+                candidate = previous_cost + position_cost + transition_cost
+                if best is None or candidate < best[0]:
+                    best = (candidate, previous_tick)
+
+            if best is not None:
+                current_costs[tick] = best[0]
+                current_parents[tick] = best[1]
+
+        costs.append(current_costs)
+        parents.append(current_parents)
+
+    final_tick = min(costs[-1], key=costs[-1].get)
+    onsets = [final_tick]
+    for index in range(count - 1, 0, -1):
+        final_tick = parents[index][final_tick]
+        onsets.append(final_tick)
+    onsets.reverse()
+    return onsets, grid_size
+
+
 def _get_word_syllable_weights(syllable_count: int) -> list[float]:
     return [1.0] * max(1, syllable_count)
 
@@ -863,6 +1297,7 @@ def _allocate_word_hierarchical_durations(
     bar_index: int,
     genre: str = "boom_bap",
     bpm: float = 120.0,
+    accent_fractions: list[float] | None = None,
 ) -> tuple[list[str], list[int], list[float], str, list[str], list[float]]:
     total_syllable_count = sum(len(w.syllables) for w in word_chunks)
     word_count = len(word_chunks)
@@ -873,6 +1308,7 @@ def _allocate_word_hierarchical_durations(
     slot_duration = bar_duration_sec / float(slots_per_bar)
 
     # Collect flat list of syllables and linguistic stress
+    word_group_boundaries = _plan_word_group_boundaries(word_chunks)
     syl_list: list[dict[str, Any]] = []
     current_syl_index = 0
     for w_idx, chunk in enumerate(word_chunks):
@@ -895,93 +1331,154 @@ def _allocate_word_hierarchical_durations(
                 "phones": syl_phones,
                 "weight": combined_weight,
                 "stress": ling_stress,
+                "is_content": bool(ling and ling.is_content),
+                "is_word_start": bool(ling and ling.is_word_start),
                 "midi_note": midi_note,
                 "is_liaison_source": is_liaison_source,
-                "is_priority_attack": bool(
-                    is_liaison_target
-                    or (ling and ling.is_content and ling.is_word_start and not is_liaison_source)
-                ),
+                "is_priority_attack": bool(is_liaison_target),
                 "punct": chunk.punctuation if s_idx == len(chunk.syllables) - 1 else None,
+                "is_group_boundary": (
+                    s_idx == len(chunk.syllables) - 1
+                    and w_idx in word_group_boundaries
+                ),
+                "boundary_punctuation": (
+                    word_group_boundaries[w_idx]
+                    if s_idx == len(chunk.syllables) - 1 and w_idx in word_group_boundaries
+                    else None
+                ),
             })
             current_syl_index += 1
 
-    # Allocate every syllable one slot first. A single cadence tail slot is
-    # used only after every content-word attack can receive one extra slot.
-    syl_weights_list = [float(item["weight"]) for item in syl_list]
-    priority_indices = [
-        index for index, item in enumerate(syl_list) if item["is_priority_attack"]
-    ]
-    remaining_slots = max(0, slots_per_bar - total_syllable_count)
-    tail_slots = 1 if remaining_slots > len(priority_indices) else 0
-    available_slots = max(1, slots_per_bar - tail_slots)
-    allocated_slots = _allocate_syllable_grid_slots(
-        syl_weights_list,
-        available_slots,
-        priority_indices,
-        [index for index, item in enumerate(syl_list) if not item["is_liaison_source"]],
+    onset_slots, onset_grid_size = _plan_syllable_onset_slots(
+        syl_list,
+        genre,
+        accent_fractions,
+    )
+    onset_slot_duration = bar_duration_sec / float(onset_grid_size)
+    onset_times: list[float] = []
+    for item, onset_slot in zip(syl_list, onset_slots):
+        micro_offset = 0.0
+        if float(item["stress"]) >= 1.0:
+            micro_offset = 0.012 if genre == "boom_bap" else -0.010
+        onset = onset_slot * onset_slot_duration + micro_offset
+        if not onset_times:
+            onset = max(MIN_LEAD_REST_SEC, onset)
+        else:
+            onset = max(onset, onset_times[-1] + onset_slot_duration * 0.55)
+        onset_times.append(min(onset, bar_duration_sec - MIN_TIMELINE_REST_SEC))
+
+    onset_times = _project_onsets_to_phoneme_floors(
+        syl_list,
+        onset_times,
+        bar_duration_sec,
+    )
+    onset_times = _advance_short_syllable_onsets_at_optional_boundaries(
+        syl_list,
+        onset_times,
+        bar_duration_sec,
     )
 
     for index, item in enumerate(syl_list[:-1]):
-        if item["is_liaison_source"] and allocated_slots[index + 1] >= 2:
+        if not item["is_liaison_source"]:
+            continue
+        following_interval_slots = (
+            onset_slots[index + 2] - onset_slots[index + 1]
+            if index + 2 < len(onset_slots)
+            else onset_grid_size - onset_slots[index + 1]
+        )
+        if following_interval_slots >= 2:
             item["midi_note"] = 60
             syl_list[index + 1]["midi_note"] = 62
 
-    lead_duration = 0.04
-    punctuation_duration = sum(
-        0.04 if item["punct"] == "," else 0.06
-        for item in syl_list
-        if item["punct"] in ("?", "!", ".", ",")
-    )
-    tail_duration = slot_duration * tail_slots + 0.04
-    raw_syl_duration_sum = sum(slots * slot_duration for slots in allocated_slots)
-    active_duration = max(0.1, bar_duration_sec - lead_duration - tail_duration - punctuation_duration)
-    scale_factor = active_duration / raw_syl_duration_sum if raw_syl_duration_sum > active_duration else 1.0
-
-    target_durations = []
-    for item, slots in zip(syl_list, allocated_slots):
-        rel_pos = item["syl_idx"] / max(1, total_syllable_count)
-        is_snare_region = (0.20 <= rel_pos <= 0.35) or (0.70 <= rel_pos <= 0.85) if genre == "boom_bap" else (0.45 <= rel_pos <= 0.60)
-        micro_offset = 0.0
-        if genre == "boom_bap" and (item["stress"] >= 1.15 or is_snare_region):
-            micro_offset = 0.012
-        elif genre == "trap" and (item["stress"] >= 1.15 or is_snare_region):
-            micro_offset = -0.010
-        target_durations.append(slots * slot_duration * scale_factor + micro_offset)
-
-    duration_total = sum(target_durations)
-    if duration_total > 0:
-        target_durations = [duration * active_duration / duration_total for duration in target_durations]
-
     items: list[dict[str, Any]] = []
-    cap_overflow = 0.0
+    density = total_syllable_count / float(onset_grid_size)
+    for index, (item, onset) in enumerate(zip(syl_list, onset_times)):
+        next_onset = onset_times[index + 1] if index + 1 < len(onset_times) else bar_duration_sec
+        interval = max(0.001, next_onset - onset)
+        next_is_word_start = bool(
+            index + 1 < len(syl_list) and syl_list[index + 1]["is_word_start"]
+        )
 
-    for item, slots, target_dur in zip(syl_list, allocated_slots, target_durations):
-        max_cap = MAX_SYLLABLE_DUR_SEC
-        if target_dur > max_cap:
-            cap_overflow += (target_dur - max_cap)
-            target_dur = max_cap
+        gate_ratio = 0.88 if genre == "trap" else 0.84
+        if density >= 0.75:
+            gate_ratio = max(gate_ratio, 0.94)
+        elif next_is_word_start:
+            gate_ratio -= 0.10
+        if float(item["stress"]) <= 0.75:
+            gate_ratio -= 0.04
+        if item["is_priority_attack"]:
+            gate_ratio += 0.05
+        if item["punct"] in ("?", "!", ".", ","):
+            gate_ratio = min(gate_ratio, 0.58 if item["punct"] == "," else 0.50)
+        gate_ratio = min(0.97, max(0.50, gate_ratio))
 
+        # Preserve the existing duration-based pitch accent decision while
+        # limiting explicit silence to planned word-group boundaries.
+        accent_duration = min(MAX_SYLLABLE_DUR_SEC, interval * gate_ratio)
+        accent_duration = min(
+            interval,
+            max(min(ABSOLUTE_MIN_DUR_SEC, interval), accent_duration),
+        )
+        if index == len(syl_list) - 1:
+            minimum_voiced_duration = _minimum_phoneme_duration(item["phones"])
+            if item["boundary_punctuation"] is not None:
+                required_rest = _minimum_required_rest_after(syl_list, index)
+                rest_duration = _boundary_rest_duration(
+                    interval,
+                    item["boundary_punctuation"],
+                    min(
+                        minimum_voiced_duration,
+                        max(0.0, interval - required_rest),
+                    ),
+                )
+                target_dur = interval - rest_duration
+            else:
+                required_tail = min(MIN_TIMELINE_REST_SEC, interval * 0.35)
+                target_dur = max(
+                    accent_duration,
+                    min(minimum_voiced_duration, interval - required_tail),
+                )
+                rest_duration = interval - target_dur
+        elif item["is_group_boundary"]:
+            minimum_voiced_duration = _minimum_phoneme_duration(item["phones"])
+            if item["boundary_punctuation"] is None:
+                minimum_voiced_duration = _comfortable_phoneme_duration(item["phones"])
+            else:
+                required_rest = _minimum_required_rest_after(syl_list, index)
+                minimum_voiced_duration = min(
+                    minimum_voiced_duration,
+                    max(0.0, interval - required_rest),
+                )
+            rest_duration = _boundary_rest_duration(
+                interval,
+                item["boundary_punctuation"],
+                minimum_voiced_duration,
+            )
+            target_dur = interval - rest_duration
+        else:
+            target_dur = interval
+            rest_duration = 0.0
+
+        long_attack_threshold = bar_duration_sec / slots_per_bar * 2.5
         items.append({
             "type": "SYLLABLE",
             "phones": item["phones"],
             "dur": target_dur,
             "weight": item["weight"],
             "stress": item["stress"],
-            "midi_note": 63 if item["is_priority_attack"] and slots >= 3 else item["midi_note"],
+            "midi_note": 63 if accent_duration >= long_attack_threshold else item["midi_note"],
         })
-        if item["punct"] in ("?", "!", ".", ","):
-            sp_dur = 0.04 if item["punct"] == "," else 0.06
+        if rest_duration > 0.0:
             items.append({
                 "type": "SP",
                 "phones": None,
-                "dur": sp_dur,
+                "dur": rest_duration,
                 "weight": 0.0,
                 "midi_note": 0,
             })
 
-    tail_duration += cap_overflow
-
     # Prepare outputs
+    lead_duration = onset_times[0]
     phonemes: list[str] = ["SP"]
     ph_num: list[int] = [1]
     durations: list[float] = [lead_duration]
@@ -1005,33 +1502,12 @@ def _allocate_word_hierarchical_durations(
             phonemes.extend(syl_phones)
             ph_num.append(len(syl_phones))
 
-            # Enhanced Option A phoneme weighting with category & BPM scaling (115 BPM threshold)
-            phone_weights = [_phoneme_weight_v2(sym, bpm=bpm, stress=ling_stress) for sym in syl_phones]
-            pw_sum = sum(phone_weights)
-            syl_phone_durs = [syl_dur * pw / pw_sum for pw in phone_weights]
-
-            # Enforce minimum duration floors (Vowel: 85ms, Fricative: 40ms, Plosive: 30ms, Nasal/Liquid: 35ms)
-            for i, sym in enumerate(syl_phones):
-                floor = 0.0
-                if sym in VOWEL_SYMBOLS:
-                    floor = MIN_VOWEL_DUR_SEC
-                elif sym in FRICATIVE_SYMBOLS:
-                    floor = MIN_FRICATIVE_DUR_SEC
-                elif sym in PLOSIVE_SYMBOLS:
-                    floor = MIN_PLOSIVE_DUR_SEC
-                elif sym in NASAL_LIQUID_SYMBOLS:
-                    floor = MIN_NASAL_DUR_SEC
-
-                if floor > 0.0 and syl_phone_durs[i] < floor:
-                    target_floor = min(floor, syl_dur * 0.75)
-                    if target_floor > syl_phone_durs[i]:
-                        diff = target_floor - syl_phone_durs[i]
-                        other_indices = [k for k in range(len(syl_phones)) if k != i]
-                        other_sum = sum(syl_phone_durs[k] for k in other_indices)
-                        if other_sum > 0:
-                            syl_phone_durs[i] = target_floor
-                            for k in other_indices:
-                                syl_phone_durs[k] -= diff * (syl_phone_durs[k] / other_sum)
+            syl_phone_durs = _allocate_phoneme_durations(
+                syl_phones,
+                syl_dur,
+                bpm=bpm,
+                stress=ling_stress,
+            )
 
             durations.extend(syl_phone_durs)
 
@@ -1040,18 +1516,22 @@ def _allocate_word_hierarchical_durations(
             note_seq.append(note_name)
             note_dur.append(syl_dur)
 
-    phonemes.append("SP")
-    ph_num.append(1)
-    durations.append(tail_duration)
-    note_seq.append("rest")
-    note_dur.append(tail_duration)
+    if items[-1]["type"] != "SP":
+        phonemes.append("SP")
+        ph_num.append(1)
+        durations.append(MIN_TIMELINE_REST_SEC)
+        note_seq.append("rest")
+        note_dur.append(MIN_TIMELINE_REST_SEC)
 
     rounded_durations = [round(v, 6) for v in durations]
     rounded_durations[-1] = round(rounded_durations[-1] + (bar_duration_sec - sum(rounded_durations)), 6)
     rounded_note_durs = [round(v, 6) for v in note_dur]
     rounded_note_durs[-1] = round(rounded_note_durs[-1] + (bar_duration_sec - sum(rounded_note_durs)), 6)
 
-    template_name = f"adaptive_hierarchical_{genre}_{total_syllable_count}syl_{word_count}words"
+    template_name = (
+        f"adaptive_hierarchical_{genre}_{total_syllable_count}syl_"
+        f"{word_count}words_onset{onset_grid_size}"
+    )
     return phonemes, ph_num, rounded_durations, template_name, note_seq, rounded_note_durs
 
 

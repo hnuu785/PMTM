@@ -120,10 +120,13 @@ def analyze_bar_end_rhyme(
     bpm: float | None = None,
     genre: str | None = None,
     threshold: float = 0.5,
+    # GRPO, inference, and dataset evaluation intentionally use adjacent endings only.
+    # Presentation callers may override this, but must not change the shared scoring default.
+    max_gap: int = 1,
 ) -> BarEndRhymeAnalysis:
-    """Analyze adjacent bar-ending rhymes using the shared GRPO policy.
+    """Analyze bar-ending rhymes using the shared GRPO policy.
 
-    A bar ending is covered when it rhymes with its previous or next bar ending.
+    A bar ending is covered when it rhymes with another bar ending within max_gap positions.
     Trap uses the second line of each two-line bar; boombap uses every line.
     Only covered bar endings are assigned groups and highlight matches.
     """
@@ -154,25 +157,31 @@ def analyze_bar_end_rhyme(
         if left_root != right_root:
             parents[right_root] = left_root
 
-    adjacent_scores = []
-    for position in range(len(selected) - 1):
-        score = get_line_rhyme_score(lines[selected[position]], lines[selected[position + 1]])
-        adjacent_scores.append(score)
-        if score >= threshold:
-            union(position, position + 1)
+    gap_scores: dict[int, list[float]] = {}
+    for gap in range(1, max_gap + 1):
+        scores = []
+        for position in range(len(selected) - gap):
+            score = get_line_rhyme_score(lines[selected[position]], lines[selected[position + gap]])
+            scores.append(score)
+            if score >= threshold:
+                union(position, position + gap)
+        gap_scores[gap] = scores
 
     covered_positions = []
     for position, line_index in enumerate(selected):
-        candidates: list[tuple[float, int | None]] = []
-        if position > 0:
-            candidates.append((adjacent_scores[position - 1], selected[position - 1]))
-        if position < len(adjacent_scores):
-            candidates.append((adjacent_scores[position], selected[position + 1]))
-        score, best_index = max(candidates, default=(0.0, None))
-        if score >= threshold:
-            covered_positions.append(position)
-            line_scores[line_index] = score
-            best_match_indexes[line_index] = best_index
+        candidates: list[tuple[float, int, int]] = []
+        for gap in range(1, max_gap + 1):
+            scores = gap_scores[gap]
+            if position >= gap:
+                candidates.append((scores[position - gap], -gap, selected[position - gap]))
+            if position < len(selected) - gap:
+                candidates.append((scores[position], -gap, selected[position + gap]))
+        if candidates:
+            best_score, neg_gap, best_index = max(candidates, key=lambda c: (c[0], c[1]))
+            if best_score >= threshold:
+                covered_positions.append(position)
+                line_scores[line_index] = best_score
+                best_match_indexes[line_index] = best_index
 
     group_ids: dict[int, int] = {}
     for position in covered_positions:

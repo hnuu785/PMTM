@@ -76,12 +76,7 @@ type ApiErrorResponse = {
 type GenerateMode = "beat" | "manual";
 
 const BPM_PRESETS = [80, 90, 120, 140];
-const DIFFSINGER_VOICEBANKS = [
-  { value: "potg", label: "POTG" },
-  { value: "kitane", label: "KITANE" },
-  { value: "rang", label: "RANG" },
-  { value: "lunar", label: "LUNAR" },
-];
+const DIFFSINGER_VOICEBANK = "potg";
 const RHYME_COLORS = [
   { background: "rgba(82, 212, 200, 0.28)", border: "rgba(82, 212, 200, 0.74)", color: "#d7fffb" },
   { background: "rgba(255, 90, 31, 0.28)", border: "rgba(255, 90, 31, 0.74)", color: "#ffe2d4" },
@@ -126,12 +121,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [llm, setLlm] = useState<LyricModel>("qwen-local");
   const [llmOptions, setLlmOptions] = useState<LlmOption[]>(DEFAULT_LLM_OPTIONS);
-  const [voicebank, setVoicebank] = useState("potg");
-  const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
-    DIFFSINGER_VOICEBANKS.map((option) => ({ id: option.value, label: option.label, available: true })),
-  );
   const [rvcModelId, setRvcModelId] = useState("none");
-  const [useIndex, setUseIndex] = useState(false);
   const [rvcModelOptions, setRvcModelOptions] = useState<VoicebankInfo[]>([]);
   const [result, setResult] = useState<LyricResponse | null>(null);
   const [demoJob, setDemoJob] = useState<DemoStatusResponse | null>(null);
@@ -143,27 +133,25 @@ export default function Home() {
   const [isAnalyzingBeat, setIsAnalyzingBeat] = useState(false);
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
   const [isAnalyzingRhyme, setIsAnalyzingRhyme] = useState(false);
+  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
 
   const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`${apiBaseUrl}/api/v1/guide-demos/voicebanks`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("voicebank lookup failed"))))
-      .then((items: VoicebankInfo[]) => {
-        setVoicebankOptions(items);
-        const firstAvailable = items.find((item) => item.available);
-        setVoicebank((current) =>
-          firstAvailable && !items.some((item) => item.id === current && item.available)
-            ? firstAvailable.id
-            : current,
-        );
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [apiBaseUrl]);
+    if (!isLoading) {
+      setGenerationElapsedSeconds(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      setGenerationElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isLoading]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -381,7 +369,7 @@ export default function Home() {
       }
       const analysis = (await response.json()) as BeatAnalysis;
       setBeatAnalysis(analysis);
-      setBpm(String(Math.round(analysis.tempo)));
+      setBpm(String(analysis.tempo));
       setFirstBarStartSec(String(analysis.firstBarStartSec));
     } catch (err) {
       setError(err instanceof Error ? err.message : "비트 분석 중 오류가 발생했습니다.");
@@ -398,7 +386,7 @@ export default function Home() {
       body.append("topic", topic);
     }
     if (beatAnalysis?.tempo) {
-      body.append("bpm", String(Math.round(beatAnalysis.tempo)));
+      body.append("bpm", String(beatAnalysis.tempo));
     }
 
     return fetch(`${apiBaseUrl}/api/v1/lyrics/generate-from-beat`, {
@@ -423,10 +411,10 @@ export default function Home() {
     body.append("lyrics", ["[Verse]", ...lyricLines].join("\n"));
     body.append("bpm", String(result.bpm));
     body.append("firstBarStartSec", String(parsedStart));
-    body.append("voicebank", voicebank);
+    body.append("voicebank", DIFFSINGER_VOICEBANK);
     if (rvcModelId && rvcModelId !== "none") {
       body.append("rvcModelId", rvcModelId);
-      body.append("useIndex", String(useIndex));
+      body.append("useIndex", "true");
     }
 
     setError("");
@@ -451,7 +439,7 @@ export default function Home() {
         audioUrl: null,
         vocalUrl: null,
         flowPlanUrl: null,
-        voicebank,
+        voicebank: DIFFSINGER_VOICEBANK,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "가이드 랩 생성 중 오류가 발생했습니다.");
@@ -486,6 +474,7 @@ export default function Home() {
 
   const effectiveVerseBpm =
     result && 60 <= result.bpm && result.bpm < 80 ? result.bpm * 2 : result?.bpm;
+  const displayedBpm = beatAnalysis?.tempo ?? demoJob?.bpm ?? result?.bpm;
   const isTrapVerse = effectiveVerseBpm !== undefined && effectiveVerseBpm >= 115 && lyricLines.length === 16;
   const verseRows = isTrapVerse
     ? Array.from({ length: 8 }, (_, row) => [row * 2, row * 2 + 1])
@@ -511,7 +500,7 @@ export default function Home() {
                 PMTM
               </p>
               <h1 className="mt-1.5 text-2xl leading-tight font-black text-[#fff3ca] sm:text-3xl">
-                랩 벌스 만들기
+                프메더머니
               </h1>
               <p className="mt-1.5 max-w-xl text-sm leading-6 text-[#d8b993]">
                 비트 분석 또는 직접 조건 입력으로 8마디 초안을 생성합니다.
@@ -553,22 +542,20 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleModeChange("beat")}
-                    className={`h-10 border text-sm font-bold transition ${
-                      mode === "beat"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                    }`}
+                    className={`h-10 border text-sm font-bold transition ${mode === "beat"
+                      ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                      : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                      }`}
                   >
                     비트 분석
                   </button>
                   <button
                     type="button"
                     onClick={() => handleModeChange("manual")}
-                    className={`h-10 border text-sm font-bold transition ${
-                      mode === "manual"
-                        ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                        : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca] disabled:cursor-not-allowed disabled:text-[#6d4530]"
-                    }`}
+                    className={`h-10 border text-sm font-bold transition ${mode === "manual"
+                      ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                      : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca] disabled:cursor-not-allowed disabled:text-[#6d4530]"
+                      }`}
                   >
                     직접 입력
                   </button>
@@ -631,11 +618,10 @@ export default function Home() {
                             setError("");
                             setRhymeError("");
                           }}
-                          className={`h-10 border text-sm font-bold transition ${
-                            bpm === String(preset)
-                              ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
-                              : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                          }`}
+                          className={`h-10 border text-sm font-bold transition ${bpm === String(preset)
+                            ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_18px_rgba(255,90,31,0.34)]"
+                            : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                            }`}
                         >
                           {preset}
                         </button>
@@ -652,11 +638,10 @@ export default function Home() {
                         key={opt.value}
                         type="button"
                         onClick={() => setTopic(opt.value)}
-                        className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${
-                          topic === opt.value
-                            ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
-                            : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
-                        }`}
+                        className={`h-9 rounded-sm border px-3 text-xs font-bold transition ${topic === opt.value
+                          ? "border-[#ffb23f] bg-[#ff5a1f] text-white shadow-[0_0_14px_rgba(255,90,31,0.34)]"
+                          : "border-transparent bg-[#23100b] text-[#d8b993] hover:border-[#f5b950]/55 hover:text-[#fff3ca]"
+                          }`}
                       >
                         {opt.label}
                       </button>
@@ -675,11 +660,10 @@ export default function Home() {
                     {llmOptions.map((option) => (
                       <label
                         key={option.value}
-                        className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${
-                          llm === option.value
-                            ? "border-[#f5b950] bg-[#f5b950] text-[#170906]"
-                            : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
-                        }`}
+                        className={`flex min-h-[52px] cursor-pointer items-start justify-between gap-2 border px-3 py-2 transition ${llm === option.value
+                          ? "border-[#f5b950] bg-[#f5b950] text-[#170906]"
+                          : "border-[#f5b950]/22 bg-[#130806]/82 text-[#fff6df] hover:border-[#f5b950]/60"
+                          }`}
                       >
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-1.5 text-sm leading-5 font-semibold break-all">
@@ -701,9 +685,8 @@ export default function Home() {
                             )}
                           </span>
                           <span
-                            className={`block text-[11px] leading-4 break-all ${
-                              llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
-                            }`}
+                            className={`block text-[11px] leading-4 break-all ${llm === option.value ? "text-[#5f260d]" : "text-[#b9865f]"
+                              }`}
                           >
                             {option.detail}
                           </span>
@@ -724,16 +707,18 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={isLoading || isAnalyzingBeat || (mode === "beat" && !beatFile)}
-                  className="h-12 w-full border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-sm font-black tracking-[0.08em] text-white uppercase shadow-[0_14px_34px_rgba(255,90,31,0.28)] transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:border-[#6d4530] disabled:bg-[#6d4530] disabled:text-[#c39a75] disabled:shadow-none"
+                  className="flex h-12 w-full items-center justify-center gap-2 border border-[#ffd78a]/55 bg-[#ff5a1f] px-4 text-sm font-black tracking-[0.08em] text-white uppercase shadow-[0_14px_34px_rgba(255,90,31,0.28)] transition hover:bg-[#ff7a28] disabled:cursor-not-allowed disabled:border-[#6d4530] disabled:bg-[#6d4530] disabled:text-[#c39a75] disabled:shadow-none"
                 >
+                  {isLoading ? (
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   {isLoading ? "Generating" : "Generate 8 Bars"}
                 </button>
               </form>
             </div>
-
-            <p className="border-t border-[#f5b950]/20 pt-4 text-xs leading-5 text-[#a97859]">
-              API: <span className="break-all font-mono text-[#d8b993]">{apiBaseUrl}</span>
-            </p>
           </aside>
 
           <section className="pmtm-panel flex min-h-[560px] flex-col p-4 sm:p-5">
@@ -741,10 +726,14 @@ export default function Home() {
               <div>
                 <p className="text-sm font-semibold text-[#52d4c8]">Generated verse</p>
                 <h2 className="mt-1 text-xl font-black text-[#fff3ca]">
-                  {result ? result.title : "결과가 여기에 표시됩니다"}
+                  {isLoading
+                    ? "8마디 벌스를 만들고 있습니다"
+                    : result && displayedBpm !== undefined
+                      ? `${displayedBpm.toFixed(1)} BPM Verse`
+                      : "결과가 여기에 표시됩니다"}
                 </h2>
                 <p className="mt-1 text-xs font-semibold tracking-[0.14em] text-[#b9865f] uppercase">
-                  {demoJob?.bpm ? `${demoJob.bpm} BPM` : result ? `${result.bpm} BPM` : "-- BPM"} · {llm}
+                  {displayedBpm !== undefined ? `${displayedBpm.toFixed(1)} BPM` : "-- BPM"} · {llm}
                 </p>
               </div>
               <button
@@ -766,12 +755,32 @@ export default function Home() {
             <div className="lyric-paper mt-5 flex-1 border border-[#f5b950]/35">
               <div className="min-h-[420px] px-5 py-5 sm:px-7 sm:py-6">
                 {isLoading ? (
-                  <div className="space-y-3 font-mono text-sm leading-8 text-[#fff6df]">
-                    <p>
-                      {mode === "beat"
-                        ? "비트를 분석하고 8마디 벌스를 구성하는 중..."
-                        : "입력 조건에 맞춰 8마디 벌스를 구성하는 중..."}
+                  <div
+                    className="flex min-h-[370px] flex-col items-center justify-center px-4 text-center"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="가사 생성 중"
+                  >
+                    <div className="pmtm-loading-bars" aria-hidden="true">
+                      {Array.from({ length: 8 }, (_, index) => (
+                        <span key={index} />
+                      ))}
+                    </div>
+                    <p className="mt-8 text-xs font-bold tracking-[0.22em] text-[#52d4c8] uppercase">
+                      Writing your verse
                     </p>
+                    <p className="mt-3 text-xl font-black text-[#fff3ca] sm:text-2xl">
+                      {mode === "beat"
+                        ? "비트 위에 라임을 쌓는 중"
+                        : "입력한 조건으로 라임을 쌓는 중"}
+                    </p>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-[#d8b993]">
+                      AI가 8마디 가사를 생성하고 있습니다. 모델에 따라 잠시 시간이 걸릴 수 있어요.
+                    </p>
+                    <div className="mt-7 flex items-center gap-3 border border-[#f5b950]/25 bg-black/25 px-4 py-2 font-mono text-xs text-[#b9865f]">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-[#ff5a1f] shadow-[0_0_12px_rgba(255,90,31,0.9)]" />
+                      <span>{formatElapsedTime(generationElapsedSeconds)} 경과</span>
+                    </div>
                   </div>
                 ) : lyricLines.length > 0 ? (
                   <div className="space-y-3">
@@ -838,22 +847,14 @@ export default function Home() {
             {result && mode === "beat" ? (
               <div className="mt-4 space-y-3 border border-[#52d4c8]/35 bg-[#071b1a]/70 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="min-w-40 flex-1">
+                  <div className="min-w-40 flex-1">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
                       DiffSinger voicebank
                     </span>
-                    <select
-                      value={voicebank}
-                      onChange={(event) => setVoicebank(event.target.value)}
-                      className="mt-2 h-10 w-full border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca] outline-none focus:border-[#52d4c8]"
-                    >
-                      {voicebankOptions.map((option) => (
-                        <option key={option.id} value={option.id} disabled={!option.available}>
-                          {option.label}{option.available ? "" : " (not installed)"}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <div className="mt-2 flex h-10 w-full items-center border border-[#52d4c8]/35 bg-[#130806]/88 px-3 text-sm font-semibold text-[#fff3ca]">
+                      POTG
+                    </div>
+                  </div>
                   <label className="min-w-40 flex-1">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
                       RVC Voice Model
@@ -870,17 +871,6 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
-                    {rvcModelId !== "none" && (
-                      <label className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#8fcac4] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={useIndex}
-                          onChange={(e) => setUseIndex(e.target.checked)}
-                          className="h-3 w-3 rounded border-[#52d4c8]/35 bg-[#130806] accent-[#169c91]"
-                        />
-                        <span>인덱스 적용</span>
-                      </label>
-                    )}
                   </label>
                   <label className="w-36">
                     <span className="text-xs font-semibold tracking-[0.12em] text-[#52d4c8] uppercase">
@@ -900,7 +890,6 @@ export default function Home() {
                     disabled={
                       isGeneratingDemo ||
                       !beatAnalysis ||
-                      !voicebankOptions.some((option) => option.id === voicebank && option.available) ||
                       (lyricLines.length !== 8 && lyricLines.length !== 16) ||
                       lyricLines.some((line) => !line.trim())
                     }
@@ -909,9 +898,11 @@ export default function Home() {
                     {isGeneratingDemo ? "Rendering 8 Bars" : "Make Guide Rap"}
                   </button>
                 </div>
-                <p className="text-xs leading-5 text-[#8fcac4]">
-                  편집된 가사(붐뱁 8줄 / 트랩 16줄)를 사용합니다. 첫 마디 시작점을 직접 보정할 수 있습니다.
-                </p>
+                {demoJob ? (
+                  <p className="text-xs font-mono text-[#d8b993]">
+                    작업 ID: <span className="break-all text-white">{demoJob.jobId}</span>
+                  </p>
+                ) : null}
                 {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-[#b9eee9]">
@@ -955,35 +946,20 @@ export default function Home() {
                       Download vocal
                     </a>
                   ) : null}
-                  {demoJob.flowPlanUrl ? (
-                    <a
-                      href={toAbsoluteApiUrl(apiBaseUrl, demoJob.flowPlanUrl)}
-                      download
-                      className="inline-flex h-10 items-center border border-[#f5b950]/45 px-4 text-xs font-black tracking-[0.08em] text-[#fff3ca] uppercase transition hover:bg-[#23100b]"
-                    >
-                      FlowPlan JSON
-                    </a>
-                  ) : null}
                 </div>
               </div>
             ) : null}
 
             <div className="mt-4 min-h-12 space-y-1 text-sm text-[#b9865f]">
               {rhymeError ? <p className="text-[#ffb6a2]">{rhymeError}</p> : null}
-              {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
+              {/* {demoJob && demoJob.status !== "succeeded" && demoJob.status !== "failed" ? (
                 <p>{formatDemoStatus(demoJob.status)} · {Math.round((demoJob.progress ?? 0) * 100)}%</p>
-              ) : null}
+              ) : null} */}
               {demoJob?.status === "queued" && demoJob.workerAvailable === false ? (
                 <p className="text-[#ffb6a2]">
                   RQ worker가 감지되지 않았습니다. 별도 터미널에서 demo-generation worker를 실행해야 합니다.
                 </p>
               ) : null}
-              {demoJob?.notes.map((note) => (
-                <p key={note}>{note}</p>
-              ))}
-              {!demoJob && result?.notes.map((note) => (
-                <p key={note}>{note}</p>
-              ))}
             </div>
           </section>
         </div>
@@ -1098,6 +1074,12 @@ function formatScore(score?: number) {
     return "0.00";
   }
   return score.toFixed(2);
+}
+
+function formatElapsedTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatDemoStatus(status?: DemoStatus) {

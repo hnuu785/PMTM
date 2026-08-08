@@ -171,5 +171,44 @@ class GrpoMessagesTests(unittest.TestCase):
 
 
 
+    def test_shared_analysis_groups_non_adjacent_gap_1_rhymes(self):
+        # ABAC
+        lines_abac = [self._line(index, ending) for index, ending in enumerate("가나가다")]
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            analysis_abac = analyze_bar_end_rhyme(lines_abac, bpm=90, max_gap=2)
+        self.assertEqual(analysis_abac.rhyme_groups[0], analysis_abac.rhyme_groups[2])
+        self.assertIsNotNone(analysis_abac.rhyme_groups[0])
+        self.assertIsNone(analysis_abac.rhyme_groups[1])
+        self.assertIsNone(analysis_abac.rhyme_groups[3])
+
+        # AABAC
+        lines_aabac = [self._line(index, ending) for index, ending in enumerate("가가나가다")]
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            analysis_aabac = analyze_bar_end_rhyme(lines_aabac, bpm=90, max_gap=2)
+        self.assertEqual(analysis_aabac.rhyme_groups[0], analysis_aabac.rhyme_groups[1])
+        self.assertEqual(analysis_aabac.rhyme_groups[1], analysis_aabac.rhyme_groups[3])
+        self.assertIsNotNone(analysis_aabac.rhyme_groups[0])
+
+        # AABBCB
+        lines_aabbcb = [self._line(index, ending) for index, ending in enumerate("가가나나다나")]
+        with mock.patch(
+            "app.rhyme_scoring.rhyme_engine.get_line_rhyme_score",
+            side_effect=self._same_ending_rhyme,
+        ):
+            analysis_aabbcb = analyze_bar_end_rhyme(lines_aabbcb, bpm=90, max_gap=2)
+        self.assertEqual(analysis_aabbcb.rhyme_groups[0], analysis_aabbcb.rhyme_groups[1])
+        self.assertEqual(analysis_aabbcb.rhyme_groups[2], analysis_aabbcb.rhyme_groups[3])
+        self.assertEqual(analysis_aabbcb.rhyme_groups[3], analysis_aabbcb.rhyme_groups[5])
+        self.assertIsNotNone(analysis_aabbcb.rhyme_groups[2])
+        self.assertNotEqual(analysis_aabbcb.rhyme_groups[0], analysis_aabbcb.rhyme_groups[2])
+
+
 if __name__ == "__main__":
     unittest.main()
+

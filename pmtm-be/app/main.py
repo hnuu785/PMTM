@@ -430,10 +430,14 @@ def _extract_lyric_lines(lyrics: str) -> list[str]:
 def _analyze_rhyme_lines(lines: list[str], bpm: float | None = None) -> list[RhymeLineAnalysis]:
     clean_lines = [line.strip() for line in lines[:32]]
     _, calculate_syllable_score, get_phonemes, analyze_bar_end_rhyme = _load_rhyme_analysis_funcs()
+    # Deliberate web-presentation exception: this response also links rhymes with one
+    # intervening selected bar. GRPO/training/inference evaluation must keep the shared
+    # max_gap=1 default so their rhyme-scoring policy remains adjacent-only.
     rhyme_analysis = analyze_bar_end_rhyme(
         clean_lines,
         bpm=bpm,
         threshold=RHYME_GROUP_THRESHOLD,
+        max_gap=2,
     )
 
     analyses: list[RhymeLineAnalysis] = []
@@ -757,11 +761,27 @@ def _analyze_beat(file_path: str, file_name: str) -> BeatAnalysisResponse:
             sr=sr,
             hop_length=hop_length,
         )
-        drum_entry_frame = _select_sustained_onset(
-            percussive_onset_frames,
-            percussive_onset_envelope[percussive_onset_frames],
-            round(2 * sr / hop_length),
-        )
+        drum_entry_frame = None
+        if tempo_value >= 115:
+            percussive_rms = librosa.feature.rms(y=percussive, hop_length=hop_length)[0]
+            spectrum = np.abs(librosa.stft(y, n_fft=2048, hop_length=hop_length)) ** 2
+            frequencies = librosa.fft_frequencies(sr=sr, n_fft=2048)
+            bass_bins = (frequencies >= 30) & (frequencies <= 180)
+            bass_energy = np.sqrt(np.mean(spectrum[bass_bins], axis=0))
+            drum_entry_frame = _select_drop_beat(
+                beat_frames,
+                bass_energy,
+                percussive_rms,
+                sr,
+                hop_length,
+                tempo_value,
+            )
+        if drum_entry_frame is None:
+            drum_entry_frame = _select_sustained_onset(
+                percussive_onset_frames,
+                percussive_onset_envelope[percussive_onset_frames],
+                round(2 * sr / hop_length),
+            )
         drum_entry_sec = (
             float(librosa.frames_to_time(drum_entry_frame, sr=sr, hop_length=hop_length))
             if drum_entry_frame is not None
@@ -855,6 +875,52 @@ def _select_sustained_onset(onset_frames, strengths, horizon_frames: int) -> int
             return frame
 
     return frame_values[0]
+
+
+def _select_drop_beat(
+    beat_frames,
+    bass_energy,
+    percussive_rms,
+    sample_rate: int,
+    hop_length: int,
+    tempo: float,
+) -> int | None:
+    # pyrefly: ignore [missing-import]
+    import numpy as np
+
+    frame_values = [int(value) for value in beat_frames]
+    bass_values = np.asarray(bass_energy, dtype=float)
+    percussive_values = np.asarray(percussive_rms, dtype=float)
+    frame_count = min(len(bass_values), len(percussive_values))
+    if not frame_values or frame_count == 0:
+        return None
+
+    bass_peak_threshold = float(np.percentile(bass_values[:frame_count], 80))
+    percussive_peak_threshold = float(np.percentile(percussive_values[:frame_count], 80))
+    sustained_threshold = float(np.percentile(percussive_values[:frame_count], 60))
+    peak_radius = max(1, round(0.12 * sample_rate / hop_length))
+    bar_frames = (
+        max(1, round(4 * 60 / tempo * sample_rate / hop_length))
+        if tempo > 0
+        else peak_radius * 8
+    )
+
+    for frame in frame_values:
+        if frame < 0 or frame >= frame_count:
+            continue
+        peak_start = max(0, frame - peak_radius)
+        peak_end = min(frame_count, frame + peak_radius + 1)
+        sustained_end = min(frame_count, frame + bar_frames)
+        if sustained_end - frame < bar_frames // 2:
+            continue
+        if (
+            float(np.max(bass_values[peak_start:peak_end])) >= bass_peak_threshold
+            and float(np.max(percussive_values[peak_start:peak_end])) >= percussive_peak_threshold
+            and float(np.mean(percussive_values[frame:sustained_end])) >= sustained_threshold
+        ):
+            return frame
+
+    return None
 
 
 def _build_first_bar(beat_times, first_beat_sec: float, tempo: float) -> tuple[list[float], float]:
