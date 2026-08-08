@@ -771,8 +771,8 @@ export default function Home() {
                     </p>
                     <p className="mt-3 text-xl font-black text-[#fff3ca] sm:text-2xl">
                       {mode === "beat"
-                        ? "비트 위에 라임을 쌓는 중"
-                        : "입력한 조건으로 라임을 쌓는 중"}
+                        ? "비트 위에 벌스를 작성하는 중"
+                        : "입력한 조건으로 벌스를 작성하는 중"}
                     </p>
                     <p className="mt-3 max-w-md text-sm leading-6 text-[#d8b993]">
                       AI가 8마디 가사를 생성하고 있습니다. 모델에 따라 잠시 시간이 걸릴 수 있어요.
