@@ -497,8 +497,8 @@ class RhymeAnalysisTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body[0]["highlightRanges"], [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
-        self.assertEqual(body[1]["highlightRanges"], [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
+        self.assertEqual(body[0]["highlightRanges"], [{"start": 0, "end": 3}])
+        self.assertEqual(body[1]["highlightRanges"], [{"start": 0, "end": 3}])
 
     def test_analyze_rhyme_leaves_different_lines_ungrouped(self):
         client = TestClient(main.app)

@@ -92,6 +92,7 @@ def run_guide_demo_generation(
     genre: str = "boom_bap",
     rvc_model_id: str | None = None,
     use_index: bool | None = None,
+    pitch_shift: int = 0,
 ) -> None:
     # pyrefly: ignore [missing-import]
     import redis
@@ -158,10 +159,17 @@ def run_guide_demo_generation(
                 voicebank=voicebank_id,
             )
             rvc_vocal_path = work_path / "vocal_rvc.wav"
-            render_rvc(vocal_path, rvc_vocal_path, rvc_model_id=rvc_model_id, use_index=use_index)
+            render_rvc(
+                vocal_path,
+                rvc_vocal_path,
+                rvc_model_id=rvc_model_id,
+                pitch_shift=pitch_shift,
+                use_index=use_index,
+            )
             vocal_path = rvc_vocal_path
+            pitch_tag = f" ({pitch_shift:+d}키)" if pitch_shift != 0 else ""
             index_tag = " (인덱스 적용)" if use_index else ""
-            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}{index_tag}"
+            rvc_applied_note = f"RVC 음색 변환 적용: {rvc_model_id}{pitch_tag}{index_tag}"
 
         _set_status(
             redis_client,
@@ -364,6 +372,7 @@ def enqueue_guide_demo(
     genre: str = "boom_bap",
     rvc_model_id: str | None = None,
     use_index: bool | None = None,
+    pitch_shift: int = 0,
 ) -> None:
     # pyrefly: ignore [missing-import]
     from rq import Queue
@@ -399,6 +408,7 @@ def enqueue_guide_demo(
         genre,
         rvc_model_id,
         use_index,
+        pitch_shift,
         job_id=job_id,
         job_timeout=get_settings().diffsinger_timeout_seconds + 120,
     )

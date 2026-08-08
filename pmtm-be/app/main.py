@@ -261,6 +261,7 @@ async def generate_guide_demo(
     voicebank: str = Form("potg"),
     rvcModelId: str | None = Form(None),
     useIndex: bool = Form(False),
+    pitchShift: int = Form(0),
     genre: str | None = Form(None),
     beat: UploadFile = File(...),
 ) -> DemoGenerateResponse:
@@ -300,6 +301,7 @@ async def generate_guide_demo(
             genre=genre_value,
             rvc_model_id=rvc_model_id,
             use_index=useIndex,
+            pitch_shift=pitchShift,
         )
     except ImportError as exc:
         raise HTTPException(status_code=503, detail="rq package is not installed.") from exc
@@ -525,10 +527,12 @@ def _find_rhyme_highlight_ranges(
         if score >= RHYME_SYLLABLE_HIGHLIGHT_THRESHOLD:
             ranges.append(syllable_ranges[-offset])
 
-    return [
-        RhymeHighlightRange(start=start, end=end)
-        for start, end in _merge_ranges(sorted(ranges))
-    ]
+    if not ranges:
+        return []
+
+    min_start = min(start for start, _ in ranges)
+    max_end = max(end for _, end in ranges)
+    return [RhymeHighlightRange(start=min_start, end=max_end)]
 
 
 def _find_last_rhyme_token(line: str) -> re.Match[str] | None:
@@ -538,20 +542,6 @@ def _find_last_rhyme_token(line: str) -> re.Match[str] | None:
 
 def _find_hangul_syllable_ranges(line: str) -> list[tuple[int, int]]:
     return [(match.start(), match.end()) for match in re.finditer(r"[가-힣]", line)]
-
-
-def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    if not ranges:
-        return []
-
-    merged: list[tuple[int, int]] = [ranges[0]]
-    for start, end in ranges[1:]:
-        previous_start, previous_end = merged[-1]
-        if start <= previous_end:
-            merged[-1] = (previous_start, max(previous_end, end))
-        else:
-            merged.append((start, end))
-    return merged
 
 
 async def _save_uploaded_beat(

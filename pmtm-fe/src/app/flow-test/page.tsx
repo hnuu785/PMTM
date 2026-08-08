@@ -72,6 +72,7 @@ export default function FlowTestPage() {
   const [voicebank, setVoicebank] = useState("potg");
   const [rvcModelId, setRvcModelId] = useState("none");
   const [useIndex, setUseIndex] = useState(false);
+  const [pitchShift, setPitchShift] = useState("0");
   const [beatFile, setBeatFile] = useState<File | null>(null);
 
   const [voicebankOptions, setVoicebankOptions] = useState<VoicebankInfo[]>(
@@ -223,6 +224,7 @@ export default function FlowTestPage() {
     if (rvcModelId && rvcModelId !== "none") {
       body.append("rvcModelId", rvcModelId);
       body.append("useIndex", String(useIndex));
+      body.append("pitchShift", pitchShift);
     }
     body.append("genre", lineCount === 16 ? "trap" : "boom_bap");
 
@@ -365,15 +367,34 @@ export default function FlowTestPage() {
                   ))}
                 </select>
                 {rvcModelId !== "none" && (
-                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-[#d8b993] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useIndex}
-                      onChange={(e) => setUseIndex(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-[#f5b950]/45 bg-[#130806] accent-[#ff5a1f]"
-                    />
-                    <span>인덱스 적용 (Feature Index)</span>
-                  </label>
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <label htmlFor="pitch-shift-input" className="text-xs font-bold text-[#d8b993]">
+                        피치 시프트 (키 조절)
+                      </label>
+                      <select
+                        id="pitch-shift-input"
+                        value={pitchShift}
+                        onChange={(e) => setPitchShift(e.target.value)}
+                        className="mt-1 block w-full border border-[#f5b950]/45 bg-[#130806]/88 px-2.5 py-1.5 text-xs font-semibold focus:border-[#ff5a1f] focus:outline-none text-white font-mono"
+                      >
+                        {Array.from({ length: 25 }, (_, i) => i - 12).map((val) => (
+                          <option key={val} value={val} className="bg-[#130806]">
+                            {val === 0 ? "0 (원음 기본)" : `${val > 0 ? `+${val}` : val} 키 (${val > 0 ? `${val}반음 올림` : `${Math.abs(val)}반음 내림`})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-[#d8b993] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useIndex}
+                        onChange={(e) => setUseIndex(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-[#f5b950]/45 bg-[#130806] accent-[#ff5a1f]"
+                      />
+                      <span>인덱스 적용 (Feature Index)</span>
+                    </label>
+                  </div>
                 )}
               </div>
             </div>
