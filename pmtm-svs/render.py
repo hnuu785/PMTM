@@ -18,6 +18,55 @@ from diffsinger_utau.voice_bank.commons.utils import resample_align_curve
 from diffsinger_utau.voice_bank.commons.voice_bank_reader import VoiceBankReader
 
 
+MIN_VOWEL_DUR_SEC = 0.085
+MIN_PLOSIVE_DUR_SEC = 0.030
+MIN_FRICATIVE_DUR_SEC = 0.040
+MIN_NASAL_DUR_SEC = 0.035
+
+PLOSIVE_SYMBOLS = {"g", "kk", "d", "tt", "b", "pp", "k", "t", "p", "kcl", "tcl", "pcl", "cl", "K", "P", "T"}
+FRICATIVE_SYMBOLS = {"sc", "s", "sh", "sy", "hh", "jh", "ch", "jj"}
+NASAL_LIQUID_SYMBOLS = {"n", "m", "ng", "l", "rx", "N", "M"}
+VOWEL_SYMBOLS = {
+    "a", "e", "eo", "eu", "i", "o", "u", "ia", "ie", "ieo", "io", "iu", "oa", "oe", "uo", "ui",
+    "a1", "a2", "a3", "a4", "e1", "e2", "e3", "e4", "eo1", "eo2", "eo3", "eo4", "eu1", "eu2", "eu3", "eu4",
+    "i1", "i2", "i3", "i4", "o1", "o2", "o3", "o4", "u1", "u2", "u3", "u4",
+    "aa", "ae", "ah", "ao", "aw", "ax", "ay", "eh", "er", "ey", "ih", "iy", "ow", "oy", "uh", "uw",
+}
+
+
+def _phoneme_duration_floor(symbol):
+    if symbol in VOWEL_SYMBOLS:
+        return MIN_VOWEL_DUR_SEC
+    if symbol in FRICATIVE_SYMBOLS:
+        return MIN_FRICATIVE_DUR_SEC
+    if symbol in PLOSIVE_SYMBOLS:
+        return MIN_PLOSIVE_DUR_SEC
+    if symbol in NASAL_LIQUID_SYMBOLS:
+        return MIN_NASAL_DUR_SEC
+    return 0.0
+
+
+def _constrain_ai_phoneme_durations(phonemes, syllable_duration, ai_durations):
+    floors = [_phoneme_duration_floor(symbol) for symbol in phonemes]
+    floor_sum = sum(floors)
+    weights = [max(0.001, float(duration)) for duration in ai_durations]
+
+    if floor_sum <= syllable_duration:
+        remaining = syllable_duration - floor_sum
+        weight_sum = sum(weights)
+        return [
+            floor + remaining * weight / weight_sum
+            for floor, weight in zip(floors, weights)
+        ]
+
+    positive_floors = [max(floor, 0.001) for floor in floors]
+    positive_floor_sum = sum(positive_floors)
+    return [
+        syllable_duration * floor / positive_floor_sum
+        for floor in positive_floors
+    ]
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Render an 8-bar PMTM DiffSinger score.")
     parser.add_argument("--score", required=True)
@@ -83,20 +132,23 @@ def render(score_path, voice_bank_path, output_path, device, lang, acoustic_step
                 if pred_dur is not None and len(pred_dur) > 0:
                     ph_dur_orig = [float(v) for v in section["ph_dur"].split()]
                     ph_num = [int(v) for v in section["ph_num"].split()]
+                    phonemes = section["ph_seq"].split()
                     
-                    if len(ph_dur_orig) == len(pred_dur) and sum(ph_num) == len(ph_dur_orig):
+                    if (
+                        len(ph_dur_orig) == len(pred_dur)
+                        and len(phonemes) == len(ph_dur_orig)
+                        and sum(ph_num) == len(ph_dur_orig)
+                    ):
                         scaled_dur = []
                         cursor = 0
                         for num in ph_num:
                             syllable_orig_dur = sum(ph_dur_orig[cursor : cursor + num])
                             ai_durs = [max(0.001, float(pred_dur[cursor + k])) for k in range(num)]
-                            ai_sum = sum(ai_durs)
-                            
-                            if ai_sum > 0:
-                                for k in range(num):
-                                    scaled_dur.append(syllable_orig_dur * (ai_durs[k] / ai_sum))
-                            else:
-                                scaled_dur.extend(ph_dur_orig[cursor : cursor + num])
+                            scaled_dur.extend(_constrain_ai_phoneme_durations(
+                                phonemes[cursor : cursor + num],
+                                syllable_orig_dur,
+                                ai_durs,
+                            ))
                             cursor += num
                             
                         diff = sum(ph_dur_orig) - sum(scaled_dur)

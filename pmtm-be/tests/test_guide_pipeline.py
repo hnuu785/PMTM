@@ -642,6 +642,41 @@ class FlowAdapterTests(unittest.TestCase):
         self.assertGreaterEqual(events[mot_index][1], 0.185)
         self.assertGreater(voiced_duration, plan.beatMap.barDurationSec * 0.90)
 
+    def test_global_onset_projection_protects_dense_complex_syllables(self):
+        lyrics = "\n".join([
+            line
+            for _ in range(8)
+            for line in (
+                "여긴 어디든 다 같이 가자고 말했어",
+                "난 이래도 빨리 챙겨",
+            )
+        ])
+        plan = build_flow_plan(
+            lyrics,
+            140,
+            0,
+            "potg",
+            base_f0_hz=190.0,
+            genre="trap",
+        )
+        bar = plan.bars[0]
+        spoken_syllables = iter(char for char in bar.text if "가" <= char <= "힣")
+        events = []
+        phoneme_cursor = 0
+        for note, duration, count in zip(bar.noteSeq, bar.noteDur, bar.phNum):
+            phones = bar.phonemes[phoneme_cursor : phoneme_cursor + count]
+            phoneme_cursor += count
+            label = "SP" if note == "rest" else next(spoken_syllables)
+            events.append((label, duration, phones))
+
+        chaeng_index = next(index for index, event in enumerate(events) if event[0] == "챙")
+        self.assertEqual(events[chaeng_index - 1][0], "리")
+        self.assertEqual(events[chaeng_index + 1][0], "겨")
+        self.assertGreaterEqual(events[chaeng_index][1], 0.16)
+        self.assertGreaterEqual(events[chaeng_index + 1][1], 0.145)
+        for phoneme, floor in zip(events[chaeng_index][2], (0.04, 0.085, 0.035)):
+            self.assertGreaterEqual(phoneme.durationSec, floor)
+
     def test_dense_bar_syllables_not_truncated(self):
         dense_lyrics = "\n".join([
             "빛나던 날의 그 기분은 지금도 꽉 달라진 채",

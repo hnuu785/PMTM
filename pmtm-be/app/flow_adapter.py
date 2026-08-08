@@ -903,6 +903,111 @@ def _comfortable_phoneme_duration(symbols: list[str]) -> float:
     return _minimum_phoneme_duration(symbols) + ARTICULATION_COMFORT_BUFFER_SEC
 
 
+def _minimum_required_rest_after(
+    syllables: list[dict[str, Any]],
+    index: int,
+) -> float:
+    punctuation = syllables[index]["boundary_punctuation"]
+    if punctuation == ",":
+        return 0.04
+    if punctuation in (".", "?", "!"):
+        return 0.05
+    if index == len(syllables) - 1:
+        return MIN_TIMELINE_REST_SEC
+    return 0.0
+
+
+def _weighted_isotonic_non_decreasing(
+    values: list[float],
+    weights: list[float],
+) -> list[float]:
+    blocks: list[dict[str, float | int]] = []
+    for index, (value, weight) in enumerate(zip(values, weights)):
+        blocks.append({
+            "start": index,
+            "end": index,
+            "weight": weight,
+            "weighted_sum": value * weight,
+        })
+        while len(blocks) >= 2:
+            previous = blocks[-2]
+            current = blocks[-1]
+            previous_mean = float(previous["weighted_sum"]) / float(previous["weight"])
+            current_mean = float(current["weighted_sum"]) / float(current["weight"])
+            if previous_mean <= current_mean:
+                break
+            blocks[-2:] = [{
+                "start": int(previous["start"]),
+                "end": int(current["end"]),
+                "weight": float(previous["weight"]) + float(current["weight"]),
+                "weighted_sum": (
+                    float(previous["weighted_sum"])
+                    + float(current["weighted_sum"])
+                ),
+            }]
+
+    result = [0.0] * len(values)
+    for block in blocks:
+        mean = float(block["weighted_sum"]) / float(block["weight"])
+        for index in range(int(block["start"]), int(block["end"]) + 1):
+            result[index] = mean
+    return result
+
+
+def _project_onsets_to_phoneme_floors(
+    syllables: list[dict[str, Any]],
+    onset_times: list[float],
+    bar_duration_sec: float,
+) -> list[float]:
+    """Move target onsets as little as possible while protecting all syllables."""
+    if not syllables:
+        return onset_times
+
+    voiced_minimums = [
+        _minimum_phoneme_duration(item["phones"])
+        for item in syllables
+    ]
+    required_rests = [
+        _minimum_required_rest_after(syllables, index)
+        for index in range(len(syllables))
+    ]
+    available_duration = max(0.001, bar_duration_sec - onset_times[0])
+    available_voiced_duration = max(0.001, available_duration - sum(required_rests))
+    voiced_floor_sum = sum(voiced_minimums)
+    if voiced_floor_sum > available_voiced_duration:
+        scale = available_voiced_duration / voiced_floor_sum
+        voiced_minimums = [minimum * scale for minimum in voiced_minimums]
+
+    interval_minimums = [
+        voiced + rest
+        for voiced, rest in zip(voiced_minimums, required_rests)
+    ]
+    cumulative_minimums = [0.0]
+    for minimum in interval_minimums:
+        cumulative_minimums.append(cumulative_minimums[-1] + minimum)
+
+    target_boundaries = list(onset_times) + [bar_duration_sec]
+    transformed_targets = [
+        target - cumulative
+        for target, cumulative in zip(target_boundaries, cumulative_minimums)
+    ]
+    endpoint_weight = 1_000_000_000.0
+    weights = [1.0] * len(target_boundaries)
+    weights[0] = endpoint_weight
+    weights[-1] = endpoint_weight
+    if len(weights) > 2:
+        weights[-2] = 3.0
+
+    projected = _weighted_isotonic_non_decreasing(transformed_targets, weights)
+    projected_boundaries = [
+        value + cumulative
+        for value, cumulative in zip(projected, cumulative_minimums)
+    ]
+    projected_boundaries[0] = onset_times[0]
+    projected_boundaries[-1] = bar_duration_sec
+    return projected_boundaries[:-1]
+
+
 def _boundary_rest_duration(
     interval: float,
     punctuation: str | None,
@@ -943,7 +1048,11 @@ def _advance_short_syllable_onsets_at_optional_boundaries(
             if index + 2 < len(adjusted)
             else bar_duration_sec
         )
-        next_interval = next_interval_end - adjusted[index + 1]
+        next_interval = (
+            next_interval_end
+            - adjusted[index + 1]
+            - _minimum_required_rest_after(syllables, index + 1)
+        )
         next_deficit = max(
             0.0,
             _comfortable_phoneme_duration(syllables[index + 1]["phones"])
@@ -1258,6 +1367,11 @@ def _allocate_word_hierarchical_durations(
             onset = max(onset, onset_times[-1] + onset_slot_duration * 0.55)
         onset_times.append(min(onset, bar_duration_sec - MIN_TIMELINE_REST_SEC))
 
+    onset_times = _project_onsets_to_phoneme_floors(
+        syl_list,
+        onset_times,
+        bar_duration_sec,
+    )
     onset_times = _advance_short_syllable_onsets_at_optional_boundaries(
         syl_list,
         onset_times,
@@ -1306,16 +1420,35 @@ def _allocate_word_hierarchical_durations(
             max(min(ABSOLUTE_MIN_DUR_SEC, interval), accent_duration),
         )
         if index == len(syl_list) - 1:
-            target_dur = accent_duration
-            rest_duration = interval - target_dur
-            required_tail = min(MIN_TIMELINE_REST_SEC, interval * 0.35)
-            if rest_duration < required_tail:
-                target_dur -= required_tail - rest_duration
-                rest_duration = required_tail
+            minimum_voiced_duration = _minimum_phoneme_duration(item["phones"])
+            if item["boundary_punctuation"] is not None:
+                required_rest = _minimum_required_rest_after(syl_list, index)
+                rest_duration = _boundary_rest_duration(
+                    interval,
+                    item["boundary_punctuation"],
+                    min(
+                        minimum_voiced_duration,
+                        max(0.0, interval - required_rest),
+                    ),
+                )
+                target_dur = interval - rest_duration
+            else:
+                required_tail = min(MIN_TIMELINE_REST_SEC, interval * 0.35)
+                target_dur = max(
+                    accent_duration,
+                    min(minimum_voiced_duration, interval - required_tail),
+                )
+                rest_duration = interval - target_dur
         elif item["is_group_boundary"]:
             minimum_voiced_duration = _minimum_phoneme_duration(item["phones"])
             if item["boundary_punctuation"] is None:
                 minimum_voiced_duration = _comfortable_phoneme_duration(item["phones"])
+            else:
+                required_rest = _minimum_required_rest_after(syl_list, index)
+                minimum_voiced_duration = min(
+                    minimum_voiced_duration,
+                    max(0.0, interval - required_rest),
+                )
             rest_duration = _boundary_rest_duration(
                 interval,
                 item["boundary_punctuation"],
